@@ -6,7 +6,6 @@ import { DragItemAsset } from '../types/animation';
 import { CanvasElement } from './components/CanvasElement';
 import { ZoomControls } from './components/ZoomControls';
 import { SnapGuides } from './components/SnapGuides';
-import { Ruler } from './components/Ruler';
 import { ContextMenu } from './components/ContextMenu';
 
 const ZOOM_SENSITIVITY = 0.001;
@@ -44,9 +43,6 @@ export const Canvas: React.FC = () => {
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const isMarqueeActive = useRef(false);
 
-  // Container dimensions for rulers
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-
   // Auto-fit canvas on mount and resize
   useEffect(() => {
     const fit = () => {
@@ -56,16 +52,7 @@ export const Canvas: React.FC = () => {
     };
 
     fit();
-    // Also track container size for rulers
-    const updateSize = () => {
-      if (containerRef.current) {
-        const r = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width: r.width, height: r.height });
-      }
-    };
-    updateSize();
-
-    const onResize = () => { fit(); updateSize(); };
+    const onResize = () => { fit(); };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, [project.canvas.width, project.canvas.height, fitToScreen]);
@@ -245,11 +232,6 @@ export const Canvas: React.FC = () => {
     };
   }, [setPanOffset, selectElements]);
 
-  // Grid pattern for canvas background
-  const gridPattern = `
-    data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='grid' width='40' height='40' patternUnits='userSpaceOnUse'%3E%3Cpath d='M 40 0 L 0 0 0 40' fill='none' stroke='rgba(0,0,0,0.06)' stroke-width='1'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23grid)' /%3E%3C/svg%3E
-  `.trim();
-
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'ASSET',
     drop: (item: DragItemAsset & { defaultWidth?: number; defaultHeight?: number }, monitor) => {
@@ -305,43 +287,16 @@ export const Canvas: React.FC = () => {
     zIndex: 9999,
   } : null;
 
-  const RULER_SIZE = 20;
-
   return (
     <div
       style={{
         flex: 1,
-        display: 'grid',
-        gridTemplate: `${RULER_SIZE}px 1fr / ${RULER_SIZE}px 1fr`,
+        width: '100%',
+        height: '100%',
+        position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Corner square */}
-      <div style={{
-        backgroundColor: '#f6f7fa',
-        borderRight: '1px solid #e0e0e8',
-        borderBottom: '1px solid #e0e0e8',
-      }} />
-
-      {/* Horizontal ruler */}
-      <Ruler
-        orientation="horizontal"
-        zoom={zoom}
-        panOffset={panOffset.x}
-        length={containerSize.width - RULER_SIZE}
-        canvasSize={project.canvas.width}
-      />
-
-      {/* Vertical ruler */}
-      <Ruler
-        orientation="vertical"
-        zoom={zoom}
-        panOffset={panOffset.y}
-        length={containerSize.height - RULER_SIZE}
-        canvasSize={project.canvas.height}
-      />
-
-      {/* Canvas viewport */}
       <div
         ref={(node) => {
           (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
@@ -350,11 +305,11 @@ export const Canvas: React.FC = () => {
         onMouseDown={handleContainerMouseDown}
         data-viewport-container
         style={{
+          width: '100%',
+          height: '100%',
           position: 'relative',
           overflow: 'hidden',
-          backgroundColor: '#f0f1f5',
-          backgroundImage: `url("${gridPattern}")`,
-          backgroundSize: '20px 20px',
+          backgroundColor: '#ebe9e8',
           cursor: 'default',
         }}
       >
@@ -378,10 +333,10 @@ export const Canvas: React.FC = () => {
               width: project.canvas.width,
               height: project.canvas.height,
               backgroundColor: project.canvas.backgroundColor,
-              border: isOver ? '3px solid #4CAF50' : '1px solid #d0d0da',
-              borderRadius: 4,
+              border: isOver ? '2px solid #0f6cbd' : '1px solid #c8c6c4',
+              borderRadius: 0,
               position: 'relative',
-              boxShadow: isOver ? '0 0 30px rgba(76, 175, 80, 0.3)' : '0 4px 20px rgba(0, 0, 0, 0.1)',
+              boxShadow: isOver ? '0 0 0 3px rgba(15, 108, 189, 0.18), 0 12px 26px rgba(0, 0, 0, 0.12)' : '0 8px 24px rgba(0, 0, 0, 0.10)',
             }}
           >
             {/* Placeholder text when empty */}
@@ -392,13 +347,13 @@ export const Canvas: React.FC = () => {
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 textAlign: 'center',
-                color: '#999',
-                fontSize: 24,
+                color: '#605e5c',
+                fontSize: 22,
                 pointerEvents: 'none',
               }}>
-                <div style={{ fontSize: 24, marginBottom: 10, fontWeight: 600, letterSpacing: '0.5px' }}>Drop Assets Here</div>
-                <div style={{ fontSize: 14, marginTop: 10, color: '#888' }}>
-                  {project.canvas.width} x {project.canvas.height} — Landscape (16:9)
+                <div style={{ fontSize: 24, marginBottom: 10, fontWeight: 600 }}>Leere Folie</div>
+                <div style={{ fontSize: 14, marginTop: 10, color: '#8a8886' }}>
+                  Ziehe Logos, Widgets oder Inhalte auf die Folie
                 </div>
               </div>
             )}
@@ -406,15 +361,17 @@ export const Canvas: React.FC = () => {
             {/* Canvas info overlay */}
             <div style={{
               position: 'absolute',
-              top: 10,
-              left: 10,
-              padding: '6px 12px',
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              borderRadius: 6,
+              top: 12,
+              right: 12,
+              padding: '4px 10px',
+              backgroundColor: 'rgba(255, 255, 255, 0.92)',
+              border: '1px solid #d2d0ce',
+              borderRadius: 999,
               fontSize: 11,
-              color: '#aaa',
+              color: '#605e5c',
               pointerEvents: 'none',
-              fontFamily: 'monospace',
+              fontFamily: 'Segoe UI, sans-serif',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
             }}>
               {project.canvas.width} × {project.canvas.height} | {Math.round(zoom * 100)}%
             </div>
@@ -441,7 +398,6 @@ export const Canvas: React.FC = () => {
         <ZoomControls />
       </div>
 
-      {/* Context Menu (portal) */}
       <ContextMenu />
     </div>
   );

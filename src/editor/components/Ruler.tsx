@@ -67,14 +67,14 @@ export const Ruler: React.FC<RulerProps> = ({ orientation, zoom, panOffset, leng
         position: 'relative',
         width: isH ? '100%' : RULER_SIZE,
         height: isH ? RULER_SIZE : '100%',
-        backgroundColor: '#f6f7fa',
-        borderBottom: isH ? '1px solid #e0e0e8' : 'none',
-        borderRight: isH ? 'none' : '1px solid #e0e0e8',
+        backgroundColor: '#f3f2f1',
+        borderBottom: isH ? '1px solid #d2d0ce' : 'none',
+        borderRight: isH ? 'none' : '1px solid #d2d0ce',
         overflow: 'hidden',
         userSelect: 'none',
         fontSize: 9,
         fontFamily: 'monospace',
-        color: '#999',
+        color: '#8a8886',
         flexShrink: 0,
       }}
     >
@@ -92,7 +92,7 @@ export const Ruler: React.FC<RulerProps> = ({ orientation, zoom, panOffset, leng
           <div
             style={{
               position: 'absolute',
-              backgroundColor: tick.major ? '#ccc' : '#ddd',
+              backgroundColor: tick.major ? '#8a8886' : '#c8c6c4',
               ...(isH
                 ? { left: 0, bottom: 0, width: 1, height: tick.major ? 8 : 5 }
                 : { top: 0, right: 0, height: 1, width: tick.major ? 8 : 5 }),

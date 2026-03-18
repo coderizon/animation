@@ -30,16 +30,16 @@ export const ZoomControls: React.FC = () => {
     <div
       style={{
         position: 'absolute',
-        bottom: 20,
-        right: 20,
+        bottom: 16,
+        right: 16,
         display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        backgroundColor: '#ffffff',
-        border: '1px solid #e0e0e8',
-        borderRadius: 8,
-        padding: 8,
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        border: '1px solid #d2d0ce',
+        borderRadius: 999,
+        padding: '4px 6px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
         zIndex: 100,
       }}
     >
@@ -48,13 +48,13 @@ export const ZoomControls: React.FC = () => {
         onClick={handleZoomIn}
         disabled={zoom >= MAX_ZOOM}
         style={{
-          width: 40,
-          height: 40,
+          width: 30,
+          height: 30,
           backgroundColor: 'transparent',
-          color: '#444',
+          color: '#323130',
           border: 'none',
-          borderRadius: 6,
-          fontSize: 20,
+          borderRadius: 999,
+          fontSize: 18,
           cursor: zoom >= MAX_ZOOM ? 'not-allowed' : 'pointer',
           transition: 'all 0.2s',
           display: 'flex',
@@ -62,7 +62,7 @@ export const ZoomControls: React.FC = () => {
           justifyContent: 'center',
         }}
         onMouseEnter={(e) => {
-          if (zoom < MAX_ZOOM) e.currentTarget.style.backgroundColor = '#f0f0f4';
+          if (zoom < MAX_ZOOM) e.currentTarget.style.backgroundColor = '#f3f2f1';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
@@ -75,17 +75,15 @@ export const ZoomControls: React.FC = () => {
       {/* Zoom Display */}
       <div
         style={{
-          width: 40,
-          height: 40,
+          minWidth: 52,
+          height: 30,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: 11,
           fontWeight: 600,
-          color: '#888',
-          borderTop: '1px solid #e0e0e8',
-          borderBottom: '1px solid #e0e0e8',
-          padding: '4px 0',
+          color: '#605e5c',
+          padding: '0 8px',
         }}
       >
         {Math.round(zoom * 100)}%
@@ -96,13 +94,13 @@ export const ZoomControls: React.FC = () => {
         onClick={handleZoomOut}
         disabled={zoom <= MIN_ZOOM}
         style={{
-          width: 40,
-          height: 40,
+          width: 30,
+          height: 30,
           backgroundColor: 'transparent',
-          color: '#444',
+          color: '#323130',
           border: 'none',
-          borderRadius: 6,
-          fontSize: 20,
+          borderRadius: 999,
+          fontSize: 18,
           cursor: zoom <= MIN_ZOOM ? 'not-allowed' : 'pointer',
           transition: 'all 0.2s',
           display: 'flex',
@@ -110,7 +108,7 @@ export const ZoomControls: React.FC = () => {
           justifyContent: 'center',
         }}
         onMouseEnter={(e) => {
-          if (zoom > MIN_ZOOM) e.currentTarget.style.backgroundColor = '#f0f0f4';
+          if (zoom > MIN_ZOOM) e.currentTarget.style.backgroundColor = '#f3f2f1';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
@@ -124,24 +122,22 @@ export const ZoomControls: React.FC = () => {
       <button
         onClick={handleFitToScreen}
         style={{
-          width: 40,
-          height: 40,
+          width: 30,
+          height: 30,
           backgroundColor: 'transparent',
-          color: '#444',
+          color: '#323130',
           border: 'none',
-          borderRadius: 6,
-          fontSize: 16,
+          borderRadius: 999,
+          fontSize: 14,
           cursor: 'pointer',
           transition: 'all 0.2s',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginTop: 4,
-          borderTop: '1px solid #e0e0e8',
-          paddingTop: 8,
+          marginLeft: 2,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#f0f0f4';
+          e.currentTarget.style.backgroundColor = '#f3f2f1';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';

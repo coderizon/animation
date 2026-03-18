@@ -24,6 +24,10 @@ const LazyTemplateSelector = lazy(() =>
   })),
 );
 
+const OFFICE_ACCENT = '#d24726';
+const OFFICE_BLUE = '#0f6cbd';
+const OFFICE_BORDER = '#d2d0ce';
+
 interface EditorLayoutProps {
   onOpenPlayer: () => void;
 }
@@ -31,6 +35,7 @@ interface EditorLayoutProps {
 export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const project = useProjectStore((state) => state.project);
   const addElement = useProjectStore((state) => state.addElement);
+  const loadProject = useProjectStore((state) => state.loadProject);
   const exportProject = useProjectStore((state) => state.exportProject);
   const importProject = useProjectStore((state) => state.importProject);
   const resetProject = useProjectStore((state) => state.resetProject);
@@ -45,14 +50,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const selectedElementIds = useProjectStore((state) => state.selectedElementIds);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
-  const [timelineHeight, setTimelineHeight] = useState(200);
+  const [timelineHeight, setTimelineHeight] = useState(116);
   const [isResizingTimeline, setIsResizingTimeline] = useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = useState<'start' | 'insert' | 'animation' | 'view'>('insert');
-  const [libraryView, setLibraryView] = useState<'logos' | 'widgets'>('logos');
+  const [assetLibraryView, setAssetLibraryView] = useState<'logos' | 'widgets' | null>(null);
   const [showShapeGallery, setShowShapeGallery] = useState(false);
   const [recentShapeIds, setRecentShapeIds] = useState<string[]>(quickShapeIds);
   const timelineRef = useRef<HTMLDivElement>(null);
   const shapeGalleryButtonRef = useRef<HTMLButtonElement>(null);
+  const logosButtonRef = useRef<HTMLButtonElement>(null);
+  const widgetsButtonRef = useRef<HTMLButtonElement>(null);
   const quickWidgets = getAllWidgets().slice(0, 3);
 
   useEffect(() => {
@@ -62,7 +69,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
       if (!timelineRef.current) return;
       const containerBottom = timelineRef.current.getBoundingClientRect().bottom;
       const newHeight = containerBottom - e.clientY;
-      setTimelineHeight(Math.max(60, Math.min(500, newHeight)));
+      setTimelineHeight(Math.max(84, Math.min(320, newHeight)));
     };
 
     const handleMouseUp = () => setIsResizingTimeline(false);
@@ -74,6 +81,22 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizingTimeline]);
+
+  useEffect(() => {
+    if (
+      project.name === 'Untitled Project' &&
+      project.elements.length === 0 &&
+      project.canvas.backgroundColor.toLowerCase() === '#000000'
+    ) {
+      loadProject({
+        ...project,
+        canvas: {
+          ...project.canvas,
+          backgroundColor: '#ffffff',
+        },
+      });
+    }
+  }, [loadProject, project]);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
@@ -151,6 +174,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const handleRibbonTabChange = (tab: 'start' | 'insert' | 'animation' | 'view') => {
     setActiveRibbonTab(tab);
     setShowShapeGallery(false);
+    setAssetLibraryView(null);
+  };
+
+  const handleAssetLibraryToggle = (view: 'logos' | 'widgets') => {
+    setShowShapeGallery(false);
+    setAssetLibraryView((current) => (current === view ? null : view));
   };
 
   const rememberShape = (shapeId: string) => {
@@ -175,7 +204,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
     const widget = getAllWidgets().find((entry) => entry.name === widgetName);
     if (!widget) return;
     addElement(createWidgetInsert(project, widget));
-    setLibraryView('widgets');
   };
 
   const renderRibbonContent = () => {
@@ -194,10 +222,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             <RibbonButton icon="↪" label="Redo" disabled={!canRedo} onClick={redo} />
           </RibbonGroup>
 
-          <RibbonGroup title="Bibliothek">
-            <RibbonButton icon="◧" label="Logos" active={libraryView === 'logos'} onClick={() => setLibraryView('logos')} />
-            <RibbonButton icon="◫" label="Widgets" active={libraryView === 'widgets'} onClick={() => setLibraryView('widgets')} />
-          </RibbonGroup>
         </>
       );
     }
@@ -238,10 +262,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             ))}
           </RibbonGroup>
 
-          <RibbonGroup title="Bibliothek">
-            <RibbonButton icon="◧" label="Logos" active={libraryView === 'logos'} onClick={() => setLibraryView('logos')} />
-            <RibbonButton icon="◫" label="Widgets" active={libraryView === 'widgets'} onClick={() => setLibraryView('widgets')} />
-          </RibbonGroup>
         </>
       );
     }
@@ -263,7 +283,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
           <RibbonGroup title="Auswahl">
             <RibbonInfoCard
               headline={selectedElementIds.length > 0 ? `${selectedElementIds.length} Elemente aktiv` : 'Keine Auswahl'}
-              text="Animationen steuerst du weiter im rechten Eigenschaftenbereich und in der Timeline."
+              text="Animationen steuerst du ueber den linken Eigenschaftenbereich und die Timeline."
             />
           </RibbonGroup>
         </>
@@ -276,11 +296,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
           <RibbonButton icon="?" label="Shortcuts" onClick={() => setShowKeyboardShortcuts(true)} />
           <RibbonButton icon="▦" label="Templates" onClick={() => setShowTemplateSelector(true)} />
           <RibbonButton icon="▣" label="Vorschau" tone="dark" onClick={onOpenPlayer} />
-        </RibbonGroup>
-
-        <RibbonGroup title="Bibliothek">
-          <RibbonButton icon="◧" label="Logos" active={libraryView === 'logos'} onClick={() => setLibraryView('logos')} />
-          <RibbonButton icon="◫" label="Widgets" active={libraryView === 'widgets'} onClick={() => setLibraryView('widgets')} />
         </RibbonGroup>
 
         <RibbonGroup title="Projekt">
@@ -299,47 +314,76 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      backgroundColor: '#f0f1f5',
+      backgroundColor: '#f3f2f1',
     }}>
       {/* Ribbon */}
       <div style={{
         backgroundColor: '#ffffff',
-        borderBottom: '1px solid #d0d5dd',
-        boxShadow: '0 6px 20px rgba(16, 24, 40, 0.06)',
+        borderBottom: `1px solid ${OFFICE_BORDER}`,
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.06)',
       }}>
         <div style={{
-          height: 40,
+          height: 42,
           display: 'flex',
           alignItems: 'center',
-          gap: 14,
-          padding: '0 14px',
-          borderBottom: '1px solid #eaecf0',
+          gap: 18,
+          padding: '0 12px',
+          borderBottom: `1px solid ${OFFICE_BORDER}`,
         }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#101828', letterSpacing: '-0.03em' }}>
-            Animation Builder
-          </div>
+          <button
+            style={{
+              height: 28,
+              padding: '0 12px',
+              borderRadius: 4,
+              border: 'none',
+              backgroundColor: OFFICE_ACCENT,
+              color: '#ffffff',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'default',
+            }}
+          >
+            Datei
+          </button>
 
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 16, height: '100%' }}>
             <RibbonTab label="Start" active={activeRibbonTab === 'start'} onClick={() => handleRibbonTabChange('start')} />
             <RibbonTab label="Einfügen" active={activeRibbonTab === 'insert'} onClick={() => handleRibbonTabChange('insert')} />
-            <RibbonTab label="Animation" active={activeRibbonTab === 'animation'} onClick={() => handleRibbonTabChange('animation')} />
+            <StaticHeaderTab label="Zeichnen" />
+            <StaticHeaderTab label="Entwurf" />
+            <StaticHeaderTab label="Übergänge" />
+            <RibbonTab label="Animationen" active={activeRibbonTab === 'animation'} onClick={() => handleRibbonTabChange('animation')} />
             <RibbonTab label="Ansicht" active={activeRibbonTab === 'view'} onClick={() => handleRibbonTabChange('view')} />
+            <StaticHeaderTab label="Hilfe" />
           </div>
 
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <HeaderActionButton
+              buttonRef={logosButtonRef}
+              label="Logos"
+              active={assetLibraryView === 'logos'}
+              onClick={() => handleAssetLibraryToggle('logos')}
+            />
+            <HeaderActionButton
+              buttonRef={widgetsButtonRef}
+              label="Widgets"
+              active={assetLibraryView === 'widgets'}
+              onClick={() => handleAssetLibraryToggle('widgets')}
+            />
             <div style={{ fontSize: 12, color: '#667085' }}>
               {project.name}
             </div>
             <button
               onClick={onOpenPlayer}
               style={{
-                padding: '6px 12px',
-                backgroundColor: '#111827',
+                height: 30,
+                padding: '0 14px',
+                backgroundColor: OFFICE_ACCENT,
                 color: '#fff',
-                border: '1px solid #111827',
-                borderRadius: 8,
-                fontSize: 11,
-                fontWeight: 700,
+                border: `1px solid ${OFFICE_ACCENT}`,
+                borderRadius: 4,
+                fontSize: 12,
+                fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
@@ -349,12 +393,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
         </div>
 
         <div style={{
-          padding: '8px 14px 6px',
+          padding: '2px 10px 1px',
           display: 'flex',
-          gap: 8,
+          gap: 0,
           alignItems: 'stretch',
           overflowX: 'auto',
-          background: 'linear-gradient(180deg, #fcfcfd 0%, #f8fafc 100%)',
+          backgroundColor: '#fbfbfb',
         }}>
           {renderRibbonContent()}
         </div>
@@ -365,25 +409,24 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
         flex: 1,
         display: 'flex',
         overflow: 'hidden',
+        backgroundColor: '#ebe9e8',
       }}>
-        {/* Sidebar (Left) - Resizable */}
-        <ResizablePanel defaultWidth={225} minWidth={150} maxWidth={700} position="left">
-          <h2 style={{ fontSize: 16, marginBottom: 15, color: '#1a1a2e' }}>
-            Library
-          </h2>
-          <AssetLibrary activeView={libraryView} onChangeView={setLibraryView} />
+        <ResizablePanel
+          defaultWidth={290}
+          minWidth={230}
+          maxWidth={380}
+          position="left"
+          backgroundColor="#f3f2f1"
+          borderColor={OFFICE_BORDER}
+          padding={0}
+        >
+          <div style={{ padding: 12 }}>
+            <PropertiesPanel />
+          </div>
         </ResizablePanel>
 
         {/* Canvas Area (Center) */}
         <Canvas />
-
-        {/* Properties Panel (Right) - Resizable */}
-        <ResizablePanel defaultWidth={280} minWidth={150} maxWidth={600} position="right">
-          <h2 style={{ fontSize: 16, marginBottom: 15, color: '#1a1a2e' }}>
-            Properties
-          </h2>
-          <PropertiesPanel />
-        </ResizablePanel>
       </div>
 
       {/* Timeline */}
@@ -400,7 +443,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             cursor: 'ns-resize',
             zIndex: 10,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(33, 150, 243, 0.3)'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(15, 108, 189, 0.22)'; }}
           onMouseLeave={(e) => { if (!isResizingTimeline) e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
           <div style={{
@@ -410,7 +453,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             transform: 'translate(-50%, -50%)',
             width: 40,
             height: 2,
-            backgroundColor: isResizingTimeline ? '#2196F3' : '#b0b0c0',
+            backgroundColor: isResizingTimeline ? OFFICE_BLUE : '#a19f9d',
             borderRadius: 2,
             opacity: isResizingTimeline ? 1 : 0.5,
           }} />
@@ -422,14 +465,14 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
       <div style={{
         height: 30,
         backgroundColor: '#ffffff',
-        borderTop: '1px solid #e0e0e8',
+        borderTop: `1px solid ${OFFICE_BORDER}`,
         display: 'flex',
         alignItems: 'center',
         padding: '0 20px',
         fontSize: 12,
-        color: '#999',
+        color: '#605e5c',
       }}>
-        Elements: {project.elements.length} | Ready
+        Folie 1 von 1 | {project.elements.length} Elemente | Bereit
       </div>
 
       {/* Template Selector Modal */}
@@ -448,6 +491,14 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
         onClose={() => setShowShapeGallery(false)}
         onSelectShape={handleInsertShape}
         recentShapeIds={recentShapeIds}
+      />
+
+      <AssetLibrary
+        anchorRef={assetLibraryView === 'widgets' ? widgetsButtonRef : logosButtonRef}
+        isOpen={assetLibraryView !== null}
+        activeView={assetLibraryView ?? 'logos'}
+        onChangeView={setAssetLibraryView}
+        onClose={() => setAssetLibraryView(null)}
       />
 
       {/* Keyboard Shortcuts Overlay */}
@@ -470,13 +521,65 @@ const RibbonTab: React.FC<RibbonTabProps> = ({ label, active, onClick }) => {
     <button
       onClick={onClick}
       style={{
-        padding: '6px 10px',
-        borderRadius: 8,
+        height: '100%',
+        padding: '0 2px',
+        borderRadius: 0,
         border: 'none',
-        backgroundColor: active ? '#eef2ff' : 'transparent',
-        color: active ? '#1d4ed8' : '#475467',
+        backgroundColor: 'transparent',
+        color: '#201f1e',
+        fontSize: 13,
+        fontWeight: active ? 600 : 500,
+        cursor: 'pointer',
+        borderBottom: active ? `2px solid ${OFFICE_ACCENT}` : '2px solid transparent',
+      }}
+    >
+      {label}
+    </button>
+  );
+};
+
+const StaticHeaderTab: React.FC<{ label: string }> = ({ label }) => {
+  return (
+    <span style={{
+      height: '100%',
+      display: 'inline-flex',
+      alignItems: 'center',
+      color: '#201f1e',
+      fontSize: 13,
+      fontWeight: 500,
+      borderBottom: '2px solid transparent',
+    }}>
+      {label}
+    </span>
+  );
+};
+
+interface HeaderActionButtonProps {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+}
+
+const HeaderActionButton: React.FC<HeaderActionButtonProps> = ({
+  label,
+  active,
+  onClick,
+  buttonRef,
+}) => {
+  return (
+    <button
+      ref={buttonRef}
+      onClick={onClick}
+      style={{
+        height: 30,
+        padding: '0 12px',
+        borderRadius: 4,
+        border: `1px solid ${active ? OFFICE_BLUE : OFFICE_BORDER}`,
+        backgroundColor: active ? '#eff6fc' : '#ffffff',
+        color: active ? OFFICE_BLUE : '#323130',
         fontSize: 12,
-        fontWeight: 700,
+        fontWeight: 600,
         cursor: 'pointer',
       }}
     >
@@ -494,25 +597,22 @@ const RibbonGroup: React.FC<RibbonGroupProps> = ({ title, children }) => {
   return (
     <div style={{
       minWidth: 0,
-      padding: '7px 8px 6px',
-      borderRadius: 10,
-      backgroundColor: '#ffffff',
-      border: '1px solid #e4e7ec',
+      padding: '3px 10px 2px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 6,
+      gap: 4,
       justifyContent: 'space-between',
       flexShrink: 0,
+      borderRight: `1px solid ${OFFICE_BORDER}`,
     }}>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
         {children}
       </div>
       <div style={{
-        fontSize: 9,
-        color: '#667085',
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        fontWeight: 700,
+        fontSize: 8,
+        color: '#605e5c',
+        textAlign: 'center',
+        fontWeight: 500,
       }}>
         {title}
       </div>
@@ -543,15 +643,15 @@ const RibbonButton: React.FC<RibbonButtonProps> = ({
 }) => {
   const tones = {
     default: {
-      backgroundColor: active ? '#eef2ff' : '#f8fafc',
-      border: active ? '#c7d7fe' : '#e4e7ec',
-      color: active ? '#1d4ed8' : '#344054',
+      backgroundColor: active ? '#eff6fc' : 'transparent',
+      border: active ? '#b7d6f2' : 'transparent',
+      color: active ? OFFICE_BLUE : '#323130',
     },
-    blue: { backgroundColor: '#2563eb', border: '#2563eb', color: '#ffffff' },
-    dark: { backgroundColor: '#111827', border: '#111827', color: '#ffffff' },
-    amber: { backgroundColor: '#f59e0b', border: '#f59e0b', color: '#ffffff' },
-    green: { backgroundColor: '#16a34a', border: '#16a34a', color: '#ffffff' },
-    danger: { backgroundColor: '#dc2626', border: '#dc2626', color: '#ffffff' },
+    blue: { backgroundColor: OFFICE_BLUE, border: OFFICE_BLUE, color: '#ffffff' },
+    dark: { backgroundColor: '#323130', border: '#323130', color: '#ffffff' },
+    amber: { backgroundColor: '#ffb900', border: '#ffb900', color: '#201f1e' },
+    green: { backgroundColor: '#107c10', border: '#107c10', color: '#ffffff' },
+    danger: { backgroundColor: '#c42b1c', border: '#c42b1c', color: '#ffffff' },
   } as const;
 
   const palette = tones[tone];
@@ -562,27 +662,27 @@ const RibbonButton: React.FC<RibbonButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       style={{
-        minWidth: 60,
-        minHeight: 48,
-        borderRadius: 9,
+        minWidth: 42,
+        minHeight: 30,
+        borderRadius: 4,
         border: `1px solid ${palette.border}`,
         backgroundColor: disabled ? '#f2f4f7' : palette.backgroundColor,
         color: disabled ? '#98a2b3' : palette.color,
-        padding: '5px 7px',
+        padding: '2px 5px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 4,
+        justifyContent: 'flex-start',
+        gap: 2,
         cursor: disabled ? 'not-allowed' : 'pointer',
         textAlign: 'center',
         flexShrink: 0,
       }}
     >
-      <span style={{ fontSize: 16, lineHeight: 1 }}>{icon}</span>
+      <span style={{ fontSize: 12, lineHeight: 1 }}>{icon}</span>
       <span style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
-        <span style={{ fontSize: 10, fontWeight: 700, lineHeight: 1.1 }}>{label}</span>
-        {caption && <span style={{ fontSize: 9, opacity: 0.78, lineHeight: 1 }}>{caption}</span>}
+        <span style={{ fontSize: 8, fontWeight: 600, lineHeight: 1.05 }}>{label}</span>
+        {caption && <span style={{ fontSize: 7, opacity: 0.78, lineHeight: 1 }}>{caption}</span>}
       </span>
     </button>
   );
@@ -596,18 +696,18 @@ interface RibbonInfoCardProps {
 const RibbonInfoCard: React.FC<RibbonInfoCardProps> = ({ headline, text }) => {
   return (
     <div style={{
-      width: 180,
-      padding: '8px 10px',
-      borderRadius: 10,
-      backgroundColor: '#f8fafc',
-      border: '1px solid #e4e7ec',
+      width: 188,
+      padding: '8px 12px',
+      borderRadius: 8,
+      backgroundColor: '#ffffff',
+      border: `1px solid ${OFFICE_BORDER}`,
       display: 'flex',
       flexDirection: 'column',
       gap: 4,
       justifyContent: 'space-between',
     }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#101828' }}>{headline}</div>
-      <div style={{ fontSize: 10, color: '#667085', lineHeight: 1.35 }}>{text}</div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: '#323130' }}>{headline}</div>
+      <div style={{ fontSize: 10, color: '#605e5c', lineHeight: 1.35 }}>{text}</div>
     </div>
   );
 };

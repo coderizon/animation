@@ -6,6 +6,9 @@ interface ResizablePanelProps {
   minWidth?: number;
   maxWidth?: number;
   position?: 'left' | 'right';
+  backgroundColor?: string;
+  borderColor?: string;
+  padding?: number;
 }
 
 export const ResizablePanel: React.FC<ResizablePanelProps> = ({
@@ -14,6 +17,9 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
   minWidth = 250,
   maxWidth = 600,
   position = 'left',
+  backgroundColor = '#f3f2f1',
+  borderColor = '#d2d0ce',
+  padding = 16,
 }) => {
   const [width, setWidth] = useState(defaultWidth);
   const [isResizing, setIsResizing] = useState(false);
@@ -62,10 +68,10 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
       ref={panelRef}
       style={{
         width: width,
-        backgroundColor: '#ffffff',
-        borderRight: position === 'left' ? '1px solid #e0e0e8' : 'none',
-        borderLeft: position === 'right' ? '1px solid #e0e0e8' : 'none',
-        padding: 20,
+        backgroundColor,
+        borderRight: position === 'left' ? `1px solid ${borderColor}` : 'none',
+        borderLeft: position === 'right' ? `1px solid ${borderColor}` : 'none',
+        padding,
         overflowY: 'auto',
         position: 'relative',
         flexShrink: 0,
@@ -105,7 +111,7 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
             transform: 'translate(-50%, -50%)',
             width: 2,
             height: 40,
-            backgroundColor: isResizing ? '#2196F3' : '#b0b0c0',
+            backgroundColor: isResizing ? '#0f6cbd' : '#a19f9d',
             borderRadius: 2,
             opacity: isResizing ? 1 : 0.5,
             transition: 'opacity 0.2s',

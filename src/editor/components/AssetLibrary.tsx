@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { LogoAsset } from '../../types/animation';
 import { getAllWidgets } from '../../widgets/registry';
@@ -6,20 +6,25 @@ import { WidgetRegistryEntry } from '../../widgets/types';
 
 const svgModules = import.meta.glob('/public/assets/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
-const autoLogos: LogoAsset[] = Object.entries(svgModules).map(([path, url]) => {
-  const filename = path.split('/').pop()!.replace('.svg', '');
-  const name = filename
-    .replace(/-color$/, '')
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+const autoLogos: LogoAsset[] = Object.entries(svgModules)
+  .map(([path, url]) => {
+    const filename = path.split('/').pop()!.replace('.svg', '');
+    const name = filename
+      .replace(/-color$/, '')
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
 
-  return { id: filename, name, src: url };
-});
+    return { id: filename, name, src: url };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 interface AssetLibraryProps {
+  anchorRef: React.RefObject<HTMLElement | null>;
+  isOpen: boolean;
   activeView: 'logos' | 'widgets';
   onChangeView: (view: 'logos' | 'widgets') => void;
+  onClose: () => void;
 }
 
 const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
@@ -76,13 +81,15 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
           pointerEvents: 'none',
         }}
       />
-      <span style={{
-        fontSize: 10,
-        fontWeight: 600,
-        color: '#344054',
-        textAlign: 'center',
-        lineHeight: 1.25,
-      }}>
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          color: '#344054',
+          textAlign: 'center',
+          lineHeight: 1.25,
+        }}
+      >
         {asset.name}
       </span>
     </div>
@@ -135,18 +142,20 @@ const DraggableWidget: React.FC<{ entry: WidgetRegistryEntry }> = ({ entry }) =>
         e.currentTarget.style.backgroundColor = '#f8fafc';
       }}
     >
-      <div style={{
-        width: 54,
-        height: 34,
-        backgroundColor: '#111827',
-        borderRadius: 8,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#8ddcff',
-        fontWeight: 700,
-        fontSize: 18,
-      }}>
+      <div
+        style={{
+          width: 54,
+          height: 34,
+          backgroundColor: '#111827',
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#8ddcff',
+          fontWeight: 700,
+          fontSize: 18,
+        }}
+      >
         {entry.icon}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -161,8 +170,45 @@ const DraggableWidget: React.FC<{ entry: WidgetRegistryEntry }> = ({ entry }) =>
   );
 };
 
-export const AssetLibrary: React.FC<AssetLibraryProps> = ({ activeView, onChangeView }) => {
+export const AssetLibrary: React.FC<AssetLibraryProps> = ({
+  anchorRef,
+  isOpen,
+  activeView,
+  onChangeView,
+  onClose,
+}) => {
   const [search, setSearch] = useState('');
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch('');
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const anchorNode = anchorRef.current;
+
+      if (popoverRef.current?.contains(target)) return;
+      if (anchorNode?.contains(target)) return;
+      onClose();
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [anchorRef, isOpen, onClose]);
 
   const filteredLogos = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -172,71 +218,111 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({ activeView, onChange
 
   const widgets = getAllWidgets();
 
+  if (!isOpen || !anchorRef.current) return null;
+
+  const width = activeView === 'logos' ? 520 : 440;
+  const rect = anchorRef.current.getBoundingClientRect();
+  const left = Math.min(Math.max(rect.right - width, 12), window.innerWidth - width - 12);
+  const top = rect.bottom + 10;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-      <div style={{
-        padding: 14,
-        borderRadius: 14,
+    <div
+      ref={popoverRef}
+      style={{
+        position: 'fixed',
+        top,
+        left,
+        width,
+        maxHeight: '72vh',
+        overflow: 'hidden',
         backgroundColor: '#ffffff',
-        border: '1px solid #e4e7ec',
+        border: '1px solid #d0d5dd',
+        borderRadius: 18,
+        boxShadow: '0 24px 60px rgba(16, 24, 40, 0.18)',
+        zIndex: 1250,
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
-      }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#101828' }}>Insert Library</div>
-          <div style={{ fontSize: 12, color: '#667085', marginTop: 4 }}>
-            Formen, Text und Bilder liegen jetzt oben im Ribbon. Hier bleiben nur die groesseren Bibliotheken.
+      }}
+    >
+      <div
+        style={{
+          padding: 18,
+          borderBottom: '1px solid #eaecf0',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#101828' }}>Bibliothek</div>
+            <div style={{ fontSize: 12, color: '#667085', marginTop: 4 }}>
+              Ziehe Elemente direkt auf den Canvas. Die linke Leiste ist jetzt frei.
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {([
+              { id: 'logos', label: 'Logos', hint: `${autoLogos.length} Assets` },
+              { id: 'widgets', label: 'Widgets', hint: `${widgets.length} Presets` },
+            ] as const).map((view) => {
+              const isActive = activeView === view.id;
+              return (
+                <button
+                  key={view.id}
+                  onClick={() => onChangeView(view.id)}
+                  style={{
+                    borderRadius: 12,
+                    border: isActive ? '1px solid #1d4ed8' : '1px solid #d0d5dd',
+                    backgroundColor: isActive ? '#eef2ff' : '#f8fafc',
+                    color: isActive ? '#1d4ed8' : '#344054',
+                    padding: '10px 12px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                    minWidth: 120,
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>{view.label}</span>
+                  <span style={{ fontSize: 11, opacity: isActive ? 0.82 : 0.72 }}>{view.hint}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-          gap: 8,
-        }}>
-          {([
-            { id: 'logos', label: 'Logos', hint: `${autoLogos.length} Assets` },
-            { id: 'widgets', label: 'Widgets', hint: `${widgets.length} Presets` },
-          ] as const).map((view) => {
-            const isActive = activeView === view.id;
-            return (
-              <button
-                key={view.id}
-                onClick={() => onChangeView(view.id)}
-                style={{
-                  borderRadius: 12,
-                  border: isActive ? '1px solid #111827' : '1px solid #e4e7ec',
-                  backgroundColor: isActive ? '#111827' : '#f8fafc',
-                  color: isActive ? '#ffffff' : '#344054',
-                  padding: '10px 12px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                }}
-              >
-                <span style={{ fontSize: 12, fontWeight: 700 }}>{view.label}</span>
-                <span style={{ fontSize: 11, opacity: isActive ? 0.78 : 0.72 }}>{view.hint}</span>
-              </button>
-            );
-          })}
-        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            border: '1px solid #e4e7ec',
+            backgroundColor: '#ffffff',
+            color: '#475467',
+            fontSize: 18,
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          ×
+        </button>
       </div>
 
       {activeView === 'logos' && (
-        <div style={{
-          padding: 14,
-          borderRadius: 14,
-          backgroundColor: '#ffffff',
-          border: '1px solid #e4e7ec',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          minHeight: 0,
-          flex: 1,
-        }}>
+        <div
+          style={{
+            padding: 18,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            minHeight: 0,
+            flex: 1,
+          }}
+        >
           <input
             type="text"
             value={search}
@@ -258,13 +344,17 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({ activeView, onChange
             {filteredLogos.length} Treffer. Ziehe ein Logo auf den Canvas.
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: 8,
-            overflowY: 'auto',
-            paddingRight: 2,
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+              gap: 8,
+              overflowY: 'auto',
+              paddingRight: 4,
+              minHeight: 0,
+              flex: 1,
+            }}
+          >
             {filteredLogos.map((logo) => (
               <DraggableLogo key={logo.id} asset={logo} />
             ))}
@@ -273,45 +363,37 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({ activeView, onChange
       )}
 
       {activeView === 'widgets' && (
-        <div style={{
-          padding: 14,
-          borderRadius: 14,
-          backgroundColor: '#ffffff',
-          border: '1px solid #e4e7ec',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          minHeight: 0,
-          flex: 1,
-        }}>
+        <div
+          style={{
+            padding: 18,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            minHeight: 0,
+            flex: 1,
+          }}
+        >
           <div style={{ fontSize: 12, color: '#667085' }}>
-            Ziehe ein Widget auf den Canvas oder fuege es oben im Ribbon direkt ein.
+            Ziehe ein Widget auf den Canvas oder fuege es im Ribbon direkt ein.
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(1, minmax(0, 1fr))',
-            gap: 10,
-            overflowY: 'auto',
-            paddingRight: 2,
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(1, minmax(0, 1fr))',
+              gap: 10,
+              overflowY: 'auto',
+              paddingRight: 4,
+              minHeight: 0,
+              flex: 1,
+            }}
+          >
             {widgets.map((entry) => (
               <DraggableWidget key={entry.name} entry={entry} />
             ))}
           </div>
         </div>
       )}
-
-      <div style={{
-        padding: 12,
-        borderRadius: 12,
-        backgroundColor: '#eef2ff',
-        color: '#4338ca',
-        fontSize: 11,
-        lineHeight: 1.5,
-      }}>
-        Tipp: Ribbon fuer schnelles Einfuegen, Bibliothek fuer stoerungsfreie Auswahl und Drag-and-drop.
-      </div>
     </div>
   );
 };

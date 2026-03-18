@@ -15,7 +15,7 @@ export function createBlankProject(): Project {
     canvas: {
       width: 1920,  // YouTube 16:9 format
       height: 1080,
-      backgroundColor: '#000000',  // Black background for YouTube
+      backgroundColor: '#ffffff',
     },
     elements: [],
     metadata: {

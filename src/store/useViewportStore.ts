@@ -60,7 +60,7 @@ export const useViewportStore = create<ViewportStore>((set, get) => ({
   },
 
   fitToScreen: (containerW, containerH, canvasW, canvasH) => {
-    const padding = 80;
+    const padding = 28;
     const availW = containerW - padding;
     const availH = containerH - padding;
     const scale = clampZoom(Math.min(availW / canvasW, availH / canvasH, 1));
