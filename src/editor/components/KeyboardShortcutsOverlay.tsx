@@ -47,7 +47,7 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -58,14 +58,14 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
     >
       <div
         style={{
-          backgroundColor: '#1a1a2e',
+          backgroundColor: '#ffffff',
           borderRadius: 12,
           padding: 40,
           maxWidth: 700,
           width: '90%',
           maxHeight: '80vh',
           overflowY: 'auto',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -79,7 +79,7 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
           <h2 style={{
             fontSize: 28,
             fontWeight: 700,
-            color: '#fff',
+            color: '#1a1a2e',
             margin: 0,
           }}>
             Keyboard Shortcuts
@@ -101,8 +101,8 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
               justifyContent: 'center',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#252538';
-              e.currentTarget.style.color = '#fff';
+              e.currentTarget.style.backgroundColor = '#f0f0f4';
+              e.currentTarget.style.color = '#333';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -141,25 +141,25 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '12px 16px',
-                      backgroundColor: '#252538',
+                      backgroundColor: '#f5f5fa',
                       borderRadius: 8,
-                      border: '1px solid #2a2a3e',
+                      border: '1px solid #e0e0e8',
                     }}
                   >
                     <span style={{
                       fontSize: 14,
-                      color: '#ddd',
+                      color: '#333',
                     }}>
                       {shortcut.description}
                     </span>
                     <kbd style={{
                       padding: '4px 12px',
-                      backgroundColor: '#1a1a2e',
-                      border: '1px solid #333',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #d0d0da',
                       borderRadius: 6,
                       fontSize: 12,
                       fontWeight: 600,
-                      color: '#fff',
+                      color: '#333',
                       fontFamily: 'monospace',
                       whiteSpace: 'nowrap',
                     }}>
@@ -175,28 +175,28 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
         <div style={{
           marginTop: 30,
           paddingTop: 20,
-          borderTop: '1px solid #2a2a3e',
+          borderTop: '1px solid #e0e0e8',
           fontSize: 12,
-          color: '#666',
+          color: '#999',
           textAlign: 'center',
         }}>
           Press <kbd style={{
             padding: '2px 8px',
-            backgroundColor: '#252538',
-            border: '1px solid #333',
+            backgroundColor: '#f5f5fa',
+            border: '1px solid #d0d0da',
             borderRadius: 4,
             fontSize: 11,
             fontWeight: 600,
-            color: '#888',
+            color: '#666',
             fontFamily: 'monospace',
           }}>?</kbd> or <kbd style={{
             padding: '2px 8px',
-            backgroundColor: '#252538',
-            border: '1px solid #333',
+            backgroundColor: '#f5f5fa',
+            border: '1px solid #d0d0da',
             borderRadius: 4,
             fontSize: 11,
             fontWeight: 600,
-            color: '#888',
+            color: '#666',
             fontFamily: 'monospace',
           }}>Esc</kbd> to close this overlay
         </div>

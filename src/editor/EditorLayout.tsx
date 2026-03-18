@@ -103,13 +103,13 @@ export const EditorLayout: React.FC = () => {
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      backgroundColor: '#0f0f1e',
+      backgroundColor: '#f0f1f5',
     }}>
       {/* Top Toolbar */}
       <div style={{
         height: 60,
-        backgroundColor: '#1a1a2e',
-        borderBottom: '1px solid #2a2a3e',
+        backgroundColor: '#ffffff',
+        borderBottom: '1px solid #e0e0e8',
         display: 'flex',
         alignItems: 'center',
         padding: '0 20px',
@@ -118,7 +118,7 @@ export const EditorLayout: React.FC = () => {
         <h1 style={{
           fontSize: 20,
           fontWeight: 600,
-          color: '#ffffff',
+          color: '#1a1a2e',
         }}>
           Animation Builder
         </h1>
@@ -137,8 +137,8 @@ export const EditorLayout: React.FC = () => {
               width: 36,
               height: 36,
               backgroundColor: 'transparent',
-              color: canUndo ? '#ddd' : '#555',
-              border: '1px solid #2a2a3e',
+              color: canUndo ? '#444' : '#bbb',
+              border: '1px solid #e0e0e8',
               borderRadius: 6,
               fontSize: 16,
               cursor: canUndo ? 'pointer' : 'not-allowed',
@@ -149,13 +149,13 @@ export const EditorLayout: React.FC = () => {
             }}
             onMouseEnter={(e) => {
               if (canUndo) {
-                e.currentTarget.style.backgroundColor = '#252538';
-                e.currentTarget.style.borderColor = '#4a4a6e';
+                e.currentTarget.style.backgroundColor = '#f0f0f4';
+                e.currentTarget.style.borderColor = '#b0b0c0';
               }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = '#2a2a3e';
+              e.currentTarget.style.borderColor = '#e0e0e8';
             }}
           >
             ↩
@@ -169,8 +169,8 @@ export const EditorLayout: React.FC = () => {
               width: 36,
               height: 36,
               backgroundColor: 'transparent',
-              color: canRedo ? '#ddd' : '#555',
-              border: '1px solid #2a2a3e',
+              color: canRedo ? '#444' : '#bbb',
+              border: '1px solid #e0e0e8',
               borderRadius: 6,
               fontSize: 16,
               cursor: canRedo ? 'pointer' : 'not-allowed',
@@ -181,13 +181,13 @@ export const EditorLayout: React.FC = () => {
             }}
             onMouseEnter={(e) => {
               if (canRedo) {
-                e.currentTarget.style.backgroundColor = '#252538';
-                e.currentTarget.style.borderColor = '#4a4a6e';
+                e.currentTarget.style.backgroundColor = '#f0f0f4';
+                e.currentTarget.style.borderColor = '#b0b0c0';
               }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = '#2a2a3e';
+              e.currentTarget.style.borderColor = '#e0e0e8';
             }}
           >
             ↪
@@ -196,7 +196,7 @@ export const EditorLayout: React.FC = () => {
           <div style={{
             width: 1,
             height: 30,
-            backgroundColor: '#2a2a3e',
+            backgroundColor: '#e0e0e8',
           }} />
 
           <button
@@ -204,8 +204,8 @@ export const EditorLayout: React.FC = () => {
             style={{
               padding: '8px 16px',
               backgroundColor: 'transparent',
-              color: '#ddd',
-              border: '1px solid #2a2a3e',
+              color: '#444',
+              border: '1px solid #e0e0e8',
               borderRadius: 6,
               fontSize: 13,
               fontWeight: 600,
@@ -216,12 +216,12 @@ export const EditorLayout: React.FC = () => {
               gap: 6,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#252538';
-              e.currentTarget.style.borderColor = '#4a4a6e';
+              e.currentTarget.style.backgroundColor = '#f0f0f4';
+              e.currentTarget.style.borderColor = '#b0b0c0';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = '#2a2a3e';
+              e.currentTarget.style.borderColor = '#e0e0e8';
             }}
           >
             Neu
@@ -232,8 +232,8 @@ export const EditorLayout: React.FC = () => {
             style={{
               padding: '8px 16px',
               backgroundColor: 'transparent',
-              color: '#ddd',
-              border: '1px solid #2a2a3e',
+              color: '#444',
+              border: '1px solid #e0e0e8',
               borderRadius: 6,
               fontSize: 13,
               fontWeight: 600,
@@ -244,12 +244,12 @@ export const EditorLayout: React.FC = () => {
               gap: 6,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#252538';
-              e.currentTarget.style.borderColor = '#4a4a6e';
+              e.currentTarget.style.backgroundColor = '#f0f0f4';
+              e.currentTarget.style.borderColor = '#b0b0c0';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = '#2a2a3e';
+              e.currentTarget.style.borderColor = '#e0e0e8';
             }}
           >
             Templates
@@ -260,8 +260,8 @@ export const EditorLayout: React.FC = () => {
             style={{
               padding: '8px 16px',
               backgroundColor: isPlayingAll ? '#4CAF50' : 'transparent',
-              color: isPlayingAll ? '#fff' : '#ddd',
-              border: isPlayingAll ? '1px solid #4CAF50' : '1px solid #2a2a3e',
+              color: isPlayingAll ? '#fff' : '#444',
+              border: isPlayingAll ? '1px solid #4CAF50' : '1px solid #e0e0e8',
               borderRadius: 6,
               fontSize: 13,
               fontWeight: 600,
@@ -273,14 +273,14 @@ export const EditorLayout: React.FC = () => {
             }}
             onMouseEnter={(e) => {
               if (!isPlayingAll) {
-                e.currentTarget.style.backgroundColor = '#252538';
-                e.currentTarget.style.borderColor = '#4a4a6e';
+                e.currentTarget.style.backgroundColor = '#f0f0f4';
+                e.currentTarget.style.borderColor = '#b0b0c0';
               }
             }}
             onMouseLeave={(e) => {
               if (!isPlayingAll) {
                 e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = '#2a2a3e';
+                e.currentTarget.style.borderColor = '#e0e0e8';
               }
             }}
           >
@@ -290,7 +290,7 @@ export const EditorLayout: React.FC = () => {
           <div style={{
             width: 1,
             height: 30,
-            backgroundColor: '#2a2a3e',
+            backgroundColor: '#e0e0e8',
           }} />
 
           <button
@@ -298,8 +298,8 @@ export const EditorLayout: React.FC = () => {
             style={{
               padding: '8px 16px',
               backgroundColor: 'transparent',
-              color: '#ddd',
-              border: '1px solid #2a2a3e',
+              color: '#444',
+              border: '1px solid #e0e0e8',
               borderRadius: 6,
               fontSize: 13,
               fontWeight: 600,
@@ -310,12 +310,12 @@ export const EditorLayout: React.FC = () => {
               gap: 6,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#252538';
-              e.currentTarget.style.borderColor = '#4a4a6e';
+              e.currentTarget.style.backgroundColor = '#f0f0f4';
+              e.currentTarget.style.borderColor = '#b0b0c0';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = '#2a2a3e';
+              e.currentTarget.style.borderColor = '#e0e0e8';
             }}
           >
             Import
@@ -350,7 +350,7 @@ export const EditorLayout: React.FC = () => {
           <div style={{
             width: 1,
             height: 30,
-            backgroundColor: '#2a2a3e',
+            backgroundColor: '#e0e0e8',
           }} />
 
           <button
@@ -359,8 +359,8 @@ export const EditorLayout: React.FC = () => {
               width: 36,
               height: 36,
               backgroundColor: 'transparent',
-              color: '#ddd',
-              border: '1px solid #2a2a3e',
+              color: '#444',
+              border: '1px solid #e0e0e8',
               borderRadius: 6,
               fontSize: 16,
               fontWeight: 600,
@@ -371,12 +371,12 @@ export const EditorLayout: React.FC = () => {
               justifyContent: 'center',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#252538';
-              e.currentTarget.style.borderColor = '#4a4a6e';
+              e.currentTarget.style.backgroundColor = '#f0f0f4';
+              e.currentTarget.style.borderColor = '#b0b0c0';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = '#2a2a3e';
+              e.currentTarget.style.borderColor = '#e0e0e8';
             }}
             title="Keyboard Shortcuts (?)"
           >
@@ -401,7 +401,7 @@ export const EditorLayout: React.FC = () => {
       }}>
         {/* Sidebar (Left) - Resizable */}
         <ResizablePanel defaultWidth={450} minWidth={300} maxWidth={700} position="left">
-          <h2 style={{ fontSize: 16, marginBottom: 15, color: '#fff' }}>
+          <h2 style={{ fontSize: 16, marginBottom: 15, color: '#1a1a2e' }}>
             Assets
           </h2>
           <AssetLibrary />
@@ -412,7 +412,7 @@ export const EditorLayout: React.FC = () => {
 
         {/* Properties Panel (Right) - Resizable */}
         <ResizablePanel defaultWidth={350} minWidth={280} maxWidth={600} position="right">
-          <h2 style={{ fontSize: 16, marginBottom: 15, color: '#fff' }}>
+          <h2 style={{ fontSize: 16, marginBottom: 15, color: '#1a1a2e' }}>
             Properties
           </h2>
           <PropertiesPanel />
@@ -425,13 +425,13 @@ export const EditorLayout: React.FC = () => {
       {/* Status Bar */}
       <div style={{
         height: 30,
-        backgroundColor: '#1a1a2e',
-        borderTop: '1px solid #2a2a3e',
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #e0e0e8',
         display: 'flex',
         alignItems: 'center',
         padding: '0 20px',
         fontSize: 12,
-        color: '#666',
+        color: '#999',
       }}>
         Elements: {project.elements.length} | Ready
       </div>

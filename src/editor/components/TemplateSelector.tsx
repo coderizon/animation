@@ -35,7 +35,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -45,14 +45,14 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
     >
       <div
         style={{
-          backgroundColor: '#1a1a2e',
+          backgroundColor: '#ffffff',
           borderRadius: 12,
           padding: 40,
           maxWidth: 900,
           width: '90%',
           maxHeight: '80vh',
           overflowY: 'auto',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -61,7 +61,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
           <h2 style={{
             fontSize: 28,
             fontWeight: 700,
-            color: '#fff',
+            color: '#1a1a2e',
             marginBottom: 8,
           }}>
             Template auswählen
@@ -89,8 +89,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                 onClick={() => setSelectedTemplate(template.id)}
                 style={{
                   padding: 32,
-                  backgroundColor: isSelected ? '#2196F3' : '#252538',
-                  border: isSelected ? '3px solid #2196F3' : '2px solid #2a2a3e',
+                  backgroundColor: isSelected ? '#2196F3' : '#f0f0f4',
+                  border: isSelected ? '3px solid #2196F3' : '2px solid #e0e0e8',
                   borderRadius: 16,
                   cursor: 'pointer',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -103,22 +103,22 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                   transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                   boxShadow: isSelected
                     ? '0 8px 24px rgba(33, 150, 243, 0.3)'
-                    : '0 2px 8px rgba(0, 0, 0, 0.2)',
+                    : '0 2px 8px rgba(0, 0, 0, 0.06)',
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#2a2a3e';
-                    e.currentTarget.style.borderColor = '#4a4a6e';
+                    e.currentTarget.style.backgroundColor = '#e0e0e8';
+                    e.currentTarget.style.borderColor = '#b0b0c0';
                     e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.3)';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.08)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#252538';
-                    e.currentTarget.style.borderColor = '#2a2a3e';
+                    e.currentTarget.style.backgroundColor = '#f0f0f4';
+                    e.currentTarget.style.borderColor = '#e0e0e8';
                     e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)';
                   }
                 }}
               >
@@ -127,7 +127,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                   width: 120,
                   height: 120,
                   borderRadius: '50%',
-                  backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.04)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -145,7 +145,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                 <h3 style={{
                   fontSize: 20,
                   fontWeight: 700,
-                  color: isSelected ? '#fff' : '#ddd',
+                  color: isSelected ? '#fff' : '#444',
                   textAlign: 'center',
                   margin: 0,
                   letterSpacing: '-0.5px',
@@ -217,7 +217,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
               padding: '12px 24px',
               backgroundColor: 'transparent',
               color: '#888',
-              border: '1px solid #2a2a3e',
+              border: '1px solid #e0e0e8',
               borderRadius: 8,
               fontSize: 14,
               fontWeight: 600,
@@ -225,8 +225,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#252538';
-              e.currentTarget.style.color = '#ddd';
+              e.currentTarget.style.backgroundColor = '#f0f0f4';
+              e.currentTarget.style.color = '#444';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -240,8 +240,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
             disabled={!selectedTemplate}
             style={{
               padding: '12px 24px',
-              backgroundColor: selectedTemplate ? '#2196F3' : '#2a2a3e',
-              color: selectedTemplate ? '#fff' : '#666',
+              backgroundColor: selectedTemplate ? '#2196F3' : '#e0e0e8',
+              color: selectedTemplate ? '#fff' : '#999',
               border: 'none',
               borderRadius: 8,
               fontSize: 14,

@@ -62,9 +62,9 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
       ref={panelRef}
       style={{
         width: width,
-        backgroundColor: '#1a1a2e',
-        borderRight: position === 'left' ? '1px solid #2a2a3e' : 'none',
-        borderLeft: position === 'right' ? '1px solid #2a2a3e' : 'none',
+        backgroundColor: '#ffffff',
+        borderRight: position === 'left' ? '1px solid #e0e0e8' : 'none',
+        borderLeft: position === 'right' ? '1px solid #e0e0e8' : 'none',
         padding: 20,
         overflowY: 'auto',
         position: 'relative',
@@ -105,7 +105,7 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
             transform: 'translate(-50%, -50%)',
             width: 2,
             height: 40,
-            backgroundColor: isResizing ? '#2196F3' : '#4a4a6e',
+            backgroundColor: isResizing ? '#2196F3' : '#b0b0c0',
             borderRadius: 2,
             opacity: isResizing ? 1 : 0.5,
             transition: 'opacity 0.2s',

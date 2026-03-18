@@ -76,7 +76,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
         <h4 style={{
           fontSize: 12,
           fontWeight: 600,
-          color: '#aaa',
+          color: '#666',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
           marginBottom: 12,
@@ -96,8 +96,8 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 onClick={() => handleSelectPreset(preset.name)}
                 style={{
                   padding: '12px 8px',
-                  backgroundColor: isSelected ? '#2196F3' : '#252538',
-                  border: isSelected ? '2px solid #2196F3' : '2px solid #2a2a3e',
+                  backgroundColor: isSelected ? '#2196F3' : '#f0f0f4',
+                  border: isSelected ? '2px solid #2196F3' : '2px solid #e0e0e8',
                   borderRadius: 8,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
@@ -108,14 +108,14 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#2a2a3e';
-                    e.currentTarget.style.borderColor = '#4a4a6e';
+                    e.currentTarget.style.backgroundColor = '#e0e0e8';
+                    e.currentTarget.style.borderColor = '#b0b0c0';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#252538';
-                    e.currentTarget.style.borderColor = '#2a2a3e';
+                    e.currentTarget.style.backgroundColor = '#f0f0f4';
+                    e.currentTarget.style.borderColor = '#e0e0e8';
                   }
                 }}
               >
@@ -123,7 +123,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 <span style={{
                   fontSize: 11,
                   fontWeight: 500,
-                  color: isSelected ? '#fff' : '#ddd',
+                  color: isSelected ? '#fff' : '#444',
                   textAlign: 'center',
                   lineHeight: 1.2,
                 }}>
@@ -143,7 +143,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
             <label style={{
               fontSize: 12,
               fontWeight: 600,
-              color: '#aaa',
+              color: '#666',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: 8,
@@ -166,10 +166,10 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 style={{
                   flex: 1,
                   padding: '8px 12px',
-                  backgroundColor: '#252538',
-                  border: '1px solid #2a2a3e',
+                  backgroundColor: '#f0f0f4',
+                  border: '1px solid #e0e0e8',
                   borderRadius: 6,
-                  color: '#fff',
+                  color: '#1a1a2e',
                   fontSize: 13,
                   outline: 'none',
                   transition: 'border-color 0.2s',
@@ -178,7 +178,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                   e.currentTarget.style.borderColor = '#2196F3';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#2a2a3e';
+                  e.currentTarget.style.borderColor = '#e0e0e8';
                 }}
               />
               <span style={{
@@ -209,7 +209,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
             <label style={{
               fontSize: 12,
               fontWeight: 600,
-              color: '#aaa',
+              color: '#666',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: 8,
@@ -232,10 +232,10 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 style={{
                   flex: 1,
                   padding: '8px 12px',
-                  backgroundColor: '#252538',
-                  border: '1px solid #2a2a3e',
+                  backgroundColor: '#f0f0f4',
+                  border: '1px solid #e0e0e8',
                   borderRadius: 6,
-                  color: '#fff',
+                  color: '#1a1a2e',
                   fontSize: 13,
                   outline: 'none',
                   transition: 'border-color 0.2s',
@@ -244,7 +244,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                   e.currentTarget.style.borderColor = '#2196F3';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#2a2a3e';
+                  e.currentTarget.style.borderColor = '#e0e0e8';
                 }}
               />
               <span style={{
@@ -275,7 +275,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
             <label style={{
               fontSize: 12,
               fontWeight: 600,
-              color: '#aaa',
+              color: '#666',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: 8,
@@ -289,10 +289,10 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
               style={{
                 width: '100%',
                 padding: '8px 12px',
-                backgroundColor: '#252538',
-                border: '1px solid #2a2a3e',
+                backgroundColor: '#f0f0f4',
+                border: '1px solid #e0e0e8',
                 borderRadius: 6,
-                color: '#fff',
+                color: '#1a1a2e',
                 fontSize: 13,
                 outline: 'none',
                 cursor: 'pointer',
@@ -302,7 +302,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 e.currentTarget.style.borderColor = '#2196F3';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#2a2a3e';
+                e.currentTarget.style.borderColor = '#e0e0e8';
               }}
             >
               <option value="linear">Linear</option>
@@ -369,7 +369,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
       {/* Tip */}
       <div style={{
         padding: 10,
-        backgroundColor: '#252538',
+        backgroundColor: '#f0f0f4',
         borderRadius: 6,
         fontSize: 11,
         color: '#888',

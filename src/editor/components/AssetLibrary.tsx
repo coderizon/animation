@@ -2,7 +2,20 @@ import { useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { LogoAsset } from '../../types/animation';
 
-// Logo Categories with lobe-icons
+// Auto-discover all SVGs in public/assets/
+const svgModules = import.meta.glob('/public/assets/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+
+const autoLogos: LogoAsset[] = Object.entries(svgModules).map(([path, url]) => {
+  const filename = path.split('/').pop()!.replace('.svg', '');
+  const name = filename
+    .replace(/-color$/, '')
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+  return { id: filename, name, src: url };
+});
+
+// Logo Categories
 interface LogoCategory {
   id: string;
   name: string;
@@ -15,7 +28,7 @@ const categories: LogoCategory[] = [
     id: 'ai-icons',
     name: 'AI Icons',
     icon: 'AI',
-    logos: [],
+    logos: autoLogos,
   },
 ];
 
@@ -119,8 +132,8 @@ const DraggableShape: React.FC<{ shapeDef: ShapeDef }> = ({ shapeDef }) => {
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move',
         padding: 8,
-        backgroundColor: '#252538',
-        border: '2px solid #2a2a3e',
+        backgroundColor: '#f0f0f4',
+        border: '2px solid #e0e0e8',
         borderRadius: 8,
         display: 'flex',
         flexDirection: 'column',
@@ -130,16 +143,16 @@ const DraggableShape: React.FC<{ shapeDef: ShapeDef }> = ({ shapeDef }) => {
         userSelect: 'none',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#4a4a6e';
-        e.currentTarget.style.backgroundColor = '#2a2a3e';
+        e.currentTarget.style.borderColor = '#b0b0c0';
+        e.currentTarget.style.backgroundColor = '#e0e0e8';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#2a2a3e';
-        e.currentTarget.style.backgroundColor = '#252538';
+        e.currentTarget.style.borderColor = '#e0e0e8';
+        e.currentTarget.style.backgroundColor = '#f0f0f4';
       }}
     >
       <ShapePreview shape={shapeDef.shape} fill={shapeDef.fill} stroke={shapeDef.stroke} strokeWidth={shapeDef.strokeWidth} />
-      <span style={{ fontSize: 10, fontWeight: 500, color: '#ddd', textAlign: 'center' }}>
+      <span style={{ fontSize: 10, fontWeight: 500, color: '#444', textAlign: 'center' }}>
         {shapeDef.name}
       </span>
     </div>
@@ -176,8 +189,8 @@ const DraggableText: React.FC = () => {
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move',
         padding: 8,
-        backgroundColor: '#252538',
-        border: '2px solid #2a2a3e',
+        backgroundColor: '#f0f0f4',
+        border: '2px solid #e0e0e8',
         borderRadius: 8,
         display: 'flex',
         flexDirection: 'column',
@@ -187,16 +200,16 @@ const DraggableText: React.FC = () => {
         userSelect: 'none',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#4a4a6e';
-        e.currentTarget.style.backgroundColor = '#2a2a3e';
+        e.currentTarget.style.borderColor = '#b0b0c0';
+        e.currentTarget.style.backgroundColor = '#e0e0e8';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#2a2a3e';
-        e.currentTarget.style.backgroundColor = '#252538';
+        e.currentTarget.style.borderColor = '#e0e0e8';
+        e.currentTarget.style.backgroundColor = '#f0f0f4';
       }}
     >
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#ddd', lineHeight: 1 }}>T</div>
-      <span style={{ fontSize: 10, fontWeight: 500, color: '#ddd', textAlign: 'center' }}>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#444', lineHeight: 1 }}>T</div>
+      <span style={{ fontSize: 10, fontWeight: 500, color: '#444', textAlign: 'center' }}>
         Text
       </span>
     </div>
@@ -228,8 +241,8 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move',
         padding: 10,
-        backgroundColor: '#252538',
-        border: '2px solid #2a2a3e',
+        backgroundColor: '#f0f0f4',
+        border: '2px solid #e0e0e8',
         borderRadius: 8,
         display: 'flex',
         flexDirection: 'column',
@@ -240,13 +253,13 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
         minHeight: 90,
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#4a4a6e';
-        e.currentTarget.style.backgroundColor = '#2a2a3e';
+        e.currentTarget.style.borderColor = '#b0b0c0';
+        e.currentTarget.style.backgroundColor = '#e0e0e8';
         e.currentTarget.style.transform = 'scale(1.05)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#2a2a3e';
-        e.currentTarget.style.backgroundColor = '#252538';
+        e.currentTarget.style.borderColor = '#e0e0e8';
+        e.currentTarget.style.backgroundColor = '#f0f0f4';
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
@@ -264,7 +277,7 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
         style={{
           fontSize: 10,
           fontWeight: 500,
-          color: '#ddd',
+          color: '#444',
           textAlign: 'center',
           lineHeight: 1.2,
         }}
@@ -282,8 +295,8 @@ const Folder: React.FC<{ category: LogoCategory; onClick: () => void }> = ({ cat
       onClick={onClick}
       style={{
         padding: 20,
-        backgroundColor: '#252538',
-        border: '2px solid #2a2a3e',
+        backgroundColor: '#f0f0f4',
+        border: '2px solid #e0e0e8',
         borderRadius: 12,
         display: 'flex',
         flexDirection: 'column',
@@ -294,13 +307,13 @@ const Folder: React.FC<{ category: LogoCategory; onClick: () => void }> = ({ cat
         userSelect: 'none',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#4a4a6e';
-        e.currentTarget.style.backgroundColor = '#2a2a3e';
+        e.currentTarget.style.borderColor = '#b0b0c0';
+        e.currentTarget.style.backgroundColor = '#e0e0e8';
         e.currentTarget.style.transform = 'scale(1.05)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#2a2a3e';
-        e.currentTarget.style.backgroundColor = '#252538';
+        e.currentTarget.style.borderColor = '#e0e0e8';
+        e.currentTarget.style.backgroundColor = '#f0f0f4';
         e.currentTarget.style.transform = 'scale(1)';
       }}
     >
@@ -308,7 +321,7 @@ const Folder: React.FC<{ category: LogoCategory; onClick: () => void }> = ({ cat
       <div style={{
         fontSize: 14,
         fontWeight: 600,
-        color: '#fff',
+        color: '#1a1a2e',
         textAlign: 'center',
       }}>
         {category.name}
@@ -375,7 +388,7 @@ export const AssetLibrary: React.FC = () => {
       </div>
 
       {/* Divider */}
-      <div style={{ height: 1, backgroundColor: '#2a2a3e' }} />
+      <div style={{ height: 1, backgroundColor: '#e0e0e8' }} />
 
       {/* Logo Categories */}
       <div>
@@ -415,7 +428,7 @@ export const AssetLibrary: React.FC = () => {
               Back
             </span>
             <span>/</span>
-            <span style={{ color: '#ddd' }}>{selectedCategory.name}</span>
+            <span style={{ color: '#444' }}>{selectedCategory.name}</span>
           </div>
         )}
       </div>
@@ -450,7 +463,7 @@ export const AssetLibrary: React.FC = () => {
       <div
         style={{
           padding: 10,
-          backgroundColor: '#252538',
+          backgroundColor: '#f0f0f4',
           borderRadius: 6,
           fontSize: 11,
           color: '#888',

@@ -15,7 +15,7 @@ export const PropertiesPanel: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        color: '#666',
+        color: '#999',
         textAlign: 'center',
         padding: 20,
       }}>
@@ -198,15 +198,15 @@ export const PropertiesPanel: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '8px 12px',
-                  backgroundColor: '#252538',
-                  border: '1px solid #2a2a3e',
+                  backgroundColor: '#f0f0f4',
+                  border: '1px solid #e0e0e8',
                   borderRadius: 6,
-                  color: '#fff',
+                  color: '#1a1a2e',
                   fontSize: 13,
                   outline: 'none',
                 }}
                 onFocus={(e) => { e.currentTarget.style.borderColor = '#2196F3'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#2a2a3e'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#e0e0e8'; }}
               />
               <ColorInput
                 label="Farbe"
@@ -232,7 +232,7 @@ export const PropertiesPanel: React.FC = () => {
 
       {/* Actions */}
       <div style={{
-        borderTop: '1px solid #2a2a3e',
+        borderTop: '1px solid #e0e0e8',
         paddingTop: 20,
         marginTop: 'auto',
       }}>
@@ -280,7 +280,7 @@ const PropertySection: React.FC<PropertySectionProps> = ({ title, children }) =>
       <h3 style={{
         fontSize: 13,
         fontWeight: 600,
-        color: '#aaa',
+        color: '#666',
         textTransform: 'uppercase',
         letterSpacing: '0.5px',
         marginBottom: 5,
@@ -309,7 +309,7 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, allowNo
       alignItems: 'center',
       gap: 10,
     }}>
-      <label style={{ fontSize: 13, color: '#ddd', minWidth: 60 }}>
+      <label style={{ fontSize: 13, color: '#444', minWidth: 60 }}>
         {label}
       </label>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
@@ -321,9 +321,9 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, allowNo
           style={{
             width: 32,
             height: 32,
-            border: '2px solid #2a2a3e',
+            border: '2px solid #e0e0e8',
             borderRadius: 6,
-            backgroundColor: '#252538',
+            backgroundColor: '#f0f0f4',
             cursor: isNone ? 'not-allowed' : 'pointer',
             padding: 2,
             opacity: isNone ? 0.4 : 1,
@@ -339,7 +339,7 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, allowNo
               padding: '4px 8px',
               backgroundColor: isNone ? '#2196F3' : 'transparent',
               color: isNone ? '#fff' : '#888',
-              border: '1px solid #2a2a3e',
+              border: '1px solid #e0e0e8',
               borderRadius: 4,
               fontSize: 10,
               fontWeight: 600,
@@ -379,7 +379,7 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
     }}>
       <label style={{
         fontSize: 13,
-        color: '#ddd',
+        color: '#444',
         minWidth: 60,
       }}>
         {label}
@@ -393,10 +393,10 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
         style={{
           flex: 1,
           padding: '8px 12px',
-          backgroundColor: '#252538',
-          border: '1px solid #2a2a3e',
+          backgroundColor: '#f0f0f4',
+          border: '1px solid #e0e0e8',
           borderRadius: 6,
-          color: '#fff',
+          color: '#1a1a2e',
           fontSize: 13,
           outline: 'none',
           transition: 'border-color 0.2s',
@@ -405,7 +405,7 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
           e.currentTarget.style.borderColor = '#2196F3';
         }}
         onBlur={(e) => {
-          e.currentTarget.style.borderColor = '#2a2a3e';
+          e.currentTarget.style.borderColor = '#e0e0e8';
         }}
       />
       {unit && (

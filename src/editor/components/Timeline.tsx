@@ -29,8 +29,8 @@ export const Timeline: React.FC = () => {
   return (
     <div style={{
       height: 140,
-      backgroundColor: '#1a1a2e',
-      borderTop: '1px solid #2a2a3e',
+      backgroundColor: '#ffffff',
+      borderTop: '1px solid #e0e0e8',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
@@ -41,14 +41,14 @@ export const Timeline: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '6px 16px',
-        borderBottom: '1px solid #2a2a3e',
+        borderBottom: '1px solid #e0e0e8',
         minHeight: 32,
       }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Timeline
         </span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: '#666' }}>
+          <span style={{ fontSize: 11, color: '#999' }}>
             {animatedElements.length} animated
           </span>
           <button
@@ -57,8 +57,8 @@ export const Timeline: React.FC = () => {
             style={{
               padding: '4px 12px',
               backgroundColor: isPlayingAll ? '#4CAF50' : 'transparent',
-              color: isPlayingAll ? '#fff' : '#aaa',
-              border: '1px solid #2a2a3e',
+              color: isPlayingAll ? '#fff' : '#666',
+              border: '1px solid #e0e0e8',
               borderRadius: 4,
               fontSize: 11,
               fontWeight: 600,
@@ -80,11 +80,11 @@ export const Timeline: React.FC = () => {
         <div style={{
           minWidth: 120,
           maxWidth: 120,
-          borderRight: '1px solid #2a2a3e',
+          borderRight: '1px solid #e0e0e8',
           overflow: 'hidden',
         }}>
           {/* Time ruler spacer */}
-          <div style={{ height: 20, borderBottom: '1px solid #2a2a3e' }} />
+          <div style={{ height: 20, borderBottom: '1px solid #e0e0e8' }} />
           {animatedElements.map((el) => (
             <div
               key={el.id}
@@ -95,13 +95,13 @@ export const Timeline: React.FC = () => {
                 alignItems: 'center',
                 padding: '0 8px',
                 fontSize: 11,
-                color: el.id === selectedElementId ? '#2196F3' : '#aaa',
+                color: el.id === selectedElementId ? '#2196F3' : '#666',
                 cursor: 'pointer',
                 backgroundColor: el.id === selectedElementId ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-                borderBottom: '1px solid #1f1f35',
+                borderBottom: '1px solid #e8e8ef',
               }}
             >
               {el.type === 'text' && el.content.type === 'text' ? el.content.text : el.type}
@@ -109,7 +109,7 @@ export const Timeline: React.FC = () => {
             </div>
           ))}
           {animatedElements.length === 0 && (
-            <div style={{ padding: '12px 8px', fontSize: 11, color: '#555' }}>
+            <div style={{ padding: '12px 8px', fontSize: 11, color: '#bbb' }}>
               No animations yet
             </div>
           )}
@@ -125,7 +125,7 @@ export const Timeline: React.FC = () => {
           <div style={{
             height: 20,
             position: 'relative',
-            borderBottom: '1px solid #2a2a3e',
+            borderBottom: '1px solid #e0e0e8',
             minWidth: timelineWidth,
           }}>
             {markers.map((t) => (
@@ -143,7 +143,7 @@ export const Timeline: React.FC = () => {
               >
                 <span style={{
                   fontSize: 9,
-                  color: '#555',
+                  color: '#bbb',
                   fontFamily: 'monospace',
                   marginLeft: 2,
                 }}>
@@ -155,7 +155,7 @@ export const Timeline: React.FC = () => {
                   top: 0,
                   width: 1,
                   height: '100%',
-                  backgroundColor: '#2a2a3e',
+                  backgroundColor: '#e0e0e8',
                 }} />
               </div>
             ))}
@@ -175,7 +175,7 @@ export const Timeline: React.FC = () => {
                   height: 24,
                   position: 'relative',
                   minWidth: timelineWidth,
-                  borderBottom: '1px solid #1f1f35',
+                  borderBottom: '1px solid #e8e8ef',
                   cursor: 'pointer',
                 }}
               >
@@ -186,9 +186,9 @@ export const Timeline: React.FC = () => {
                   width: Math.max(duration * pxPerMs, 4),
                   top: 4,
                   height: 16,
-                  backgroundColor: isSelected ? '#2196F3' : '#3a3a5e',
+                  backgroundColor: isSelected ? '#2196F3' : '#b8c0d8',
                   borderRadius: 3,
-                  border: isSelected ? '1px solid #64B5F6' : '1px solid #4a4a6e',
+                  border: isSelected ? '1px solid #64B5F6' : '1px solid #b0b0c0',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -196,7 +196,7 @@ export const Timeline: React.FC = () => {
                 }}>
                   <span style={{
                     fontSize: 9,
-                    color: isSelected ? '#fff' : '#999',
+                    color: isSelected ? '#fff' : '#777',
                     whiteSpace: 'nowrap',
                     padding: '0 4px',
                   }}>

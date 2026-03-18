@@ -35,11 +35,11 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
-        backgroundColor: '#1a1a2e',
-        border: '1px solid #2a2a3e',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e0e0e8',
         borderRadius: 8,
         padding: 8,
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
         zIndex: 100,
       }}
     >
@@ -51,7 +51,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
           width: 40,
           height: 40,
           backgroundColor: 'transparent',
-          color: currentZoom >= zoomLevels[zoomLevels.length - 1] ? '#444' : '#ddd',
+          color: currentZoom >= zoomLevels[zoomLevels.length - 1] ? '#444' : '#444',
           border: 'none',
           borderRadius: 6,
           fontSize: 20,
@@ -63,7 +63,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
         }}
         onMouseEnter={(e) => {
           if (currentZoom < zoomLevels[zoomLevels.length - 1]) {
-            e.currentTarget.style.backgroundColor = '#252538';
+            e.currentTarget.style.backgroundColor = '#f0f0f4';
           }
         }}
         onMouseLeave={(e) => {
@@ -85,8 +85,8 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
           fontSize: 11,
           fontWeight: 600,
           color: '#888',
-          borderTop: '1px solid #2a2a3e',
-          borderBottom: '1px solid #2a2a3e',
+          borderTop: '1px solid #e0e0e8',
+          borderBottom: '1px solid #e0e0e8',
           padding: '4px 0',
         }}
       >
@@ -101,7 +101,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
           width: 40,
           height: 40,
           backgroundColor: 'transparent',
-          color: currentZoom <= zoomLevels[0] ? '#444' : '#ddd',
+          color: currentZoom <= zoomLevels[0] ? '#444' : '#444',
           border: 'none',
           borderRadius: 6,
           fontSize: 20,
@@ -113,7 +113,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
         }}
         onMouseEnter={(e) => {
           if (currentZoom > zoomLevels[0]) {
-            e.currentTarget.style.backgroundColor = '#252538';
+            e.currentTarget.style.backgroundColor = '#f0f0f4';
           }
         }}
         onMouseLeave={(e) => {
@@ -131,7 +131,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
           width: 40,
           height: 40,
           backgroundColor: 'transparent',
-          color: '#ddd',
+          color: '#444',
           border: 'none',
           borderRadius: 6,
           fontSize: 16,
@@ -141,11 +141,11 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
           alignItems: 'center',
           justifyContent: 'center',
           marginTop: 4,
-          borderTop: '1px solid #2a2a3e',
+          borderTop: '1px solid #e0e0e8',
           paddingTop: 8,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#252538';
+          e.currentTarget.style.backgroundColor = '#f0f0f4';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
