@@ -1,0 +1,191 @@
+{
+  "id": "template-logo-showcase",
+  "name": "Logo Showcase",
+  "version": "1.0",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "backgroundColor": "#0f0f1e"
+  },
+  "elements": [
+    {
+      "id": "title",
+      "type": "text",
+      "position": { "x": 610, "y": 100 },
+      "size": { "width": 700, "height": 80 },
+      "rotation": 0,
+      "zIndex": 10,
+      "content": {
+        "text": "AI Logo Showcase",
+        "fontSize": 64,
+        "fontFamily": "Arial, sans-serif",
+        "color": "#ffffff",
+        "fontWeight": 700
+      },
+      "animation": {
+        "preset": "fadeIn",
+        "delay": 0,
+        "duration": 1000,
+        "easing": "easeOut"
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "deepseek-bounce",
+      "type": "logo",
+      "position": { "x": 360, "y": 400 },
+      "size": { "width": 150, "height": 150 },
+      "rotation": 0,
+      "zIndex": 5,
+      "content": {
+        "src": "/assets/deepseek.svg",
+        "alt": "DeepSeek"
+      },
+      "animation": {
+        "preset": "bounce",
+        "delay": 800,
+        "duration": 1000,
+        "easing": "bounce"
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "meta-scale",
+      "type": "logo",
+      "position": { "x": 885, "y": 400 },
+      "size": { "width": 150, "height": 150 },
+      "rotation": 0,
+      "zIndex": 5,
+      "content": {
+        "src": "/assets/meta.svg",
+        "alt": "Meta"
+      },
+      "animation": {
+        "preset": "scaleIn",
+        "delay": 1200,
+        "duration": 800,
+        "easing": "spring"
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "mistral-rotate",
+      "type": "logo",
+      "position": { "x": 1410, "y": 400 },
+      "size": { "width": 150, "height": 150 },
+      "rotation": 0,
+      "zIndex": 5,
+      "content": {
+        "src": "/assets/mistral.svg",
+        "alt": "Mistral"
+      },
+      "animation": {
+        "preset": "rotate",
+        "delay": 1600,
+        "duration": 1000,
+        "easing": "easeInOut"
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "label-bounce",
+      "type": "text",
+      "position": { "x": 370, "y": 580 },
+      "size": { "width": 130, "height": 40 },
+      "rotation": 0,
+      "zIndex": 10,
+      "content": {
+        "text": "Bounce",
+        "fontSize": 20,
+        "fontFamily": "Arial, sans-serif",
+        "color": "#888888",
+        "fontWeight": 500
+      },
+      "animation": {
+        "preset": "fadeIn",
+        "delay": 1800,
+        "duration": 600,
+        "easing": "easeOut"
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "label-scale",
+      "type": "text",
+      "position": { "x": 905, "y": 580 },
+      "size": { "width": 110, "height": 40 },
+      "rotation": 0,
+      "zIndex": 10,
+      "content": {
+        "text": "Scale",
+        "fontSize": 20,
+        "fontFamily": "Arial, sans-serif",
+        "color": "#888888",
+        "fontWeight": 500
+      },
+      "animation": {
+        "preset": "fadeIn",
+        "delay": 2000,
+        "duration": 600,
+        "easing": "easeOut"
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "label-rotate",
+      "type": "text",
+      "position": { "x": 1430, "y": 580 },
+      "size": { "width": 110, "height": 40 },
+      "rotation": 0,
+      "zIndex": 10,
+      "content": {
+        "text": "Rotate",
+        "fontSize": 20,
+        "fontFamily": "Arial, sans-serif",
+        "color": "#888888",
+        "fontWeight": 500
+      },
+      "animation": {
+        "preset": "fadeIn",
+        "delay": 2200,
+        "duration": 600,
+        "easing": "easeOut"
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "footer",
+      "type": "text",
+      "position": { "x": 660, "y": 900 },
+      "size": { "width": 600, "height": 50 },
+      "rotation": 0,
+      "zIndex": 10,
+      "content": {
+        "text": "Created with Animation Builder",
+        "fontSize": 24,
+        "fontFamily": "Arial, sans-serif",
+        "color": "#555555",
+        "fontWeight": 400
+      },
+      "animation": {
+        "preset": "fadeIn",
+        "delay": 2800,
+        "duration": 1000,
+        "easing": "easeOut"
+      },
+      "visible": true,
+      "locked": false
+    }
+  ],
+  "metadata": {
+    "createdAt": "2026-03-17T16:00:00Z",
+    "updatedAt": "2026-03-17T16:00:00Z"
+  }
+}
