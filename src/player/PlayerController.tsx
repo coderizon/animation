@@ -105,7 +105,7 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
           .filter((el) => el.visible)
           .sort((a, b) => a.zIndex - b.zIndex)
           .map((element) => {
-            const animationConfig = element.type !== 'widget' && element.animation
+            const animationConfig = element.animation
               ? animationPresets[element.animation.preset]
               : null;
 
@@ -124,7 +124,6 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
                 animate: 'visible',
                 variants: cleanVariants,
                 transition: {
-                  delay: (element.animation?.delay || 0) / 1000,
                   duration: isSpring ? undefined : (element.animation?.duration || 600) / 1000,
                   ease: isSpring ? undefined : easing,
                   type: isSpring ? 'spring' : 'tween',
@@ -133,6 +132,9 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
                 },
               };
             })();
+
+            const animDelay = element.animation?.delay || 0;
+            const hiddenBeforeDelay = animDelay > 0 && currentTime < animDelay;
 
             const interp = getInterpolatedProperties(element.keyframes, currentTime);
             const posX = interp ? interp.x : element.position.x;
@@ -153,6 +155,7 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
                   height: h,
                   transform: `rotate(${rot}deg)`,
                   zIndex: element.zIndex,
+                  display: hiddenBeforeDelay ? 'none' : undefined,
                   ...(element.clip ? {
                     clipPath: `inset(${element.clip.top}% ${element.clip.right}% ${element.clip.bottom}% ${element.clip.left}%)`,
                   } : {}),

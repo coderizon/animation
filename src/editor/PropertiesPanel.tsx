@@ -313,12 +313,10 @@ export const PropertiesPanel: React.FC = () => {
         );
       })()}
 
-      {/* Animation (not for widgets) */}
-      {selectedElement.type !== 'widget' && (
-        <PropertySection title="Animation">
-          <AnimationPicker elementId={selectedElement.id} />
-        </PropertySection>
-      )}
+      {/* Animation */}
+      <PropertySection title="Animation">
+        <AnimationPicker elementId={selectedElement.id} />
+      </PropertySection>
 
       {/* Keyframes */}
       <PropertySection title="Keyframes">

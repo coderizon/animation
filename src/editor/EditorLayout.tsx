@@ -441,7 +441,7 @@ export const EditorLayout: React.FC = () => {
         overflow: 'hidden',
       }}>
         {/* Sidebar (Left) - Resizable */}
-        <ResizablePanel defaultWidth={450} minWidth={150} maxWidth={700} position="left">
+        <ResizablePanel defaultWidth={225} minWidth={150} maxWidth={700} position="left">
           <h2 style={{ fontSize: 16, marginBottom: 15, color: '#1a1a2e' }}>
             Assets
           </h2>
@@ -452,7 +452,7 @@ export const EditorLayout: React.FC = () => {
         <Canvas />
 
         {/* Properties Panel (Right) - Resizable */}
-        <ResizablePanel defaultWidth={350} minWidth={150} maxWidth={600} position="right">
+        <ResizablePanel defaultWidth={280} minWidth={150} maxWidth={600} position="right">
           <h2 style={{ fontSize: 16, marginBottom: 15, color: '#1a1a2e' }}>
             Properties
           </h2>

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
-import { ShapeContent, TextContent, Keyframe } from '../../types/project';
+import { ShapeContent, TextContent, WidgetContent, Keyframe } from '../../types/project';
 
 export const Timeline: React.FC = () => {
   const project = useProjectStore((state) => state.project);
@@ -66,14 +66,36 @@ export const Timeline: React.FC = () => {
   const maxTime = Math.max(
     3000,
     maxKeyframeTime + 500,
-    ...project.elements.map((el) =>
-      el.animation && el.animation.preset !== 'none'
-        ? (el.animation.delay || 0) + (el.animation.duration || 600)
-        : 0
-    )
+    ...project.elements.map((el) => {
+      let t = 0;
+      const delay = el.animation?.delay || 0;
+      if (el.animation && el.animation.preset !== 'none') {
+        t = delay + (el.animation.duration || 600);
+      }
+      if (el.content.type === 'widget') {
+        const wDur = (el.content.durationInFrames / el.content.fps) * 1000;
+        t = Math.max(t, delay + wDur);
+      }
+      return t;
+    })
   );
-  const timelineWidth = 600;
-  const pxPerMs = timelineWidth / maxTime;
+  // Measure tracks container width for dynamic scaling
+  const [tracksWidth, setTracksWidth] = useState(600);
+  useEffect(() => {
+    if (!tracksRef.current) return;
+    const obs = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setTracksWidth(entry.contentRect.width);
+      }
+    });
+    obs.observe(tracksRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  // Use a fixed px/ms scale that makes bars readable, and let the timeline scroll
+  const minPxPerMs = 0.15;  // minimum scale
+  const pxPerMs = Math.max(minPxPerMs, tracksWidth / maxTime);
+  const timelineWidth = Math.max(tracksWidth, maxTime * pxPerMs);
 
   // Time markers
   const markerInterval = maxTime <= 3000 ? 500 : maxTime <= 6000 ? 1000 : 2000;
@@ -194,7 +216,10 @@ export const Timeline: React.FC = () => {
       const dxMs = dxPx / pxPerMs;
 
       const el = useProjectStore.getState().project.elements.find((el) => el.id === elementId);
-      if (!el || !el.animation) return;
+      if (!el) return;
+
+      // Create animation config if it doesn't exist (e.g. widget bars) - use 'none' so only timing is controlled
+      const anim = el.animation || { preset: 'none' as const, delay: startDelay, duration: startDuration, easing: 'easeOut' as const };
 
       let newDelay = startDelay;
       let newDuration = startDuration;
@@ -216,7 +241,7 @@ export const Timeline: React.FC = () => {
       newDuration = Math.max(100, Math.round(newDuration / 50) * 50);
 
       updateElementSilent(elementId, {
-        animation: { ...el.animation, delay: newDelay, duration: newDuration },
+        animation: { ...anim, delay: newDelay, duration: newDuration },
       });
     };
 
@@ -725,6 +750,100 @@ export const Timeline: React.FC = () => {
                       {/* Right resize handle */}
                       <div
                         onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-right', delay, duration)}
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 0,
+                          width: 6,
+                          height: '100%',
+                          cursor: 'ew-resize',
+                          borderRadius: '0 3px 3px 0',
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
+
+                {/* Default element bar (if no animation bar) - shows element presence */}
+                {!hasAnimation && el.content.type !== 'widget' && (
+                  <div style={{
+                    position: 'absolute',
+                    left: 0,
+                    width: Math.max(60, 500 * pxPerMs),
+                    top: 5,
+                    height: 18,
+                    backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.25)' : 'rgba(0,0,0,0.06)',
+                    borderRadius: 3,
+                    border: isSelected ? '1px dashed #64B5F6' : '1px dashed #ccc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    pointerEvents: 'none',
+                  }}>
+                    <span style={{
+                      fontSize: 9,
+                      color: isSelected ? '#2196F3' : '#aaa',
+                      whiteSpace: 'nowrap',
+                      padding: '0 8px',
+                      fontStyle: 'italic',
+                    }}>
+                      keine Animation
+                    </span>
+                  </div>
+                )}
+
+                {/* Widget duration bar (if no visual animation bar) */}
+                {!hasAnimation && el.content.type === 'widget' && (() => {
+                  const wc = el.content as WidgetContent;
+                  const wDuration = (wc.durationInFrames / wc.fps) * 1000;
+                  const wDelay = el.animation?.delay || 0;
+                  const wBarWidth = Math.max(wDuration * pxPerMs, 20);
+                  return (
+                    <div
+                      onMouseDown={(e) => handleBarMouseDown(e, el.id, 'move', wDelay, wDuration)}
+                      style={{
+                        position: 'absolute',
+                        left: wDelay * pxPerMs,
+                        width: wBarWidth,
+                        top: 5,
+                        height: 18,
+                        backgroundColor: isSelected ? '#7C4DFF' : '#d1c4e9',
+                        borderRadius: 3,
+                        border: isSelected ? '1px solid #B388FF' : '1px solid #b0b0c0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        cursor: 'grab',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {/* Left resize handle */}
+                      <div
+                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-left', wDelay, wDuration)}
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          width: 6,
+                          height: '100%',
+                          cursor: 'ew-resize',
+                          borderRadius: '3px 0 0 3px',
+                        }}
+                      />
+                      <span style={{
+                        fontSize: 9,
+                        color: isSelected ? '#fff' : '#777',
+                        whiteSpace: 'nowrap',
+                        padding: '0 8px',
+                        pointerEvents: 'none',
+                      }}>
+                        {wc.widgetName}
+                      </span>
+                      {/* Right resize handle */}
+                      <div
+                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-right', wDelay, wDuration)}
                         style={{
                           position: 'absolute',
                           right: 0,

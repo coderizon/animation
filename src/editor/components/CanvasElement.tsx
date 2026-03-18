@@ -37,7 +37,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const isPreviewing = previewingElementId === element.id;
-  const shouldAnimate = isPreviewing || isPlayingAll;
+  const animDelay = element.animation?.delay || 0;
+  const isPlayback = isPlayingAll || playbackState === 'paused';
+  const pastDelay = isPreviewing || (isPlayback && currentTime >= animDelay);
+  const shouldAnimate = isPreviewing || (isPlayingAll && pastDelay);
 
   // Refs for drag/resize to avoid stale closures
   const dragStart = useRef({ mouseX: 0, mouseY: 0, elX: 0, elY: 0 });
@@ -45,13 +48,22 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const snapshotRef = useRef<typeof project | null>(null);
   // For multi-drag: initial positions of all selected elements
   const multiDragStartPositions = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const prevPastDelay = useRef(false);
 
-  // Trigger re-animation
+  // Trigger animation when crossing the delay threshold
   useEffect(() => {
-    if (shouldAnimate) {
+    if (pastDelay && !prevPastDelay.current) {
       setAnimationKey((prev) => prev + 1);
     }
-  }, [shouldAnimate]);
+    prevPastDelay.current = pastDelay;
+  }, [pastDelay]);
+
+  // Reset when playback stops
+  useEffect(() => {
+    if (playbackState === 'stopped') {
+      prevPastDelay.current = false;
+    }
+  }, [playbackState]);
 
   // --- DRAG (native mouse events) ---
   const handleDragStart = useCallback((e: React.MouseEvent) => {
@@ -357,7 +369,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   };
 
   // --- Animation ---
-  const animationConfig = element.type !== 'widget' && element.animation && shouldAnimate
+  const animationConfig = element.animation && shouldAnimate
     ? animationPresets[element.animation.preset]
     : null;
 
@@ -382,7 +394,6 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       animate: 'visible',
       variants: cleanVariants,
       transition: {
-        delay: (element.animation?.delay || 0) / 1000,
         duration: isSpring ? undefined : (element.animation?.duration || 600) / 1000,
         ease: isSpring ? undefined : easing,
         type: isSpring ? 'spring' : 'tween',
@@ -392,8 +403,11 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     };
   })();
 
+  // Hide element before its delay during playback
+  const hiddenBeforeDelay = isPlayback && !isPreviewing && animDelay > 0 && currentTime < animDelay;
+
   // Full keyframe interpolation during playback or paused state
-  const showInterpolated = playbackState === 'playing' || playbackState === 'paused';
+  const showInterpolated = isPlayback;
   const interpolated = showInterpolated
     ? getInterpolatedProperties(element.keyframes, currentTime)
     : null;
@@ -422,7 +436,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         border: isSelected ? '2px solid #2196F3' : '1px solid transparent',
         boxShadow: isSelected ? '0 0 0 1px #2196F3' : 'none',
         pointerEvents: element.locked ? 'none' : 'auto',
-        display: element.visible ? 'flex' : 'none',
+        display: element.visible && !hiddenBeforeDelay ? 'flex' : 'none',
         alignItems: 'center',
         justifyContent: 'center',
         userSelect: 'none',
