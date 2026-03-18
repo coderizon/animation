@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 
 export const Timeline: React.FC = () => {
@@ -15,6 +15,8 @@ export const Timeline: React.FC = () => {
   const isPlayingAll = useProjectStore((state) => state.isPlayingAll);
   const currentTime = useProjectStore((state) => state.currentTime);
   const setCurrentTime = useProjectStore((state) => state.setCurrentTime);
+  const updateElementSilent = useProjectStore((state) => state.updateElementSilent);
+  const pushSnapshot = useProjectStore((state) => state.pushSnapshot);
 
   // Inline rename state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -28,6 +30,17 @@ export const Timeline: React.FC = () => {
   // Scrubbing
   const isScrubbing = useRef(false);
   const tracksRef = useRef<HTMLDivElement>(null);
+
+  // Bar drag/resize state
+  const barDragRef = useRef<{
+    type: 'move' | 'resize-left' | 'resize-right';
+    elementId: string;
+    startMouseX: number;
+    startDelay: number;
+    startDuration: number;
+    snapshot: typeof project;
+  } | null>(null);
+  const [barDragActive, setBarDragActive] = useState(false);
 
   // Reverse order: highest layer first
   const elements = [...project.elements].reverse();
@@ -118,6 +131,81 @@ export const Timeline: React.FC = () => {
     window.addEventListener('mousemove', handleScrubMove);
     window.addEventListener('mouseup', handleScrubEnd);
   }, [pxPerMs, maxTime, setCurrentTime]);
+
+  // Bar drag/resize handlers
+  const handleBarMouseDown = useCallback((
+    e: React.MouseEvent,
+    elementId: string,
+    type: 'move' | 'resize-left' | 'resize-right',
+    delay: number,
+    duration: number,
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const snapshot = JSON.parse(JSON.stringify(project));
+    barDragRef.current = {
+      type,
+      elementId,
+      startMouseX: e.clientX,
+      startDelay: delay,
+      startDuration: duration,
+      snapshot,
+    };
+    setBarDragActive(true);
+    selectElement(elementId);
+  }, [project, selectElement]);
+
+  useEffect(() => {
+    if (!barDragActive) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!barDragRef.current) return;
+      const { type, elementId, startMouseX, startDelay, startDuration } = barDragRef.current;
+      const dxPx = e.clientX - startMouseX;
+      const dxMs = dxPx / pxPerMs;
+
+      const el = useProjectStore.getState().project.elements.find((el) => el.id === elementId);
+      if (!el || !el.animation) return;
+
+      let newDelay = startDelay;
+      let newDuration = startDuration;
+
+      if (type === 'move') {
+        newDelay = Math.max(0, Math.round(startDelay + dxMs));
+      } else if (type === 'resize-left') {
+        // Moving left edge: changes both delay and duration
+        const shift = Math.round(dxMs);
+        newDelay = Math.max(0, startDelay + shift);
+        const actualShift = newDelay - startDelay;
+        newDuration = Math.max(100, startDuration - actualShift);
+      } else if (type === 'resize-right') {
+        newDuration = Math.max(100, Math.round(startDuration + dxMs));
+      }
+
+      // Snap to 50ms grid
+      newDelay = Math.round(newDelay / 50) * 50;
+      newDuration = Math.max(100, Math.round(newDuration / 50) * 50);
+
+      updateElementSilent(elementId, {
+        animation: { ...el.animation, delay: newDelay, duration: newDuration },
+      });
+    };
+
+    const handleMouseUp = () => {
+      if (barDragRef.current) {
+        pushSnapshot(barDragRef.current.snapshot);
+      }
+      barDragRef.current = null;
+      setBarDragActive(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [barDragActive, pxPerMs, updateElementSilent, pushSnapshot]);
 
   // Format time as MM:SS.ms
   const formatTime = (ms: number) => {
@@ -440,29 +528,62 @@ export const Timeline: React.FC = () => {
                 {hasAnimation && (() => {
                   const delay = el.animation!.delay || 0;
                   const duration = el.animation!.duration || 600;
+                  const barWidth = Math.max(duration * pxPerMs, 20);
                   return (
-                    <div style={{
-                      position: 'absolute',
-                      left: delay * pxPerMs,
-                      width: Math.max(duration * pxPerMs, 4),
-                      top: 5,
-                      height: 18,
-                      backgroundColor: isSelected ? '#2196F3' : '#b8c0d8',
-                      borderRadius: 3,
-                      border: isSelected ? '1px solid #64B5F6' : '1px solid #b0b0c0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden',
-                    }}>
+                    <div
+                      onMouseDown={(e) => handleBarMouseDown(e, el.id, 'move', delay, duration)}
+                      style={{
+                        position: 'absolute',
+                        left: delay * pxPerMs,
+                        width: barWidth,
+                        top: 5,
+                        height: 18,
+                        backgroundColor: isSelected ? '#2196F3' : '#b8c0d8',
+                        borderRadius: 3,
+                        border: isSelected ? '1px solid #64B5F6' : '1px solid #b0b0c0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        cursor: 'grab',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {/* Left resize handle */}
+                      <div
+                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-left', delay, duration)}
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          width: 6,
+                          height: '100%',
+                          cursor: 'ew-resize',
+                          borderRadius: '3px 0 0 3px',
+                        }}
+                      />
                       <span style={{
                         fontSize: 9,
                         color: isSelected ? '#fff' : '#777',
                         whiteSpace: 'nowrap',
-                        padding: '0 4px',
+                        padding: '0 8px',
+                        pointerEvents: 'none',
                       }}>
                         {el.animation!.preset}
                       </span>
+                      {/* Right resize handle */}
+                      <div
+                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-right', delay, duration)}
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 0,
+                          width: 6,
+                          height: '100%',
+                          cursor: 'ew-resize',
+                          borderRadius: '0 3px 3px 0',
+                        }}
+                      />
                     </div>
                   );
                 })()}
