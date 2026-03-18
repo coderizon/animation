@@ -420,7 +420,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
           borderColor={OFFICE_BORDER}
           padding={0}
         >
-          <div style={{ padding: 12 }}>
+          <div style={{ padding: 8 }}>
             <PropertiesPanel />
           </div>
         </ResizablePanel>
@@ -459,20 +459,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
           }} />
         </div>
         <Timeline />
-      </div>
-
-      {/* Status Bar */}
-      <div style={{
-        height: 30,
-        backgroundColor: '#ffffff',
-        borderTop: `1px solid ${OFFICE_BORDER}`,
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 20px',
-        fontSize: 12,
-        color: '#605e5c',
-      }}>
-        Folie 1 von 1 | {project.elements.length} Elemente | Bereit
       </div>
 
       {/* Template Selector Modal */}

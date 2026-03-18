@@ -23,13 +23,13 @@ export const PropertiesPanel: React.FC = () => {
       <div style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: 8,
       }}>
         <div style={{
-          padding: '12px 16px',
+          padding: '10px 14px',
           backgroundColor: '#ffffff',
           border: `1px solid ${PANEL_BORDER}`,
-          borderRadius: 10,
+          borderRadius: 8,
           fontSize: 14,
           fontWeight: 600,
           textAlign: 'center',
@@ -45,7 +45,7 @@ export const PropertiesPanel: React.FC = () => {
           }}
           style={{
             width: '100%',
-            padding: '12px 20px',
+            padding: '10px 16px',
             backgroundColor: '#c42b1c',
             color: '#fff',
             border: 'none',
@@ -117,7 +117,7 @@ export const PropertiesPanel: React.FC = () => {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: 12,
+      gap: 8,
     }}>
       {/* Size */}
       <PropertySection title="Größe">
@@ -171,7 +171,7 @@ export const PropertiesPanel: React.FC = () => {
           onChange={(e) => handleRotationChange(Number(e.target.value))}
           style={{
             width: '100%',
-            marginTop: 8,
+            marginTop: 4,
             accentColor: OFFICE_BLUE,
           }}
         />
@@ -343,7 +343,7 @@ export const PropertiesPanel: React.FC = () => {
         return (
           <PropertySection title="Widget">
             <div style={{
-              padding: '6px 10px',
+              padding: '5px 8px',
               backgroundColor: '#ffffff',
               border: `1px solid ${PANEL_BORDER}`,
               borderRadius: 8,
@@ -404,7 +404,7 @@ export const PropertiesPanel: React.FC = () => {
           }}
           style={{
             width: '100%',
-            padding: '8px 12px',
+            padding: '7px 10px',
             backgroundColor: '#ffb900',
             color: '#000',
             border: 'none',
@@ -424,8 +424,8 @@ export const PropertiesPanel: React.FC = () => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  padding: '4px 8px',
+                  gap: 6,
+                  padding: '4px 6px',
                   backgroundColor: '#ffffff',
                   border: `1px solid ${PANEL_BORDER}`,
                   borderRadius: 8,
@@ -465,14 +465,14 @@ export const PropertiesPanel: React.FC = () => {
       {/* Actions */}
       <div style={{
         borderTop: `1px solid ${PANEL_BORDER}`,
-        paddingTop: 16,
+        paddingTop: 12,
         marginTop: 'auto',
       }}>
         <button
           onClick={handleDelete}
           style={{
             width: '100%',
-            padding: '12px 20px',
+            padding: '10px 16px',
             backgroundColor: '#c42b1c',
             color: '#fff',
             border: 'none',
@@ -505,7 +505,7 @@ interface LabeledTextInputProps {
 
 const LabeledTextInput: React.FC<LabeledTextInputProps> = ({ label, value, onChange, placeholder }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <label style={{ fontSize: 13, color: MUTED_TEXT }}>{label}</label>
       <input
         type="text"
@@ -514,7 +514,8 @@ const LabeledTextInput: React.FC<LabeledTextInputProps> = ({ label, value, onCha
         placeholder={placeholder}
         style={{
           width: '100%',
-          padding: '8px 12px',
+          padding: '6px 10px',
+          boxSizing: 'border-box',
           backgroundColor: FIELD_BG,
           border: `1px solid ${FIELD_BORDER}`,
           borderRadius: 8,
@@ -540,18 +541,18 @@ const PropertySection: React.FC<PropertySectionProps> = ({ title, children }) =>
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: 10,
+      gap: 8,
       backgroundColor: '#ffffff',
       border: `1px solid ${PANEL_BORDER}`,
-      borderRadius: 10,
-      padding: 14,
+      borderRadius: 8,
+      padding: 10,
     }}>
       <h3 style={{
         fontSize: 12,
         fontWeight: 600,
         color: '#323130',
         letterSpacing: '0.02em',
-        marginBottom: 2,
+        marginBottom: 0,
       }}>
         {title}
       </h3>
@@ -575,20 +576,20 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, allowNo
     <div style={{
       display: 'grid',
       gridTemplateColumns: '1fr',
-      gap: 8,
+      gap: 6,
     }}>
       <label style={{ fontSize: 13, color: MUTED_TEXT }}>
         {label}
       </label>
-      <div style={{ display: 'grid', gridTemplateColumns: '32px minmax(0, 1fr) auto', alignItems: 'center', gap: 8, minWidth: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '28px minmax(0, 1fr) auto', alignItems: 'center', gap: 6, minWidth: 0 }}>
         <input
           type="color"
           value={isNone ? '#ffffff' : value}
           onChange={(e) => onChange(e.target.value)}
           disabled={isNone}
           style={{
-            width: 32,
-            height: 32,
+            width: 28,
+            height: 28,
             border: `1px solid ${FIELD_BORDER}`,
             borderRadius: 6,
             backgroundColor: '#ffffff',
@@ -604,7 +605,7 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, allowNo
           <button
             onClick={() => onChange(isNone ? '#ffffff' : 'transparent')}
             style={{
-              padding: '4px 8px',
+              padding: '3px 6px',
               backgroundColor: isNone ? OFFICE_BLUE : 'transparent',
               color: isNone ? '#fff' : MUTED_TEXT,
               border: `1px solid ${FIELD_BORDER}`,
@@ -642,9 +643,9 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: unit ? '72px minmax(0, 1fr) auto' : '72px minmax(0, 1fr)',
+      gridTemplateColumns: unit ? '56px minmax(0, 1fr) auto' : '56px minmax(0, 1fr)',
       alignItems: 'center',
-      gap: 8,
+      gap: 6,
       minWidth: 0,
     }}>
       <label style={{
@@ -662,7 +663,8 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
         style={{
           width: '100%',
           minWidth: 0,
-          padding: '8px 12px',
+          padding: '6px 10px',
+          boxSizing: 'border-box',
           backgroundColor: FIELD_BG,
           border: `1px solid ${FIELD_BORDER}`,
           borderRadius: 8,
@@ -682,7 +684,7 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
         <span style={{
           fontSize: 12,
           color: MUTED_TEXT,
-          minWidth: 20,
+          minWidth: 16,
           textAlign: 'right',
         }}>
           {unit}
