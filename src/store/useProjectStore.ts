@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Project, CanvasElement, PartialCanvasElement, AnimationConfig } from '../types/project';
+import { Project, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent } from '../types/project';
 
 // Helper: Generate unique ID
 function generateId(): string {
@@ -27,13 +27,18 @@ function createBlankProject(): Project {
 
 const MAX_HISTORY = 50;
 
+// RAF playback state (module-level)
+let playAnimationFrameId: number | null = null;
+let playStartTimestamp: number | null = null;
+
 // Store Interface
 interface ProjectStore {
   // State
   project: Project;
-  selectedElementId: string | null;
+  selectedElementIds: string[];
   previewingElementId: string | null;
   isPlayingAll: boolean;
+  currentTime: number; // ms
 
   // History (Undo/Redo)
   history: Project[];
@@ -47,7 +52,13 @@ interface ProjectStore {
   addElement: (element: PartialCanvasElement) => void;
   updateElement: (id: string, updates: Partial<CanvasElement>) => void;
   deleteElement: (id: string) => void;
+
+  // Selection
   selectElement: (id: string | null) => void;
+  toggleSelectElement: (id: string) => void;
+  addToSelection: (id: string) => void;
+  selectElements: (ids: string[]) => void;
+  clearSelection: () => void;
 
   // Silent updates (no history push, for real-time drag/resize)
   updateElementSilent: (id: string, updates: Partial<CanvasElement>) => void;
@@ -57,6 +68,7 @@ interface ProjectStore {
   updateElementPosition: (id: string, x: number, y: number) => void;
   updateElementSize: (id: string, width: number, height: number) => void;
   updateElementAnimation: (id: string, animation: AnimationConfig | undefined) => void;
+  setCurrentTime: (time: number) => void;
   triggerPreview: (id: string) => void;
   playAllAnimations: () => void;
   stopAllAnimations: () => void;
@@ -68,8 +80,15 @@ interface ProjectStore {
   resetProject: () => void;
   updateProjectName: (name: string) => void;
 
+  // Layer operations
+  reorderElements: (fromIndex: number, toIndex: number) => void;
+  renameElement: (id: string, name: string) => void;
+  toggleElementVisibility: (id: string) => void;
+  toggleElementLock: (id: string) => void;
+
   // Getters
   getSelectedElement: () => CanvasElement | null;
+  getSelectedElements: () => CanvasElement[];
 }
 
 // Helper to push current project to history
@@ -84,9 +103,10 @@ function pushHistory(state: ProjectStore): { history: Project[]; future: Project
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Initial State
   project: createBlankProject(),
-  selectedElementId: null,
+  selectedElementIds: [],
   previewingElementId: null,
   isPlayingAll: false,
+  currentTime: 0,
   history: [],
   future: [],
 
@@ -120,9 +140,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   // Element Actions
   addElement: (element) => {
+    const state = get();
+    const typeCount = state.project.elements.filter((el) => el.type === element.type).length;
+    const autoName = `${element.type.charAt(0).toUpperCase() + element.type.slice(1)} ${typeCount + 1}`;
+
     const newElement: CanvasElement = {
       ...element,
       id: generateId(),
+      name: element.name || autoName,
     };
 
     set((state) => ({
@@ -135,7 +160,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           updatedAt: new Date().toISOString(),
         },
       },
-      selectedElementId: newElement.id,
+      selectedElementIds: [newElement.id],
     }));
   },
 
@@ -166,12 +191,38 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           updatedAt: new Date().toISOString(),
         },
       },
-      selectedElementId: state.selectedElementId === id ? null : state.selectedElementId,
+      selectedElementIds: state.selectedElementIds.filter((sid) => sid !== id),
     }));
   },
 
+  // Selection
   selectElement: (id) => {
-    set({ selectedElementId: id });
+    set({ selectedElementIds: id ? [id] : [] });
+  },
+
+  toggleSelectElement: (id) => {
+    set((state) => {
+      const ids = state.selectedElementIds;
+      if (ids.includes(id)) {
+        return { selectedElementIds: ids.filter((sid) => sid !== id) };
+      }
+      return { selectedElementIds: [...ids, id] };
+    });
+  },
+
+  addToSelection: (id) => {
+    set((state) => {
+      if (state.selectedElementIds.includes(id)) return state;
+      return { selectedElementIds: [...state.selectedElementIds, id] };
+    });
+  },
+
+  selectElements: (ids) => {
+    set({ selectedElementIds: ids });
+  },
+
+  clearSelection: () => {
+    set({ selectedElementIds: [] });
   },
 
   // Silent updates (no history push, for real-time drag/resize)
@@ -207,6 +258,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     get().updateElement(id, { animation });
   },
 
+  setCurrentTime: (time) => {
+    set({ currentTime: time });
+  },
+
   triggerPreview: (id) => {
     set({ previewingElementId: id });
     setTimeout(() => {
@@ -215,22 +270,57 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   playAllAnimations: () => {
-    set({ isPlayingAll: true, selectedElementId: null });
+    // Cancel any existing playback
+    if (playAnimationFrameId !== null) {
+      cancelAnimationFrame(playAnimationFrameId);
+    }
 
     const { project } = get();
-    const maxDuration = project.elements.reduce((max, el) => {
-      if (!el.animation) return max;
+
+    // Calculate max duration
+    const maxFramerDuration = project.elements.reduce((max, el) => {
+      if (!el.animation || el.type === 'widget') return max;
       const totalTime = (el.animation.delay || 0) + (el.animation.duration || 600);
       return Math.max(max, totalTime);
     }, 0);
 
-    setTimeout(() => {
-      set({ isPlayingAll: false });
-    }, maxDuration + 1000);
+    const maxWidgetDuration = project.elements.reduce((max, el) => {
+      if (el.type !== 'widget') return max;
+      const wc = el.content as WidgetContent;
+      const totalMs = (wc.durationInFrames / wc.fps) * 1000;
+      return Math.max(max, totalMs);
+    }, 0);
+
+    const maxDuration = Math.max(maxFramerDuration, maxWidgetDuration, 3000);
+
+    set({ isPlayingAll: true, selectedElementIds: [], currentTime: 0 });
+    playStartTimestamp = null;
+
+    const tick = (timestamp: number) => {
+      if (playStartTimestamp === null) playStartTimestamp = timestamp;
+      const elapsed = timestamp - playStartTimestamp;
+
+      set({ currentTime: elapsed });
+
+      if (elapsed < maxDuration + 500) {
+        playAnimationFrameId = requestAnimationFrame(tick);
+      } else {
+        set({ isPlayingAll: false, currentTime: 0 });
+        playAnimationFrameId = null;
+        playStartTimestamp = null;
+      }
+    };
+
+    playAnimationFrameId = requestAnimationFrame(tick);
   },
 
   stopAllAnimations: () => {
-    set({ isPlayingAll: false });
+    if (playAnimationFrameId !== null) {
+      cancelAnimationFrame(playAnimationFrameId);
+      playAnimationFrameId = null;
+      playStartTimestamp = null;
+    }
+    set({ isPlayingAll: false, currentTime: 0 });
   },
 
   // Project Management
@@ -238,7 +328,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set((state) => ({
       ...pushHistory(state),
       project,
-      selectedElementId: null,
+      selectedElementIds: [],
     }));
   },
 
@@ -254,6 +344,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         throw new Error('Invalid project format');
       }
 
+      // Backfill missing name fields
+      const typeCounts: Record<string, number> = {};
+      project.elements = project.elements.map((el) => {
+        if (!el.name) {
+          typeCounts[el.type] = (typeCounts[el.type] || 0) + 1;
+          return { ...el, name: `${el.type.charAt(0).toUpperCase() + el.type.slice(1)} ${typeCounts[el.type]}` };
+        }
+        return el;
+      });
+
       get().loadProject(project);
     } catch (error) {
       console.error('Failed to import project:', error);
@@ -265,7 +365,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set((state) => ({
       ...pushHistory(state),
       project: createBlankProject(),
-      selectedElementId: null,
+      selectedElementIds: [],
     }));
   },
 
@@ -282,10 +382,71 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }));
   },
 
+  // Layer operations
+  reorderElements: (fromIndex, toIndex) => {
+    set((state) => {
+      const elements = [...state.project.elements];
+      const [moved] = elements.splice(fromIndex, 1);
+      elements.splice(toIndex, 0, moved);
+      // Re-assign zIndex based on array position
+      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
+      return {
+        ...pushHistory(state),
+        project: {
+          ...state.project,
+          elements: reindexed,
+          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  renameElement: (id, name) => {
+    set((state) => ({
+      project: {
+        ...state.project,
+        elements: state.project.elements.map((el) =>
+          el.id === id ? { ...el, name } : el
+        ),
+      },
+    }));
+  },
+
+  toggleElementVisibility: (id) => {
+    set((state) => ({
+      ...pushHistory(state),
+      project: {
+        ...state.project,
+        elements: state.project.elements.map((el) =>
+          el.id === id ? { ...el, visible: !el.visible } : el
+        ),
+        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+      },
+    }));
+  },
+
+  toggleElementLock: (id) => {
+    set((state) => ({
+      ...pushHistory(state),
+      project: {
+        ...state.project,
+        elements: state.project.elements.map((el) =>
+          el.id === id ? { ...el, locked: !el.locked } : el
+        ),
+        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+      },
+    }));
+  },
+
   // Getters
   getSelectedElement: () => {
     const state = get();
-    if (!state.selectedElementId) return null;
-    return state.project.elements.find((el) => el.id === state.selectedElementId) || null;
+    if (state.selectedElementIds.length !== 1) return null;
+    return state.project.elements.find((el) => el.id === state.selectedElementIds[0]) || null;
+  },
+
+  getSelectedElements: () => {
+    const state = get();
+    return state.project.elements.filter((el) => state.selectedElementIds.includes(el.id));
   },
 }));

@@ -21,11 +21,12 @@ export interface Project {
 
 // Canvas Element Types
 
-export type ElementType = 'logo' | 'text' | 'shape' | 'image';
+export type ElementType = 'logo' | 'text' | 'shape' | 'image' | 'widget';
 
 export interface CanvasElement {
   id: string;
   type: ElementType;
+  name?: string;
 
   // Position & Size
   position: { x: number; y: number };
@@ -34,7 +35,7 @@ export interface CanvasElement {
   zIndex: number;
 
   // Content (varies by type)
-  content: LogoContent | TextContent | ShapeContent | ImageContent;
+  content: LogoContent | TextContent | ShapeContent | ImageContent | WidgetContent;
 
   // Animation
   animation?: AnimationConfig;
@@ -74,6 +75,14 @@ export interface ImageContent {
   type: 'image';
   src: string;
   alt: string;
+}
+
+export interface WidgetContent {
+  type: 'widget';
+  widgetName: string;
+  fps: number;
+  durationInFrames: number;
+  props?: Record<string, unknown>;
 }
 
 // Animation Config

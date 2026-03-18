@@ -2,9 +2,6 @@ import { useEffect } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 
 export const useKeyboardShortcuts = () => {
-  const selectedElement = useProjectStore((state) => state.getSelectedElement());
-  const deleteElement = useProjectStore((state) => state.deleteElement);
-  const updateElement = useProjectStore((state) => state.updateElement);
   const undo = useProjectStore((state) => state.undo);
   const redo = useProjectStore((state) => state.redo);
 
@@ -14,6 +11,9 @@ export const useKeyboardShortcuts = () => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
+
+      // Space is reserved for canvas pan — don't handle here
+      if (e.code === 'Space') return;
 
       // Undo: Ctrl+Z / Cmd+Z
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -29,60 +29,57 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
-      if (!selectedElement) return;
+      // Ctrl+A: Select all
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        const { project, selectElements } = useProjectStore.getState();
+        selectElements(project.elements.map((el) => el.id));
+        return;
+      }
 
-      const step = e.shiftKey ? 10 : 1; // Shift = 10px, normal = 1px
+      // Escape: Clear selection
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        useProjectStore.getState().clearSelection();
+        return;
+      }
+
+      const { selectedElementIds, getSelectedElements, deleteElement, updateElement } = useProjectStore.getState();
+      if (selectedElementIds.length === 0) return;
+
+      const step = e.shiftKey ? 10 : 1;
 
       switch (e.key) {
         case 'Delete':
-        case 'Backspace':
+        case 'Backspace': {
           e.preventDefault();
-          deleteElement(selectedElement.id);
+          const ids = [...selectedElementIds];
+          ids.forEach((id) => deleteElement(id));
           break;
+        }
 
         case 'ArrowUp':
-          e.preventDefault();
-          updateElement(selectedElement.id, {
-            position: {
-              ...selectedElement.position,
-              y: selectedElement.position.y - step,
-            },
-          });
-          break;
-
         case 'ArrowDown':
-          e.preventDefault();
-          updateElement(selectedElement.id, {
-            position: {
-              ...selectedElement.position,
-              y: selectedElement.position.y + step,
-            },
-          });
-          break;
-
         case 'ArrowLeft':
+        case 'ArrowRight': {
           e.preventDefault();
-          updateElement(selectedElement.id, {
-            position: {
-              ...selectedElement.position,
-              x: selectedElement.position.x - step,
-            },
-          });
+          const elements = getSelectedElements();
+          for (const el of elements) {
+            const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+            const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+            updateElement(el.id, {
+              position: {
+                x: el.position.x + dx,
+                y: el.position.y + dy,
+              },
+            });
+          }
           break;
-
-        case 'ArrowRight':
-          e.preventDefault();
-          updateElement(selectedElement.id, {
-            position: {
-              ...selectedElement.position,
-              x: selectedElement.position.x + step,
-            },
-          });
-          break;
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElement, deleteElement, updateElement, undo, redo]);
+  }, [undo, redo]);
 };

@@ -1,8 +1,11 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { CanvasElement as CanvasElementType, ShapeContent } from '../../types/project';
+import { CanvasElement as CanvasElementType, ShapeContent, WidgetContent } from '../../types/project';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useViewportStore } from '../../store/useViewportStore';
 import { animationPresets } from '../../animations/presets';
+import { WidgetRenderer } from './WidgetRenderer';
+import { computeSnap } from '../utils/snapping';
 
 interface CanvasElementProps {
   element: CanvasElementType;
@@ -15,6 +18,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const updateElementSilent = useProjectStore((state) => state.updateElementSilent);
   const pushSnapshot = useProjectStore((state) => state.pushSnapshot);
   const selectElement = useProjectStore((state) => state.selectElement);
+  const addToSelection = useProjectStore((state) => state.addToSelection);
+  const toggleSelectElement = useProjectStore((state) => state.toggleSelectElement);
   const previewingElementId = useProjectStore((state) => state.previewingElementId);
   const isPlayingAll = useProjectStore((state) => state.isPlayingAll);
   const project = useProjectStore((state) => state.project);
@@ -29,6 +34,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const dragStart = useRef({ mouseX: 0, mouseY: 0, elX: 0, elY: 0 });
   const resizeStart = useRef({ mouseX: 0, mouseY: 0, width: 0, height: 0, elX: 0, elY: 0, handle: '' });
   const snapshotRef = useRef<typeof project | null>(null);
+  // For multi-drag: initial positions of all selected elements
+  const multiDragStartPositions = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   // Trigger re-animation
   useEffect(() => {
@@ -43,10 +50,30 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     e.stopPropagation();
     e.preventDefault();
 
-    selectElement(element.id);
+    // Modifier key handling for selection
+    if (e.ctrlKey || e.metaKey) {
+      toggleSelectElement(element.id);
+      return; // Don't start drag on Ctrl+Click
+    }
+
+    if (e.shiftKey) {
+      addToSelection(element.id);
+    } else if (!isSelected) {
+      selectElement(element.id);
+    }
 
     // Save snapshot for undo before any changes
     snapshotRef.current = JSON.parse(JSON.stringify(project));
+
+    // Capture start positions of ALL selected elements for multi-drag
+    const { selectedElementIds } = useProjectStore.getState();
+    const posMap = new Map<string, { x: number; y: number }>();
+    for (const el of project.elements) {
+      if (selectedElementIds.includes(el.id) || el.id === element.id) {
+        posMap.set(el.id, { x: el.position.x, y: el.position.y });
+      }
+    }
+    multiDragStartPositions.current = posMap;
 
     dragStart.current = {
       mouseX: e.clientX,
@@ -55,7 +82,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       elY: element.position.y,
     };
     setIsDragging(true);
-  }, [element.id, element.position.x, element.position.y, element.locked, project, selectElement]);
+  }, [element.id, element.position.x, element.position.y, element.locked, project, isSelected, selectElement, addToSelection, toggleSelectElement]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -64,17 +91,42 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       const dx = (e.clientX - dragStart.current.mouseX) / zoom;
       const dy = (e.clientY - dragStart.current.mouseY) / zoom;
 
-      updateElementSilent(element.id, {
-        position: {
-          x: dragStart.current.elX + dx,
-          y: dragStart.current.elY + dy,
-        },
-      });
+      const rawX = dragStart.current.elX + dx;
+      const rawY = dragStart.current.elY + dy;
+
+      // Snapping (only for the dragged element)
+      const { project: proj } = useProjectStore.getState();
+      const snap = computeSnap(
+        { id: element.id, x: rawX, y: rawY, w: element.size.width, h: element.size.height },
+        proj.elements,
+        proj.canvas.width,
+        proj.canvas.height,
+      );
+
+      useViewportStore.getState().setSnapGuides(snap.guides);
+
+      // Snap delta = difference between snapped and raw
+      const snapDx = snap.x - rawX;
+      const snapDy = snap.y - rawY;
+
+      // Move all selected elements by the same delta
+      const { selectedElementIds } = useProjectStore.getState();
+      for (const [id, startPos] of multiDragStartPositions.current) {
+        if (selectedElementIds.includes(id) || id === element.id) {
+          updateElementSilent(id, {
+            position: {
+              x: startPos.x + dx + snapDx,
+              y: startPos.y + dy + snapDy,
+            },
+          });
+        }
+      }
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      // Push the pre-drag snapshot to history
+      multiDragStartPositions.current.clear();
+      useViewportStore.getState().setSnapGuides([]);
       if (snapshotRef.current) {
         pushSnapshot(snapshotRef.current);
         snapshotRef.current = null;
@@ -87,7 +139,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, element.id, zoom, updateElementSilent, pushSnapshot]);
+  }, [isDragging, element.id, element.size.width, element.size.height, zoom, updateElementSilent, pushSnapshot]);
 
   // --- RESIZE (native mouse events) ---
   const handleResizeStart = useCallback((e: React.MouseEvent, handle: string) => {
@@ -121,7 +173,6 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       let newX = elX;
       let newY = elY;
 
-      // Compute new size & position based on which handle is being dragged
       if (handle.includes('right')) { newW = Math.max(20, width + dx); }
       if (handle.includes('left')) { newW = Math.max(20, width - dx); newX = elX + (width - newW); }
       if (handle.includes('bottom')) { newH = Math.max(20, height + dy); }
@@ -152,9 +203,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   // --- Click to select (only if not dragging) ---
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isDragging) {
-      selectElement(element.id);
-    }
+    // Selection is handled in handleDragStart
   };
 
   // --- Render content ---
@@ -221,13 +270,21 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
 
         return <div style={shapeStyle} />;
       }
+      case 'widget':
+        return (
+          <WidgetRenderer
+            content={element.content as WidgetContent}
+            width={element.size.width}
+            height={element.size.height}
+          />
+        );
       default:
         return null;
     }
   };
 
   // --- Animation ---
-  const animationConfig = element.animation && shouldAnimate
+  const animationConfig = element.type !== 'widget' && element.animation && shouldAnimate
     ? animationPresets[element.animation.preset]
     : null;
 
@@ -249,6 +306,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   return (
     <div
       ref={elementRef}
+      data-canvas-element
       onMouseDown={handleDragStart}
       onClick={handleClick}
       style={{

@@ -1,37 +1,37 @@
-import { useState } from 'react';
+import { useProjectStore } from '../../store/useProjectStore';
+import { useViewportStore } from '../../store/useViewportStore';
 
-interface ZoomControlsProps {
-  onZoomChange: (zoom: number) => void;
-  currentZoom: number;
-}
+const ZOOM_FACTOR = 1.25;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 4;
 
-export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, currentZoom }) => {
-  const zoomLevels = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2];
+export const ZoomControls: React.FC = () => {
+  const zoom = useViewportStore((state) => state.zoom);
+  const setZoom = useViewportStore((state) => state.setZoom);
 
   const handleZoomIn = () => {
-    const currentIndex = zoomLevels.indexOf(currentZoom);
-    if (currentIndex < zoomLevels.length - 1) {
-      onZoomChange(zoomLevels[currentIndex + 1]);
-    }
+    setZoom(Math.min(MAX_ZOOM, zoom * ZOOM_FACTOR));
   };
 
   const handleZoomOut = () => {
-    const currentIndex = zoomLevels.indexOf(currentZoom);
-    if (currentIndex > 0) {
-      onZoomChange(zoomLevels[currentIndex - 1]);
-    }
+    setZoom(Math.max(MIN_ZOOM, zoom / ZOOM_FACTOR));
   };
 
   const handleFitToScreen = () => {
-    onZoomChange(0.45); // Default fit
+    const container = document.querySelector('[data-viewport-container]') as HTMLElement;
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      const { canvas } = useProjectStore.getState().project;
+      useViewportStore.getState().fitToScreen(rect.width, rect.height, canvas.width, canvas.height);
+    }
   };
 
   return (
     <div
       style={{
-        position: 'fixed',
-        bottom: 40,
-        right: 40,
+        position: 'absolute',
+        bottom: 20,
+        right: 20,
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
@@ -46,30 +46,28 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
       {/* Zoom In */}
       <button
         onClick={handleZoomIn}
-        disabled={currentZoom >= zoomLevels[zoomLevels.length - 1]}
+        disabled={zoom >= MAX_ZOOM}
         style={{
           width: 40,
           height: 40,
           backgroundColor: 'transparent',
-          color: currentZoom >= zoomLevels[zoomLevels.length - 1] ? '#444' : '#444',
+          color: '#444',
           border: 'none',
           borderRadius: 6,
           fontSize: 20,
-          cursor: currentZoom >= zoomLevels[zoomLevels.length - 1] ? 'not-allowed' : 'pointer',
+          cursor: zoom >= MAX_ZOOM ? 'not-allowed' : 'pointer',
           transition: 'all 0.2s',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
         onMouseEnter={(e) => {
-          if (currentZoom < zoomLevels[zoomLevels.length - 1]) {
-            e.currentTarget.style.backgroundColor = '#f0f0f4';
-          }
+          if (zoom < MAX_ZOOM) e.currentTarget.style.backgroundColor = '#f0f0f4';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
         }}
-        title="Zoom In (Ctrl/Cmd +)"
+        title="Zoom In (Ctrl+Scroll)"
       >
         +
       </button>
@@ -90,36 +88,34 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
           padding: '4px 0',
         }}
       >
-        {Math.round(currentZoom * 100)}%
+        {Math.round(zoom * 100)}%
       </div>
 
       {/* Zoom Out */}
       <button
         onClick={handleZoomOut}
-        disabled={currentZoom <= zoomLevels[0]}
+        disabled={zoom <= MIN_ZOOM}
         style={{
           width: 40,
           height: 40,
           backgroundColor: 'transparent',
-          color: currentZoom <= zoomLevels[0] ? '#444' : '#444',
+          color: '#444',
           border: 'none',
           borderRadius: 6,
           fontSize: 20,
-          cursor: currentZoom <= zoomLevels[0] ? 'not-allowed' : 'pointer',
+          cursor: zoom <= MIN_ZOOM ? 'not-allowed' : 'pointer',
           transition: 'all 0.2s',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
         onMouseEnter={(e) => {
-          if (currentZoom > zoomLevels[0]) {
-            e.currentTarget.style.backgroundColor = '#f0f0f4';
-          }
+          if (zoom > MIN_ZOOM) e.currentTarget.style.backgroundColor = '#f0f0f4';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
         }}
-        title="Zoom Out (Ctrl/Cmd -)"
+        title="Zoom Out (Ctrl+Scroll)"
       >
         −
       </button>
@@ -150,7 +146,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ onZoomChange, curren
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
         }}
-        title="Fit to Screen (Ctrl/Cmd 0)"
+        title="Fit to Screen"
       >
         ⊡
       </button>

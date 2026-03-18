@@ -1,11 +1,56 @@
 import { useProjectStore } from '../store/useProjectStore';
-import { ShapeContent, TextContent } from '../types/project';
+import { ShapeContent, TextContent, WidgetContent } from '../types/project';
 import { AnimationPicker } from './components/AnimationPicker';
 
 export const PropertiesPanel: React.FC = () => {
   const selectedElement = useProjectStore((state) => state.getSelectedElement());
+  const selectedElementIds = useProjectStore((state) => state.selectedElementIds);
   const updateElement = useProjectStore((state) => state.updateElement);
   const deleteElement = useProjectStore((state) => state.deleteElement);
+
+  // Multi-select: show count + delete button
+  if (selectedElementIds.length > 1) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20,
+        padding: 10,
+      }}>
+        <div style={{
+          padding: '12px 16px',
+          backgroundColor: '#2196F3',
+          borderRadius: 6,
+          fontSize: 14,
+          fontWeight: 600,
+          textAlign: 'center',
+          color: '#fff',
+        }}>
+          {selectedElementIds.length} Elemente ausgewählt
+        </div>
+        <button
+          onClick={() => {
+            if (confirm(`${selectedElementIds.length} Elemente wirklich löschen?`)) {
+              selectedElementIds.forEach((id) => deleteElement(id));
+            }
+          }}
+          style={{
+            width: '100%',
+            padding: '12px 20px',
+            backgroundColor: '#d32f2f',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Alle löschen
+        </button>
+      </div>
+    );
+  }
 
   if (!selectedElement) {
     return (
@@ -225,10 +270,52 @@ export const PropertiesPanel: React.FC = () => {
         );
       })()}
 
-      {/* Animation */}
-      <PropertySection title="Animation">
-        <AnimationPicker elementId={selectedElement.id} />
-      </PropertySection>
+      {/* Widget Properties */}
+      {selectedElement.type === 'widget' && (() => {
+        const content = selectedElement.content as WidgetContent;
+        const handleWidgetUpdate = (updates: Partial<WidgetContent>) => {
+          updateElement(selectedElement.id, {
+            content: { ...content, ...updates },
+          });
+        };
+        return (
+          <PropertySection title="Widget">
+            <div style={{
+              padding: '6px 10px',
+              backgroundColor: '#f0f0f4',
+              borderRadius: 6,
+              fontSize: 13,
+              color: '#444',
+              fontWeight: 500,
+            }}>
+              {content.widgetName}
+            </div>
+            <PropertyInput
+              label="FPS"
+              value={content.fps}
+              onChange={(val) => handleWidgetUpdate({ fps: Math.max(1, Math.min(60, val)) })}
+              min={1}
+              max={60}
+            />
+            <PropertyInput
+              label="Frames"
+              value={content.durationInFrames}
+              onChange={(val) => handleWidgetUpdate({ durationInFrames: Math.max(1, val) })}
+              min={1}
+            />
+            <div style={{ fontSize: 12, color: '#888' }}>
+              Dauer: {(content.durationInFrames / content.fps).toFixed(1)}s
+            </div>
+          </PropertySection>
+        );
+      })()}
+
+      {/* Animation (not for widgets) */}
+      {selectedElement.type !== 'widget' && (
+        <PropertySection title="Animation">
+          <AnimationPicker elementId={selectedElement.id} />
+        </PropertySection>
+      )}
 
       {/* Actions */}
       <div style={{

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useDrag } from 'react-dnd';
 import { LogoAsset } from '../../types/animation';
+import { getAllWidgets } from '../../widgets/registry';
+import { WidgetRegistryEntry } from '../../widgets/types';
 
 // Auto-discover all SVGs in public/assets/
 const svgModules = import.meta.glob('/public/assets/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
@@ -288,6 +290,80 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
   );
 };
 
+// Draggable Widget Component
+const DraggableWidget: React.FC<{ entry: WidgetRegistryEntry }> = ({ entry }) => {
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: 'ASSET',
+    item: {
+      type: 'ASSET',
+      elementType: 'widget' as const,
+      content: {
+        type: 'widget',
+        widgetName: entry.name,
+        fps: entry.defaultFps,
+        durationInFrames: entry.defaultDurationInFrames,
+      },
+      defaultWidth: entry.defaultElementWidth,
+      defaultHeight: entry.defaultElementHeight,
+    },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }));
+
+  return (
+    <div
+      ref={drag}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        cursor: 'move',
+        padding: 12,
+        backgroundColor: '#f0f0f4',
+        border: '2px solid #e0e0e8',
+        borderRadius: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 8,
+        transition: 'all 0.2s',
+        userSelect: 'none',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = '#b0b0c0';
+        e.currentTarget.style.backgroundColor = '#e0e0e8';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = '#e0e0e8';
+        e.currentTarget.style.backgroundColor = '#f0f0f4';
+      }}
+    >
+      <div style={{
+        width: 48,
+        height: 32,
+        backgroundColor: '#1a1a2e',
+        borderRadius: 4,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 18,
+        fontWeight: 700,
+        color: '#4A6BFF',
+      }}>
+        {entry.icon}
+      </div>
+      <span style={{
+        fontSize: 10,
+        fontWeight: 500,
+        color: '#444',
+        textAlign: 'center',
+        lineHeight: 1.2,
+      }}>
+        {entry.displayName}
+      </span>
+    </div>
+  );
+};
+
 // Folder Component
 const Folder: React.FC<{ category: LogoCategory; onClick: () => void }> = ({ category, onClick }) => {
   return (
@@ -386,6 +462,34 @@ export const AssetLibrary: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Divider */}
+      <div style={{ height: 1, backgroundColor: '#e0e0e8' }} />
+
+      {/* Widgets Section */}
+      {getAllWidgets().length > 0 && (
+        <div>
+          <h3 style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#888',
+            marginBottom: 8,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}>
+            Widgets
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 8,
+          }}>
+            {getAllWidgets().map((entry) => (
+              <DraggableWidget key={entry.name} entry={entry} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Divider */}
       <div style={{ height: 1, backgroundColor: '#e0e0e8' }} />

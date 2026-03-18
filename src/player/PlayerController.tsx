@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { Project, CanvasElement } from '../types/project';
+import { Project, CanvasElement, ShapeContent, WidgetContent } from '../types/project';
 import { animationPresets } from '../animations/presets';
+import { WidgetRenderer } from '../editor/components/WidgetRenderer';
 
 interface PlayerControllerProps {
   project: Project;
@@ -9,11 +10,12 @@ interface PlayerControllerProps {
 export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) => {
   const renderContent = (element: CanvasElement) => {
     switch (element.type) {
-      case 'logo':
+      case 'logo': {
+        const c = element.content as { src: string; alt: string };
         return (
           <img
-            src={element.content.src}
-            alt={element.content.alt}
+            src={c.src}
+            alt={c.alt}
             style={{
               width: '100%',
               height: '100%',
@@ -21,37 +23,50 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
             }}
           />
         );
-      case 'text':
+      }
+      case 'text': {
+        const c = element.content as { text: string; fontSize: number; color: string; fontFamily: string; fontWeight?: number };
         return (
           <div style={{
-            fontSize: element.content.fontSize,
-            color: element.content.color,
-            fontFamily: element.content.fontFamily,
-            fontWeight: element.content.fontWeight,
+            fontSize: c.fontSize,
+            color: c.color,
+            fontFamily: c.fontFamily,
+            fontWeight: c.fontWeight,
             width: '100%',
             height: '100%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-            {element.content.text}
+            {c.text}
           </div>
         );
-      case 'shape':
+      }
+      case 'shape': {
+        const c = element.content as ShapeContent;
         const shapeStyle: React.CSSProperties = {
           width: '100%',
           height: '100%',
-          backgroundColor: element.content.fill,
-          border: element.content.stroke
-            ? `${element.content.strokeWidth || 1}px solid ${element.content.stroke}`
+          backgroundColor: c.fill,
+          border: c.stroke
+            ? `${c.strokeWidth || 1}px solid ${c.stroke}`
             : 'none',
         };
 
-        if (element.content.shape === 'circle') {
+        if (c.shape === 'circle') {
           shapeStyle.borderRadius = '50%';
         }
 
         return <div style={shapeStyle} />;
+      }
+      case 'widget':
+        return (
+          <WidgetRenderer
+            content={element.content as WidgetContent}
+            width={element.size.width}
+            height={element.size.height}
+          />
+        );
       default:
         return null;
     }
@@ -82,7 +97,7 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
           .filter((el) => el.visible)
           .sort((a, b) => a.zIndex - b.zIndex)
           .map((element) => {
-            const animationConfig = element.animation
+            const animationConfig = element.type !== 'widget' && element.animation
               ? animationPresets[element.animation.preset]
               : null;
 

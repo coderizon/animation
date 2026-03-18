@@ -1,5 +1,6 @@
 import { Variants } from 'framer-motion';
-import { AnimationPresetName, EasingName } from './project';
+import { AnimationPresetName } from './project';
+export type { AnimationPresetName, EasingName } from './project';
 
 // Animation Preset Definition
 
@@ -16,7 +17,7 @@ export interface AnimationPreset {
 
 export interface DragItemAsset {
   type: 'ASSET';
-  elementType: 'logo' | 'text' | 'shape' | 'image';
+  elementType: 'logo' | 'text' | 'shape' | 'image' | 'widget';
   content: any;
 }
 
