@@ -17,6 +17,7 @@ export const Timeline: React.FC = () => {
   const setCurrentTime = useProjectStore((state) => state.setCurrentTime);
   const updateElementSilent = useProjectStore((state) => state.updateElementSilent);
   const pushSnapshot = useProjectStore((state) => state.pushSnapshot);
+  const addPositionKeyframe = useProjectStore((state) => state.addPositionKeyframe);
 
   // Inline rename state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,13 +43,27 @@ export const Timeline: React.FC = () => {
   } | null>(null);
   const [barDragActive, setBarDragActive] = useState(false);
 
+  // Keyframe diamond drag state
+  const kfDragRef = useRef<{
+    elementId: string;
+    startMouseX: number;
+    startTime: number;
+    snapshot: typeof project;
+  } | null>(null);
+  const [kfDragActive, setKfDragActive] = useState(false);
+
   // Reverse order: highest layer first
   const elements = [...project.elements].reverse();
 
   // Timeline calculations
   const animatedElements = project.elements.filter((el) => el.animation && el.animation.preset !== 'none');
+  const maxKeyframeTime = project.elements.reduce((max, el) => {
+    if (!el.positionKeyframes || el.positionKeyframes.length === 0) return max;
+    return Math.max(max, ...el.positionKeyframes.map((kf) => kf.time));
+  }, 0);
   const maxTime = Math.max(
     3000,
+    maxKeyframeTime + 500,
     ...project.elements.map((el) =>
       el.animation && el.animation.preset !== 'none'
         ? (el.animation.delay || 0) + (el.animation.duration || 600)
@@ -207,6 +222,74 @@ export const Timeline: React.FC = () => {
     };
   }, [barDragActive, pxPerMs, updateElementSilent, pushSnapshot]);
 
+  // Keyframe diamond drag handlers
+  const handleKfMouseDown = useCallback((
+    e: React.MouseEvent,
+    elementId: string,
+    time: number,
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const snapshot = JSON.parse(JSON.stringify(project));
+    kfDragRef.current = { elementId, startMouseX: e.clientX, startTime: time, snapshot };
+    setKfDragActive(true);
+    selectElement(elementId);
+  }, [project, selectElement]);
+
+  useEffect(() => {
+    if (!kfDragActive) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!kfDragRef.current) return;
+      const { elementId, startMouseX, startTime } = kfDragRef.current;
+      const dxPx = e.clientX - startMouseX;
+      const dxMs = dxPx / pxPerMs;
+      let newTime = Math.max(0, Math.round(startTime + dxMs));
+      newTime = Math.round(newTime / 50) * 50; // 50ms snap
+
+      const el = useProjectStore.getState().project.elements.find((el) => el.id === elementId);
+      if (!el || !el.positionKeyframes) return;
+
+      const kf = el.positionKeyframes.find((k) => k.time === startTime) ||
+                 el.positionKeyframes.find((k) => Math.abs(k.time - startTime) < 50);
+      if (!kf) return;
+
+      // Update: remove old, add at new time
+      const filtered = el.positionKeyframes.filter((k) => k.time !== kf.time);
+      const updated = [...filtered, { time: newTime, x: kf.x, y: kf.y }].sort((a, b) => a.time - b.time);
+      updateElementSilent(elementId, { positionKeyframes: updated });
+      kfDragRef.current.startTime = newTime;
+      kfDragRef.current.startMouseX = e.clientX;
+    };
+
+    const handleMouseUp = () => {
+      if (kfDragRef.current) {
+        pushSnapshot(kfDragRef.current.snapshot);
+      }
+      kfDragRef.current = null;
+      setKfDragActive(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [kfDragActive, pxPerMs, updateElementSilent, pushSnapshot]);
+
+  // Add keyframe at current playhead time for selected element
+  const handleAddKeyframe = useCallback(() => {
+    if (selectedElementIds.length !== 1) return;
+    const el = project.elements.find((e) => e.id === selectedElementIds[0]);
+    if (!el) return;
+    addPositionKeyframe(el.id, {
+      time: Math.round(currentTime / 50) * 50, // snap to 50ms
+      x: el.position.x,
+      y: el.position.y,
+    });
+  }, [selectedElementIds, project.elements, currentTime, addPositionKeyframe]);
+
   // Format time as MM:SS.ms
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -250,6 +333,23 @@ export const Timeline: React.FC = () => {
           <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#666', minWidth: 70, textAlign: 'right' }}>
             {formatTime(currentTime)}
           </span>
+          <button
+            onClick={handleAddKeyframe}
+            disabled={selectedElementIds.length !== 1}
+            title="Keyframe an aktueller Position hinzufügen"
+            style={{
+              padding: '4px 10px',
+              backgroundColor: selectedElementIds.length === 1 ? '#FFC107' : 'transparent',
+              color: selectedElementIds.length === 1 ? '#000' : '#ccc',
+              border: '1px solid #e0e0e8',
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: selectedElementIds.length === 1 ? 'pointer' : 'not-allowed',
+            }}
+          >
+            ◆ Keyframe +
+          </button>
           <button
             onClick={isPlayingAll ? stopAllAnimations : playAllAnimations}
             style={{
@@ -587,6 +687,27 @@ export const Timeline: React.FC = () => {
                     </div>
                   );
                 })()}
+
+                {/* Position Keyframe diamonds */}
+                {el.positionKeyframes && el.positionKeyframes.map((kf) => (
+                  <div
+                    key={`kf-${kf.time}`}
+                    onMouseDown={(e) => handleKfMouseDown(e, el.id, kf.time)}
+                    title={`Keyframe ${kf.time}ms (${Math.round(kf.x)}, ${Math.round(kf.y)})`}
+                    style={{
+                      position: 'absolute',
+                      left: kf.time * pxPerMs - 5,
+                      top: 9,
+                      width: 10,
+                      height: 10,
+                      backgroundColor: '#FFC107',
+                      border: '1px solid #FF9800',
+                      transform: 'rotate(45deg)',
+                      cursor: 'ew-resize',
+                      zIndex: 5,
+                    }}
+                  />
+                ))}
               </div>
             );
           })}

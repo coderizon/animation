@@ -7,6 +7,9 @@ export const PropertiesPanel: React.FC = () => {
   const selectedElementIds = useProjectStore((state) => state.selectedElementIds);
   const updateElement = useProjectStore((state) => state.updateElement);
   const deleteElement = useProjectStore((state) => state.deleteElement);
+  const currentTime = useProjectStore((state) => state.currentTime);
+  const addPositionKeyframe = useProjectStore((state) => state.addPositionKeyframe);
+  const removePositionKeyframe = useProjectStore((state) => state.removePositionKeyframe);
 
   // Multi-select: show count + delete button
   if (selectedElementIds.length > 1) {
@@ -316,6 +319,73 @@ export const PropertiesPanel: React.FC = () => {
           <AnimationPicker elementId={selectedElement.id} />
         </PropertySection>
       )}
+
+      {/* Position Keyframes */}
+      <PropertySection title="Keyframes">
+        <button
+          onClick={() => {
+            addPositionKeyframe(selectedElement.id, {
+              time: Math.round(currentTime / 50) * 50,
+              x: selectedElement.position.x,
+              y: selectedElement.position.y,
+            });
+          }}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            backgroundColor: '#FFC107',
+            color: '#000',
+            border: 'none',
+            borderRadius: 6,
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          ◆ Keyframe bei {Math.round(currentTime)}ms
+        </button>
+        {selectedElement.positionKeyframes && selectedElement.positionKeyframes.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {selectedElement.positionKeyframes.map((kf) => (
+              <div
+                key={kf.time}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '4px 8px',
+                  backgroundColor: '#f0f0f4',
+                  borderRadius: 4,
+                  fontSize: 11,
+                }}
+              >
+                <span style={{ color: '#FFC107', fontWeight: 700 }}>◆</span>
+                <span style={{ color: '#666', fontFamily: 'monospace', minWidth: 55 }}>
+                  {kf.time >= 1000 ? `${(kf.time / 1000).toFixed(1)}s` : `${kf.time}ms`}
+                </span>
+                <span style={{ color: '#888', fontSize: 10 }}>
+                  ({Math.round(kf.x)}, {Math.round(kf.y)})
+                </span>
+                <button
+                  onClick={() => removePositionKeyframe(selectedElement.id, kf.time)}
+                  style={{
+                    marginLeft: 'auto',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: '#d32f2f',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    padding: '0 4px',
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </PropertySection>
 
       {/* Actions */}
       <div style={{

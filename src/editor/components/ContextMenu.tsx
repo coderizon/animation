@@ -7,6 +7,9 @@ export const ContextMenu: React.FC = () => {
   const setContextMenu = useProjectStore((s) => s.setContextMenu);
   const setCroppingElement = useProjectStore((s) => s.setCroppingElement);
   const updateElement = useProjectStore((s) => s.updateElement);
+  const addPositionKeyframe = useProjectStore((s) => s.addPositionKeyframe);
+  const lastDragStartPosition = useProjectStore((s) => s.lastDragStartPosition);
+  const setLastDragStartPosition = useProjectStore((s) => s.setLastDragStartPosition);
   const project = useProjectStore((s) => s.project);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +39,40 @@ export const ContextMenu: React.FC = () => {
   const hasClip = element.clip &&
     (element.clip.top > 0 || element.clip.right > 0 || element.clip.bottom > 0 || element.clip.left > 0);
 
+  // Check if the element was just dragged (pre-drag position differs from current)
+  const hasDragMovement = lastDragStartPosition
+    && lastDragStartPosition.elementId === contextMenu.elementId
+    && (lastDragStartPosition.x !== element.position.x || lastDragStartPosition.y !== element.position.y);
+
   const menuItems: { label: string; onClick: () => void; visible: boolean }[] = [
+    {
+      label: 'Bewegung hierher',
+      onClick: () => {
+        if (!lastDragStartPosition) return;
+        const anim = element.animation;
+        // Start keyframe = after entrance animation ends
+        const animEnd = anim ? (anim.delay || 0) + (anim.duration || 600) : 0;
+        const startTime = Math.max(animEnd, 0);
+        const endTime = startTime + 1000; // 1s movement duration
+
+        // Keyframe 1: start position (where element was before drag)
+        addPositionKeyframe(contextMenu.elementId, {
+          time: startTime,
+          x: lastDragStartPosition.x,
+          y: lastDragStartPosition.y,
+        });
+        // Keyframe 2: end position (current position after drag)
+        addPositionKeyframe(contextMenu.elementId, {
+          time: endTime,
+          x: element.position.x,
+          y: element.position.y,
+        });
+
+        setLastDragStartPosition(null);
+        setContextMenu(null);
+      },
+      visible: !!hasDragMovement,
+    },
     {
       label: 'Zuschneiden',
       onClick: () => {

@@ -40,6 +40,9 @@ export interface CanvasElement {
   // Animation
   animation?: AnimationConfig;
 
+  // Position Keyframes (sorted by time)
+  positionKeyframes?: PositionKeyframe[];
+
   // Crop (inset percentages 0-100)
   clip?: { top: number; right: number; bottom: number; left: number };
 
@@ -120,6 +123,14 @@ export type EasingName =
   | 'easeInOut'
   | 'spring'
   | 'bounce';
+
+// Position Keyframes
+
+export interface PositionKeyframe {
+  time: number;  // ms
+  x: number;
+  y: number;
+}
 
 // Helper Types
 

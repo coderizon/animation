@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Project, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent } from '../types/project';
+import { Project, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent, PositionKeyframe } from '../types/project';
 
 // Helper: Generate unique ID
 function generateId(): string {
@@ -41,6 +41,7 @@ interface ProjectStore {
   currentTime: number; // ms
   croppingElementId: string | null;
   contextMenu: { x: number; y: number; elementId: string } | null;
+  lastDragStartPosition: { elementId: string; x: number; y: number } | null;
 
   // History (Undo/Redo)
   history: Project[];
@@ -88,9 +89,14 @@ interface ProjectStore {
   toggleElementVisibility: (id: string) => void;
   toggleElementLock: (id: string) => void;
 
+  // Position Keyframes
+  addPositionKeyframe: (elementId: string, keyframe: PositionKeyframe) => void;
+  removePositionKeyframe: (elementId: string, time: number) => void;
+
   // Crop
   setCroppingElement: (id: string | null) => void;
   setContextMenu: (menu: { x: number; y: number; elementId: string } | null) => void;
+  setLastDragStartPosition: (pos: { elementId: string; x: number; y: number } | null) => void;
 
   // Getters
   getSelectedElement: () => CanvasElement | null;
@@ -115,6 +121,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   currentTime: 0,
   croppingElementId: null,
   contextMenu: null,
+  lastDragStartPosition: null,
   history: [],
   future: [],
 
@@ -299,7 +306,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       return Math.max(max, totalMs);
     }, 0);
 
-    const maxDuration = Math.max(maxFramerDuration, maxWidgetDuration, 3000);
+    const maxKeyframeDuration = project.elements.reduce((max, el) => {
+      if (!el.positionKeyframes || el.positionKeyframes.length === 0) return max;
+      return Math.max(max, ...el.positionKeyframes.map((kf) => kf.time));
+    }, 0);
+
+    const maxDuration = Math.max(maxFramerDuration, maxWidgetDuration, maxKeyframeDuration + 500, 3000);
 
     set({ isPlayingAll: true, selectedElementIds: [], currentTime: 0 });
     playStartTimestamp = null;
@@ -446,6 +458,40 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }));
   },
 
+  // Position Keyframes
+  addPositionKeyframe: (elementId, keyframe) => {
+    set((state) => ({
+      ...pushHistory(state),
+      project: {
+        ...state.project,
+        elements: state.project.elements.map((el) => {
+          if (el.id !== elementId) return el;
+          const existing = el.positionKeyframes || [];
+          // Replace if same time exists, otherwise add
+          const filtered = existing.filter((kf) => kf.time !== keyframe.time);
+          const updated = [...filtered, keyframe].sort((a, b) => a.time - b.time);
+          return { ...el, positionKeyframes: updated };
+        }),
+        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+      },
+    }));
+  },
+
+  removePositionKeyframe: (elementId, time) => {
+    set((state) => ({
+      ...pushHistory(state),
+      project: {
+        ...state.project,
+        elements: state.project.elements.map((el) => {
+          if (el.id !== elementId) return el;
+          const updated = (el.positionKeyframes || []).filter((kf) => kf.time !== time);
+          return { ...el, positionKeyframes: updated.length > 0 ? updated : undefined };
+        }),
+        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+      },
+    }));
+  },
+
   // Crop
   setCroppingElement: (id) => {
     set({ croppingElementId: id });
@@ -453,6 +499,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   setContextMenu: (menu) => {
     set({ contextMenu: menu });
+  },
+
+  setLastDragStartPosition: (pos) => {
+    set({ lastDragStartPosition: pos });
   },
 
   // Getters

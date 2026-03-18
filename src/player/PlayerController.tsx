@@ -2,12 +2,15 @@ import { motion } from 'framer-motion';
 import { Project, CanvasElement, ShapeContent, WidgetContent } from '../types/project';
 import { animationPresets } from '../animations/presets';
 import { WidgetRenderer } from '../editor/components/WidgetRenderer';
+import { useProjectStore } from '../store/useProjectStore';
+import { getInterpolatedPosition } from '../editor/utils/keyframeInterpolation';
 
 interface PlayerControllerProps {
   project: Project;
 }
 
 export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) => {
+  const currentTime = useProjectStore((state) => state.currentTime);
   const renderContent = (element: CanvasElement) => {
     switch (element.type) {
       case 'logo': {
@@ -122,14 +125,18 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
                 }
               : {};
 
+            const interpolatedPos = getInterpolatedPosition(element.positionKeyframes, currentTime);
+            const posX = interpolatedPos ? interpolatedPos.x : element.position.x;
+            const posY = interpolatedPos ? interpolatedPos.y : element.position.y;
+
             return (
               <motion.div
                 key={element.id}
                 {...motionProps}
                 style={{
                   position: 'absolute',
-                  left: element.position.x,
-                  top: element.position.y,
+                  left: posX,
+                  top: posY,
                   width: element.size.width,
                   height: element.size.height,
                   transform: `rotate(${element.rotation}deg)`,

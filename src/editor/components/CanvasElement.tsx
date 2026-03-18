@@ -7,6 +7,7 @@ import { animationPresets } from '../../animations/presets';
 import { WidgetRenderer } from './WidgetRenderer';
 import { CropOverlay } from './CropOverlay';
 import { computeSnap } from '../utils/snapping';
+import { getInterpolatedPosition } from '../utils/keyframeInterpolation';
 
 interface CanvasElementProps {
   element: CanvasElementType;
@@ -24,8 +25,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const previewingElementId = useProjectStore((state) => state.previewingElementId);
   const isPlayingAll = useProjectStore((state) => state.isPlayingAll);
   const project = useProjectStore((state) => state.project);
+  const currentTime = useProjectStore((state) => state.currentTime);
   const croppingElementId = useProjectStore((state) => state.croppingElementId);
   const setContextMenu = useProjectStore((state) => state.setContextMenu);
+  const setLastDragStartPosition = useProjectStore((state) => state.setLastDragStartPosition);
 
   const isCropping = croppingElementId === element.id;
 
@@ -51,6 +54,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
 
   // --- DRAG (native mouse events) ---
   const handleDragStart = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left-click starts drag
     if (element.locked || isCropping) return;
     e.stopPropagation();
     e.preventDefault();
@@ -70,6 +74,9 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     // Save snapshot for undo before any changes
     snapshotRef.current = JSON.parse(JSON.stringify(project));
 
+    // Save pre-drag position for "Bewegung hierher" context menu
+    setLastDragStartPosition({ elementId: element.id, x: element.position.x, y: element.position.y });
+
     // Capture start positions of ALL selected elements for multi-drag
     const { selectedElementIds } = useProjectStore.getState();
     const posMap = new Map<string, { x: number; y: number }>();
@@ -87,7 +94,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       elY: element.position.y,
     };
     setIsDragging(true);
-  }, [element.id, element.position.x, element.position.y, element.locked, isCropping, project, isSelected, selectElement, addToSelection, toggleSelectElement]);
+  }, [element.id, element.position.x, element.position.y, element.locked, isCropping, project, isSelected, selectElement, addToSelection, toggleSelectElement, setLastDragStartPosition]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -364,6 +371,13 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       }
     : {};
 
+  // Position keyframe interpolation during playback
+  const interpolatedPos = isPlayingAll
+    ? getInterpolatedPosition(element.positionKeyframes, currentTime)
+    : null;
+  const renderX = interpolatedPos ? interpolatedPos.x : element.position.x;
+  const renderY = interpolatedPos ? interpolatedPos.y : element.position.y;
+
   return (
     <div
       ref={elementRef}
@@ -373,8 +387,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       onContextMenu={handleContextMenu}
       style={{
         position: 'absolute',
-        left: element.position.x,
-        top: element.position.y,
+        left: renderX,
+        top: renderY,
         width: element.size.width,
         height: element.size.height,
         transform: `rotate(${element.rotation}deg)`,
