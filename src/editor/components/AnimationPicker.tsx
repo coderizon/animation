@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
-import { animationPresets } from '../../animations/presets';
+import { animationPresets, presetCategories } from '../../animations/presets';
 import { AnimationPresetName, EasingName } from '../../types/animation';
 
 interface AnimationPickerProps {
@@ -12,6 +13,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
   );
   const updateElement = useProjectStore((state) => state.updateElement);
   const triggerPreview = useProjectStore((state) => state.triggerPreview);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   if (!element) return null;
 
@@ -19,14 +21,17 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
 
   const handleSelectPreset = (presetName: AnimationPresetName) => {
     const preset = animationPresets[presetName];
+    const isNewAnimation = !currentAnimation || currentAnimation.preset === 'none';
     updateElement(element.id, {
       animation: {
         preset: presetName,
-        delay: currentAnimation?.delay || 0,
-        duration: preset.defaultDuration,
-        easing: currentAnimation?.easing || 'easeOut',
+        delay: isNewAnimation ? 0 : currentAnimation.delay,
+        duration: isNewAnimation ? preset.defaultDuration : currentAnimation.duration,
+        easing: isNewAnimation ? 'easeOut' : currentAnimation.easing,
       },
     });
+    // Auto-preview on selection
+    setTimeout(() => triggerPreview(element.id), 50);
   };
 
   const handleRemoveAnimation = () => {
@@ -65,13 +70,17 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
     });
   };
 
+  const toggleCategory = (categoryName: string) => {
+    setExpandedCategory(prev => prev === categoryName ? null : categoryName);
+  };
+
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: 20,
+      gap: 12,
     }}>
-      {/* Animation Presets Grid */}
+      {/* Animation Presets by Category */}
       <div>
         <h4 style={{
           fontSize: 12,
@@ -79,57 +88,141 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
           color: '#666',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
-          marginBottom: 12,
+          marginBottom: 8,
         }}>
           Animation Preset
         </h4>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 8,
-        }}>
-          {Object.values(animationPresets).map((preset) => {
-            const isSelected = currentAnimation?.preset === preset.name;
+
+        {/* Current selection indicator */}
+        {currentAnimation && currentAnimation.preset !== 'none' && (
+          <div style={{
+            padding: '6px 10px',
+            backgroundColor: '#e3f2fd',
+            borderRadius: 6,
+            marginBottom: 8,
+            fontSize: 12,
+            color: '#1565c0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            <span>{animationPresets[currentAnimation.preset]?.icon}</span>
+            <span style={{ fontWeight: 600 }}>
+              {animationPresets[currentAnimation.preset]?.displayName}
+            </span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {presetCategories.map((category) => {
+            const isExpanded = expandedCategory === category.name;
+            const hasCurrent = category.presets.includes(currentAnimation?.preset as AnimationPresetName);
+
             return (
-              <button
-                key={preset.name}
-                onClick={() => handleSelectPreset(preset.name)}
-                style={{
-                  padding: '12px 8px',
-                  backgroundColor: isSelected ? '#2196F3' : '#f0f0f4',
-                  border: isSelected ? '2px solid #2196F3' : '2px solid #e0e0e8',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#e0e0e8';
-                    e.currentTarget.style.borderColor = '#b0b0c0';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#f0f0f4';
-                    e.currentTarget.style.borderColor = '#e0e0e8';
-                  }
-                }}
-              >
-                <span style={{ fontSize: 24 }}>{preset.icon}</span>
-                <span style={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: isSelected ? '#fff' : '#444',
-                  textAlign: 'center',
-                  lineHeight: 1.2,
-                }}>
-                  {preset.displayName}
-                </span>
-              </button>
+              <div key={category.name}>
+                {/* Category Header */}
+                <button
+                  onClick={() => toggleCategory(category.name)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    backgroundColor: hasCurrent ? '#e3f2fd' : '#f8f8fa',
+                    border: '1px solid',
+                    borderColor: hasCurrent ? '#90caf9' : '#e0e0e8',
+                    borderRadius: isExpanded ? '6px 6px 0 0' : 6,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: hasCurrent ? '#1565c0' : '#555',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!hasCurrent) {
+                      e.currentTarget.style.backgroundColor = '#ececf0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!hasCurrent) {
+                      e.currentTarget.style.backgroundColor = '#f8f8fa';
+                    }
+                  }}
+                >
+                  <span>{category.name}</span>
+                  <span style={{
+                    fontSize: 10,
+                    color: '#999',
+                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.15s',
+                  }}>
+                    ▼
+                  </span>
+                </button>
+
+                {/* Category Presets */}
+                {isExpanded && (
+                  <div style={{
+                    border: '1px solid #e0e0e8',
+                    borderTop: 'none',
+                    borderRadius: '0 0 6px 6px',
+                    padding: 6,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 4,
+                  }}>
+                    {category.presets.map((presetName) => {
+                      const preset = animationPresets[presetName];
+                      if (!preset) return null;
+                      const isSelected = currentAnimation?.preset === presetName;
+
+                      return (
+                        <button
+                          key={presetName}
+                          onClick={() => handleSelectPreset(presetName)}
+                          style={{
+                            padding: '8px 6px',
+                            backgroundColor: isSelected ? '#2196F3' : '#fff',
+                            border: isSelected ? '1.5px solid #2196F3' : '1.5px solid #e0e0e8',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 3,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = '#f0f0f4';
+                              e.currentTarget.style.borderColor = '#b0b0c0';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = '#fff';
+                              e.currentTarget.style.borderColor = '#e0e0e8';
+                            }
+                          }}
+                          title={preset.description}
+                        >
+                          <span style={{ fontSize: 18 }}>{preset.icon}</span>
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 500,
+                            color: isSelected ? '#fff' : '#444',
+                            textAlign: 'center',
+                            lineHeight: 1.2,
+                          }}>
+                            {preset.displayName}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -375,7 +468,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
         color: '#888',
         lineHeight: 1.4,
       }}>
-        <strong>Tipp:</strong> Wähle eine Animation aus, um dein Element zu animieren
+        <strong>Tipp:</strong> Wähle eine Kategorie und dann eine Animation aus
       </div>
     </div>
   );

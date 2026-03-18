@@ -339,7 +339,7 @@ export const Timeline: React.FC = () => {
 
   return (
     <div style={{
-      height: 200,
+      height: '100%',
       backgroundColor: '#ffffff',
       borderTop: '1px solid #e0e0e8',
       display: 'flex',

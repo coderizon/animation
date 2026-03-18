@@ -102,19 +102,64 @@ export interface AnimationConfig {
 
 export type AnimationPresetName =
   | 'none'
+  // Fade
   | 'fadeIn'
   | 'fadeOut'
+  | 'softFadeOut'
+  // Slide
   | 'slideInLeft'
   | 'slideInRight'
   | 'slideInTop'
   | 'slideInBottom'
+  | 'slideOutLeft'
+  | 'slideOutRight'
+  // Scale & Zoom
   | 'scaleIn'
   | 'scaleOut'
-  | 'bounce'
+  | 'scalePop'
+  | 'zoomIn'
+  | 'zoomOut'
+  | 'cameraPush'
+  // Rotation
   | 'rotate'
+  | 'rotationReveal'
+  | 'flipIn'
+  | 'flipInY'
+  // Bounce & Elastic
+  | 'bounce'
+  | 'elasticIn'
+  | 'elasticScale'
   | 'pulse'
   | 'shake'
-  | 'flipIn';
+  // Reveal & Mask
+  | 'wipeRight'
+  | 'wipeDown'
+  | 'wipeLeft'
+  | 'barReveal'
+  | 'maskCircle'
+  // Stroke & Shape
+  | 'strokeDraw'
+  | 'shapeAssembly'
+  // Glitch & Digital
+  | 'glitch'
+  | 'rgbSplit'
+  | 'scanlines'
+  // Light & Shine
+  | 'lightSweep'
+  | 'lightShadow'
+  // Motion
+  | 'motionBlur'
+  | 'slowDrift'
+  | 'parallaxDepth'
+  | 'subtle3D'
+  // Particle & Dissolve
+  | 'particleBuild'
+  | 'particleDissolve'
+  // Dramatic
+  | 'explode'
+  | 'liquidReveal'
+  | 'smokeReveal'
+  | 'depthOfField';
 
 export type EasingName =
   | 'linear'

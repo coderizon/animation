@@ -361,20 +361,36 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     ? animationPresets[element.animation.preset]
     : null;
 
-  const motionProps = animationConfig
-    ? {
-        key: animationKey,
-        initial: 'hidden',
-        animate: 'visible',
-        variants: animationConfig.variants,
-        transition: {
-          delay: (element.animation?.delay || 0) / 1000,
-          duration: (element.animation?.duration || 600) / 1000,
-          ease: element.animation?.easing === 'spring' ? undefined : element.animation?.easing || 'easeOut',
-          type: element.animation?.easing === 'spring' || element.animation?.easing === 'bounce' ? 'spring' : 'tween',
-        },
-      }
-    : {};
+  // Build motion props, stripping inner transition from variants so user controls take effect
+  const motionProps = (() => {
+    if (!animationConfig) return {};
+
+    // Clone variants and remove transition from visible to prevent override
+    const cleanVariants = { ...animationConfig.variants };
+    if (cleanVariants.visible && typeof cleanVariants.visible === 'object' && !Array.isArray(cleanVariants.visible)) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { transition: _innerTransition, ...visibleWithoutTransition } = cleanVariants.visible as Record<string, any>;
+      cleanVariants.visible = visibleWithoutTransition;
+    }
+
+    const easing = element.animation?.easing || 'easeOut';
+    const isSpring = easing === 'spring' || easing === 'bounce';
+
+    return {
+      key: animationKey,
+      initial: 'hidden',
+      animate: 'visible',
+      variants: cleanVariants,
+      transition: {
+        delay: (element.animation?.delay || 0) / 1000,
+        duration: isSpring ? undefined : (element.animation?.duration || 600) / 1000,
+        ease: isSpring ? undefined : easing,
+        type: isSpring ? 'spring' : 'tween',
+        ...(easing === 'spring' ? { stiffness: 200, damping: 20 } : {}),
+        ...(easing === 'bounce' ? { bounce: 0.5 } : {}),
+      },
+    };
+  })();
 
   // Full keyframe interpolation during playback or paused state
   const showInterpolated = playbackState === 'playing' || playbackState === 'paused';

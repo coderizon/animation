@@ -109,26 +109,30 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
               ? animationPresets[element.animation.preset]
               : null;
 
-            const motionProps = animationConfig
-              ? {
-                  initial: 'hidden',
-                  animate: 'visible',
-                  variants: animationConfig.variants,
-                  transition: {
-                    delay: (element.animation?.delay || 0) / 1000,
-                    duration: (element.animation?.duration || 600) / 1000,
-                    ease:
-                      element.animation?.easing === 'spring'
-                        ? undefined
-                        : element.animation?.easing || 'easeOut',
-                    type:
-                      element.animation?.easing === 'spring' ||
-                      element.animation?.easing === 'bounce'
-                        ? 'spring'
-                        : 'tween',
-                  },
-                }
-              : {};
+            const motionProps = (() => {
+              if (!animationConfig) return {};
+              const cleanVariants = { ...animationConfig.variants };
+              if (cleanVariants.visible && typeof cleanVariants.visible === 'object' && !Array.isArray(cleanVariants.visible)) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { transition: _t, ...rest } = cleanVariants.visible as Record<string, any>;
+                cleanVariants.visible = rest;
+              }
+              const easing = element.animation?.easing || 'easeOut';
+              const isSpring = easing === 'spring' || easing === 'bounce';
+              return {
+                initial: 'hidden',
+                animate: 'visible',
+                variants: cleanVariants,
+                transition: {
+                  delay: (element.animation?.delay || 0) / 1000,
+                  duration: isSpring ? undefined : (element.animation?.duration || 600) / 1000,
+                  ease: isSpring ? undefined : easing,
+                  type: isSpring ? 'spring' : 'tween',
+                  ...(easing === 'spring' ? { stiffness: 200, damping: 20 } : {}),
+                  ...(easing === 'bounce' ? { bounce: 0.5 } : {}),
+                },
+              };
+            })();
 
             const interp = getInterpolatedProperties(element.keyframes, currentTime);
             const posX = interp ? interp.x : element.position.x;

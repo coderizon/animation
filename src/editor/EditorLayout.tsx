@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { AssetLibrary } from './components/AssetLibrary';
 import { Canvas } from './Canvas';
@@ -24,6 +24,29 @@ export const EditorLayout: React.FC = () => {
   const canRedo = useProjectStore((state) => state.canRedo());
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [timelineHeight, setTimelineHeight] = useState(200);
+  const [isResizingTimeline, setIsResizingTimeline] = useState(false);
+  const timelineRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isResizingTimeline) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!timelineRef.current) return;
+      const containerBottom = timelineRef.current.getBoundingClientRect().bottom;
+      const newHeight = containerBottom - e.clientY;
+      setTimelineHeight(Math.max(60, Math.min(500, newHeight)));
+    };
+
+    const handleMouseUp = () => setIsResizingTimeline(false);
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingTimeline]);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
@@ -418,7 +441,7 @@ export const EditorLayout: React.FC = () => {
         overflow: 'hidden',
       }}>
         {/* Sidebar (Left) - Resizable */}
-        <ResizablePanel defaultWidth={450} minWidth={300} maxWidth={700} position="left">
+        <ResizablePanel defaultWidth={450} minWidth={150} maxWidth={700} position="left">
           <h2 style={{ fontSize: 16, marginBottom: 15, color: '#1a1a2e' }}>
             Assets
           </h2>
@@ -429,7 +452,7 @@ export const EditorLayout: React.FC = () => {
         <Canvas />
 
         {/* Properties Panel (Right) - Resizable */}
-        <ResizablePanel defaultWidth={350} minWidth={280} maxWidth={600} position="right">
+        <ResizablePanel defaultWidth={350} minWidth={150} maxWidth={600} position="right">
           <h2 style={{ fontSize: 16, marginBottom: 15, color: '#1a1a2e' }}>
             Properties
           </h2>
@@ -438,7 +461,36 @@ export const EditorLayout: React.FC = () => {
       </div>
 
       {/* Timeline */}
-      <Timeline />
+      <div ref={timelineRef} style={{ position: 'relative', height: timelineHeight, flexShrink: 0 }}>
+        {/* Resize Handle */}
+        <div
+          onMouseDown={(e) => { e.preventDefault(); setIsResizingTimeline(true); }}
+          style={{
+            position: 'absolute',
+            top: -4,
+            left: 0,
+            right: 0,
+            height: 8,
+            cursor: 'ns-resize',
+            zIndex: 10,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(33, 150, 243, 0.3)'; }}
+          onMouseLeave={(e) => { if (!isResizingTimeline) e.currentTarget.style.backgroundColor = 'transparent'; }}
+        >
+          <div style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 40,
+            height: 2,
+            backgroundColor: isResizingTimeline ? '#2196F3' : '#b0b0c0',
+            borderRadius: 2,
+            opacity: isResizingTimeline ? 1 : 0.5,
+          }} />
+        </div>
+        <Timeline />
+      </div>
 
       {/* Status Bar */}
       <div style={{
