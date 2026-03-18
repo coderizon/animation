@@ -1,7 +1,15 @@
 import React from 'react';
 import { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
 import { interpolate } from '../../interpolate';
-import { networkConfig, TOTAL_USERS, COUNTER_FRAMES, AVATAR_SIZE } from './config';
+import {
+  networkConfig,
+  TOTAL_USERS,
+  COUNTER_FRAMES,
+  AVATAR_SIZE,
+  HORIZONTAL_SAFE_MARGIN,
+  VERTICAL_SAFE_MARGIN,
+  mapPercentToAxis,
+} from './config';
 import { TypingPerson } from './TypingPerson';
 import { CentralBox } from './CentralBox';
 import { ConnectionLine } from './ConnectionLine';
@@ -94,14 +102,16 @@ const NetworkVisualization: React.FC<WidgetComponentProps> = ({ frame, width, he
         {networkConfig.map((person, index) => {
           const userAppearFrame = (index / TOTAL_USERS) * COUNTER_FRAMES;
           const avatarOpacity = interpolate(frame, [userAppearFrame, userAppearFrame + 15], [0, 1], CLAMP);
+          const avatarX = mapPercentToAxis(person.left, width, HORIZONTAL_SAFE_MARGIN);
+          const avatarY = mapPercentToAxis(person.top, height, VERTICAL_SAFE_MARGIN);
 
           return (
             <div
               key={index}
               style={{
                 position: 'absolute',
-                top: `${person.top}%`,
-                left: `${person.left}%`,
+                top: avatarY,
+                left: avatarX,
                 transform: 'translate(-50%, -50%)',
                 opacity: avatarOpacity,
                 borderRadius: '50%',

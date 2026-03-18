@@ -31,7 +31,7 @@ src/
 │   ├── PropertiesPanel.tsx        # Right panel: position/size/rotation/color/animation/keyframes
 │   ├── components/
 │   │   ├── AnimationPicker.tsx    # Collapsible category UI, auto-preview on select
-│   │   ├── AssetLibrary.tsx       # Left panel: shapes/text/widgets/logos (drag sources)
+│   │   ├── AssetLibrary.tsx       # Left panel: shapes/text/images/widgets/logos (drag sources)
 │   │   ├── CanvasElement.tsx      # Element renderer: drag/resize/select + framer-motion animation
 │   │   ├── ContextMenu.tsx        # Right-click: crop, keyframe, "Bewegung hierher"
 │   │   ├── CropOverlay.tsx        # 8-handle crop tool (inset percentages)
@@ -66,7 +66,7 @@ src/
 │       ├── NetworkVisualization/  # User counter + connection lines
 │       └── NeuralNetServer/       # Floating neural network graph
 └── templates/
-    └── index.ts                   # Empty template system (infrastructure ready)
+    └── index.ts                   # Built-in starter templates
 ```
 
 ---
@@ -210,7 +210,8 @@ On stop: reset currentTime=0, prevPastDelay=false
 3. Register in `widgets/registry.ts`
 
 ### Add a new asset/logo
-Drop SVG file in `/public/assets/` - auto-discovered by AssetLibrary via Vite glob
+Drop SVG file in `/public/assets/` - auto-discovered by AssetLibrary via Vite glob.
+Image elements can also point at files in `/public/assets/` via the Properties panel.
 
 ### Add a keyboard shortcut
 Edit `editor/hooks/useKeyboardShortcuts.ts`
@@ -233,7 +234,7 @@ Edit `editor/hooks/useKeyboardShortcuts.ts`
 ---
 
 ## Public Assets
-`/public/assets/` contains ~25 AI/ML company SVG logos (Anthropic, DeepSeek, HuggingFace, Meta, Microsoft, Google Cloud, Mistral, Groq, etc.) - auto-discovered and shown in AssetLibrary.
+`/public/assets/` contains 76 SVG assets at the moment - auto-discovered and shown in AssetLibrary.
 
 ---
 
@@ -246,4 +247,3 @@ Edit `editor/hooks/useKeyboardShortcuts.ts`
 - No path animation / SVG morphing
 - Linear keyframe interpolation only (no bezier curves between keyframes)
 - Single user (no collaboration)
-- Template system exists but is empty

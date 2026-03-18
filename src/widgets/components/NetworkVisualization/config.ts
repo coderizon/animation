@@ -49,3 +49,14 @@ export const queries = [
 export const TOTAL_USERS = 20;
 export const COUNTER_FRAMES = 90;
 export const AVATAR_SIZE = 50;
+export const HORIZONTAL_SAFE_MARGIN = 80;
+export const VERTICAL_SAFE_MARGIN = 56;
+
+export function mapPercentToAxis(
+  percent: number,
+  axisSize: number,
+  safeMargin: number,
+): number {
+  const usableSize = Math.max(axisSize - safeMargin * 2, 0);
+  return safeMargin + (percent / 100) * usableSize;
+}

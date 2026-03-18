@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { CanvasElement as CanvasElementType, ShapeContent, WidgetContent } from '../../types/project';
+import { CanvasElement as CanvasElementType, ImageContent, ShapeContent, TextContent, WidgetContent } from '../../types/project';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useViewportStore } from '../../store/useViewportStore';
 import { animationPresets } from '../../animations/presets';
@@ -8,6 +8,7 @@ import { WidgetRenderer } from './WidgetRenderer';
 import { CropOverlay } from './CropOverlay';
 import { computeSnap } from '../utils/snapping';
 import { getInterpolatedProperties } from '../utils/keyframeInterpolation';
+import { getTypewriterText } from '../../utils/typewriter';
 
 interface CanvasElementProps {
   element: CanvasElementType;
@@ -36,6 +37,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const [animationKey, setAnimationKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [previewElapsed, setPreviewElapsed] = useState(0);
   const isPreviewing = previewingElementId === element.id;
   const animDelay = element.animation?.delay || 0;
   const isPlayback = isPlayingAll || playbackState === 'paused';
@@ -64,6 +66,24 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       prevPastDelay.current = false;
     }
   }, [playbackState]);
+
+  useEffect(() => {
+    if (!isPreviewing) {
+      setPreviewElapsed(0);
+      return;
+    }
+
+    let frameId = 0;
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      setPreviewElapsed(now - start);
+      frameId = requestAnimationFrame(tick);
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [isPreviewing, animationKey]);
 
   // --- DRAG (native mouse events) ---
   const handleDragStart = useCallback((e: React.MouseEvent) => {
@@ -306,8 +326,32 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
             draggable={false}
           />
         );
+      case 'image': {
+        const ic = element.content as ImageContent;
+        return (
+          <img
+            src={ic.src}
+            alt={ic.alt}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              draggable: false,
+            } as React.CSSProperties}
+            draggable={false}
+          />
+        );
+      }
       case 'text': {
-        const tc = element.content as { text: string; fontSize: number; color: string; fontFamily: string; fontWeight?: number };
+        const tc = element.content as TextContent;
+        const displayedText = getTypewriterText(
+          tc.text,
+          tc.typewriter,
+          isPreviewing ? previewElapsed : (isPlayback ? currentTime - animDelay : null),
+          element.animation?.duration,
+        );
         return (
           <div style={{
             fontSize: interpolated?.fontSize ?? tc.fontSize,
@@ -318,7 +362,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
             userSelect: 'none',
             whiteSpace: 'nowrap',
           }}>
-            {tc.text}
+            {displayedText}
           </div>
         );
       }

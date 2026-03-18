@@ -1,5 +1,5 @@
 import { useProjectStore } from '../store/useProjectStore';
-import { ShapeContent, TextContent, WidgetContent, Keyframe } from '../types/project';
+import { ImageContent, ShapeContent, TextContent, WidgetContent, Keyframe } from '../types/project';
 import { AnimationPicker } from './components/AnimationPicker';
 
 export const PropertiesPanel: React.FC = () => {
@@ -268,8 +268,72 @@ export const PropertiesPanel: React.FC = () => {
                 unit="px"
                 min={8}
               />
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 13,
+                color: '#444',
+                cursor: 'pointer',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={content.typewriter ?? false}
+                  onChange={(e) => handleTextUpdate({ typewriter: e.target.checked })}
+                />
+                Typewriter
+              </label>
             </PropertySection>
           </>
+        );
+      })()}
+
+      {/* Image Properties */}
+      {selectedElement.type === 'image' && (() => {
+        const content = selectedElement.content as ImageContent;
+        const handleImageUpdate = (updates: Partial<ImageContent>) => {
+          updateElement(selectedElement.id, {
+            content: { ...content, ...updates },
+          });
+        };
+        return (
+          <PropertySection title="Bild">
+            <div style={{
+              width: '100%',
+              aspectRatio: '16 / 9',
+              backgroundColor: '#f0f0f4',
+              border: '1px solid #e0e0e8',
+              borderRadius: 8,
+              overflow: 'hidden',
+            }}>
+              <img
+                src={content.src}
+                alt={content.alt}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+            </div>
+            <LabeledTextInput
+              label="Quelle"
+              value={content.src}
+              onChange={(val) => handleImageUpdate({ src: val })}
+              placeholder="/assets/your-image.png"
+            />
+            <LabeledTextInput
+              label="Alt"
+              value={content.alt}
+              onChange={(val) => handleImageUpdate({ alt: val })}
+              placeholder="Image description"
+            />
+            <div style={{ fontSize: 11, color: '#888', lineHeight: 1.4 }}>
+              Verwende eine Datei unter <code>/public/assets</code> als Pfad wie <code>/assets/name.png</code>
+              oder eine vollstaendige URL.
+            </div>
+          </PropertySection>
         );
       })()}
 
@@ -431,6 +495,39 @@ export const PropertiesPanel: React.FC = () => {
           Element löschen
         </button>
       </div>
+    </div>
+  );
+};
+
+interface LabeledTextInputProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+const LabeledTextInput: React.FC<LabeledTextInputProps> = ({ label, value, onChange, placeholder }) => {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{ fontSize: 13, color: '#444' }}>{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: '100%',
+          padding: '8px 12px',
+          backgroundColor: '#f0f0f4',
+          border: '1px solid #e0e0e8',
+          borderRadius: 6,
+          color: '#1a1a2e',
+          fontSize: 13,
+          outline: 'none',
+        }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = '#2196F3'; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = '#e0e0e8'; }}
+      />
     </div>
   );
 };

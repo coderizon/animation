@@ -7,7 +7,7 @@ function generateId(): string {
 }
 
 // Helper: Create blank project
-function createBlankProject(): Project {
+export function createBlankProject(): Project {
   return {
     id: generateId(),
     name: 'Untitled Project',

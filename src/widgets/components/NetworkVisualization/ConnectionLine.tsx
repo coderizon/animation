@@ -1,5 +1,10 @@
 import React from 'react';
-import { queries } from './config';
+import {
+  HORIZONTAL_SAFE_MARGIN,
+  VERTICAL_SAFE_MARGIN,
+  mapPercentToAxis,
+  queries,
+} from './config';
 
 // Seeded random for deterministic animation offsets
 function seededRandom(seed: number) {
@@ -19,8 +24,8 @@ interface ConnectionLineProps {
 export const ConnectionLine: React.FC<ConnectionLineProps> = ({ index, person, frame, opacity, width, height }) => {
   const serverX = width / 2;
   const serverY = height / 2;
-  const avatarX = (person.left / 100) * width;
-  const avatarY = (person.top / 100) * height;
+  const avatarX = mapPercentToAxis(person.left, width, HORIZONTAL_SAFE_MARGIN);
+  const avatarY = mapPercentToAxis(person.top, height, VERTICAL_SAFE_MARGIN);
 
   // Dashed line flow: 1s = 30 frames cycle
   const dashOffset = person.flip
@@ -33,12 +38,9 @@ export const ConnectionLine: React.FC<ConnectionLineProps> = ({ index, person, f
   const textStart = seed * 8 * 30;
   const textProgress = ((frame + textStart) % textDuration) / textDuration;
 
-  let startOffset: string;
-  if (!person.flip) {
-    startOffset = `${-20 + textProgress * 140}%`;
-  } else {
-    startOffset = `${120 - textProgress * 140}%`;
-  }
+  const startOffset = person.flip
+    ? `${66 - textProgress * 32}%`
+    : `${34 + textProgress * 32}%`;
 
   // Path direction
   const x1 = person.flip ? serverX : avatarX;
@@ -62,10 +64,11 @@ export const ConnectionLine: React.FC<ConnectionLineProps> = ({ index, person, f
       />
       <text
         fill="#E8F0FE"
-        fontSize={14}
+        fontSize={13}
         fontWeight={500}
         letterSpacing={0.5}
         dy={-6}
+        textAnchor="middle"
       >
         <textPath href={`#${pathId}`} startOffset={startOffset}>
           {queries[index]}
