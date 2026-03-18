@@ -7,7 +7,7 @@ export const ContextMenu: React.FC = () => {
   const setContextMenu = useProjectStore((s) => s.setContextMenu);
   const setCroppingElement = useProjectStore((s) => s.setCroppingElement);
   const updateElement = useProjectStore((s) => s.updateElement);
-  const addPositionKeyframe = useProjectStore((s) => s.addPositionKeyframe);
+  const addKeyframe = useProjectStore((s) => s.addKeyframe);
   const lastDragStartPosition = useProjectStore((s) => s.lastDragStartPosition);
   const setLastDragStartPosition = useProjectStore((s) => s.setLastDragStartPosition);
   const project = useProjectStore((s) => s.project);
@@ -49,24 +49,33 @@ export const ContextMenu: React.FC = () => {
       label: 'Bewegung hierher',
       onClick: () => {
         if (!lastDragStartPosition) return;
-        const anim = element.animation;
-        // Start keyframe = after entrance animation ends
-        const animEnd = anim ? (anim.delay || 0) + (anim.duration || 600) : 0;
-        const startTime = Math.max(animEnd, 0);
-        const endTime = startTime + 1000; // 1s movement duration
+        const existingKfs = element.keyframes || [];
 
-        // Keyframe 1: start position (where element was before drag)
-        addPositionKeyframe(contextMenu.elementId, {
-          time: startTime,
-          x: lastDragStartPosition.x,
-          y: lastDragStartPosition.y,
-        });
-        // Keyframe 2: end position (current position after drag)
-        addPositionKeyframe(contextMenu.elementId, {
-          time: endTime,
-          x: element.position.x,
-          y: element.position.y,
-        });
+        if (existingKfs.length > 0) {
+          // Chain: append new keyframe 1s after last existing one
+          const lastKf = existingKfs[existingKfs.length - 1];
+          addKeyframe(contextMenu.elementId, {
+            time: lastKf.time + 1000,
+            x: element.position.x,
+            y: element.position.y,
+          });
+        } else {
+          // First movement: create start + end keyframes
+          const anim = element.animation;
+          const animEnd = anim ? (anim.delay || 0) + (anim.duration || 600) : 0;
+          const startTime = Math.max(animEnd, 0);
+
+          addKeyframe(contextMenu.elementId, {
+            time: startTime,
+            x: lastDragStartPosition.x,
+            y: lastDragStartPosition.y,
+          });
+          addKeyframe(contextMenu.elementId, {
+            time: startTime + 1000,
+            x: element.position.x,
+            y: element.position.y,
+          });
+        }
 
         setLastDragStartPosition(null);
         setContextMenu(null);

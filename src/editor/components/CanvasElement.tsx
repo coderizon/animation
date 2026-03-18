@@ -7,7 +7,7 @@ import { animationPresets } from '../../animations/presets';
 import { WidgetRenderer } from './WidgetRenderer';
 import { CropOverlay } from './CropOverlay';
 import { computeSnap } from '../utils/snapping';
-import { getInterpolatedPosition } from '../utils/keyframeInterpolation';
+import { getInterpolatedProperties } from '../utils/keyframeInterpolation';
 
 interface CanvasElementProps {
   element: CanvasElementType;
@@ -24,6 +24,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const toggleSelectElement = useProjectStore((state) => state.toggleSelectElement);
   const previewingElementId = useProjectStore((state) => state.previewingElementId);
   const isPlayingAll = useProjectStore((state) => state.isPlayingAll);
+  const playbackState = useProjectStore((state) => state.playbackState);
   const project = useProjectStore((state) => state.project);
   const currentTime = useProjectStore((state) => state.currentTime);
   const croppingElementId = useProjectStore((state) => state.croppingElementId);
@@ -297,8 +298,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         const tc = element.content as { text: string; fontSize: number; color: string; fontFamily: string; fontWeight?: number };
         return (
           <div style={{
-            fontSize: tc.fontSize,
-            color: tc.color,
+            fontSize: interpolated?.fontSize ?? tc.fontSize,
+            color: interpolated?.color ?? tc.color,
             fontFamily: tc.fontFamily,
             fontWeight: tc.fontWeight,
             pointerEvents: 'none',
@@ -311,14 +312,18 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       }
       case 'shape': {
         const content = element.content as ShapeContent;
+        const fill = interpolated?.fill ?? content.fill;
+        const stroke = interpolated?.stroke ?? content.stroke;
+        const strokeWidth = interpolated?.strokeWidth ?? content.strokeWidth;
+
         if (content.shape === 'triangle') {
           return (
             <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ pointerEvents: 'none' }}>
               <polygon
                 points="50,0 100,100 0,100"
-                fill={content.fill}
-                stroke={content.stroke || 'none'}
-                strokeWidth={content.strokeWidth || 0}
+                fill={fill}
+                stroke={stroke || 'none'}
+                strokeWidth={strokeWidth || 0}
               />
             </svg>
           );
@@ -327,8 +332,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         const shapeStyle: React.CSSProperties = {
           width: '100%',
           height: '100%',
-          backgroundColor: content.fill,
-          border: content.stroke ? `${content.strokeWidth || 1}px solid ${content.stroke}` : 'none',
+          backgroundColor: fill,
+          border: stroke ? `${strokeWidth || 1}px solid ${stroke}` : 'none',
           pointerEvents: 'none',
         };
 
@@ -342,8 +347,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         return (
           <WidgetRenderer
             content={element.content as WidgetContent}
-            width={element.size.width}
-            height={element.size.height}
+            width={renderW}
+            height={renderH}
           />
         );
       default:
@@ -371,12 +376,16 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       }
     : {};
 
-  // Position keyframe interpolation during playback
-  const interpolatedPos = isPlayingAll
-    ? getInterpolatedPosition(element.positionKeyframes, currentTime)
+  // Full keyframe interpolation during playback or paused state
+  const showInterpolated = playbackState === 'playing' || playbackState === 'paused';
+  const interpolated = showInterpolated
+    ? getInterpolatedProperties(element.keyframes, currentTime)
     : null;
-  const renderX = interpolatedPos ? interpolatedPos.x : element.position.x;
-  const renderY = interpolatedPos ? interpolatedPos.y : element.position.y;
+  const renderX = interpolated ? interpolated.x : element.position.x;
+  const renderY = interpolated ? interpolated.y : element.position.y;
+  const renderW = interpolated?.width ?? element.size.width;
+  const renderH = interpolated?.height ?? element.size.height;
+  const renderRotation = interpolated?.rotation ?? element.rotation;
 
   return (
     <div
@@ -389,9 +398,9 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         position: 'absolute',
         left: renderX,
         top: renderY,
-        width: element.size.width,
-        height: element.size.height,
-        transform: `rotate(${element.rotation}deg)`,
+        width: renderW,
+        height: renderH,
+        transform: `rotate(${renderRotation}deg)`,
         zIndex: isDragging ? 9999 : element.zIndex,
         cursor: element.locked ? 'not-allowed' : isDragging ? 'grabbing' : 'grab',
         border: isSelected ? '2px solid #2196F3' : '1px solid transparent',

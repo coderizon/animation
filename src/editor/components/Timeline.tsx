@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
+import { ShapeContent, TextContent, Keyframe } from '../../types/project';
 
 export const Timeline: React.FC = () => {
   const project = useProjectStore((state) => state.project);
@@ -11,13 +12,14 @@ export const Timeline: React.FC = () => {
   const renameElement = useProjectStore((state) => state.renameElement);
   const reorderElements = useProjectStore((state) => state.reorderElements);
   const playAllAnimations = useProjectStore((state) => state.playAllAnimations);
+  const pauseAllAnimations = useProjectStore((state) => state.pauseAllAnimations);
   const stopAllAnimations = useProjectStore((state) => state.stopAllAnimations);
-  const isPlayingAll = useProjectStore((state) => state.isPlayingAll);
+  const playbackState = useProjectStore((state) => state.playbackState);
   const currentTime = useProjectStore((state) => state.currentTime);
   const setCurrentTime = useProjectStore((state) => state.setCurrentTime);
   const updateElementSilent = useProjectStore((state) => state.updateElementSilent);
   const pushSnapshot = useProjectStore((state) => state.pushSnapshot);
-  const addPositionKeyframe = useProjectStore((state) => state.addPositionKeyframe);
+  const addKeyframe = useProjectStore((state) => state.addKeyframe);
 
   // Inline rename state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,8 +60,8 @@ export const Timeline: React.FC = () => {
   // Timeline calculations
   const animatedElements = project.elements.filter((el) => el.animation && el.animation.preset !== 'none');
   const maxKeyframeTime = project.elements.reduce((max, el) => {
-    if (!el.positionKeyframes || el.positionKeyframes.length === 0) return max;
-    return Math.max(max, ...el.positionKeyframes.map((kf) => kf.time));
+    if (!el.keyframes || el.keyframes.length === 0) return max;
+    return Math.max(max, ...el.keyframes.map((kf) => kf.time));
   }, 0);
   const maxTime = Math.max(
     3000,
@@ -100,6 +102,18 @@ export const Timeline: React.FC = () => {
       selectElement(id);
     }
   }, [selectElement, addToSelection]);
+
+  // Click on track area: select element + set playhead time
+  const handleTrackClick = useCallback((id: string, e: React.MouseEvent) => {
+    handleRowClick(id, e);
+    // Set playhead based on click X position within tracks area
+    if (tracksRef.current) {
+      const rect = tracksRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left + tracksRef.current.scrollLeft;
+      const time = Math.max(0, Math.round((x / pxPerMs) / 50) * 50); // snap to 50ms
+      setCurrentTime(time);
+    }
+  }, [handleRowClick, pxPerMs, setCurrentTime]);
 
   // Drag-to-reorder handlers
   const handleDragStart = useCallback((reversedIndex: number) => {
@@ -248,16 +262,16 @@ export const Timeline: React.FC = () => {
       newTime = Math.round(newTime / 50) * 50; // 50ms snap
 
       const el = useProjectStore.getState().project.elements.find((el) => el.id === elementId);
-      if (!el || !el.positionKeyframes) return;
+      if (!el || !el.keyframes) return;
 
-      const kf = el.positionKeyframes.find((k) => k.time === startTime) ||
-                 el.positionKeyframes.find((k) => Math.abs(k.time - startTime) < 50);
+      const kf = el.keyframes.find((k) => k.time === startTime) ||
+                 el.keyframes.find((k) => Math.abs(k.time - startTime) < 50);
       if (!kf) return;
 
-      // Update: remove old, add at new time
-      const filtered = el.positionKeyframes.filter((k) => k.time !== kf.time);
-      const updated = [...filtered, { time: newTime, x: kf.x, y: kf.y }].sort((a, b) => a.time - b.time);
-      updateElementSilent(elementId, { positionKeyframes: updated });
+      // Update: remove old, add at new time (preserve all properties)
+      const filtered = el.keyframes.filter((k) => k.time !== kf.time);
+      const updated = [...filtered, { ...kf, time: newTime }].sort((a, b) => a.time - b.time);
+      updateElementSilent(elementId, { keyframes: updated });
       kfDragRef.current.startTime = newTime;
       kfDragRef.current.startMouseX = e.clientX;
     };
@@ -278,17 +292,35 @@ export const Timeline: React.FC = () => {
     };
   }, [kfDragActive, pxPerMs, updateElementSilent, pushSnapshot]);
 
-  // Add keyframe at current playhead time for selected element
+  // Add keyframe at current playhead time for selected element (captures ALL properties)
   const handleAddKeyframe = useCallback(() => {
     if (selectedElementIds.length !== 1) return;
     const el = project.elements.find((e) => e.id === selectedElementIds[0]);
     if (!el) return;
-    addPositionKeyframe(el.id, {
+
+    const kf: Keyframe = {
       time: Math.round(currentTime / 50) * 50, // snap to 50ms
       x: el.position.x,
       y: el.position.y,
-    });
-  }, [selectedElementIds, project.elements, currentTime, addPositionKeyframe]);
+      width: el.size.width,
+      height: el.size.height,
+      rotation: el.rotation,
+    };
+
+    // Capture content-specific properties
+    if (el.type === 'shape') {
+      const c = el.content as ShapeContent;
+      kf.fill = c.fill;
+      kf.stroke = c.stroke;
+      kf.strokeWidth = c.strokeWidth;
+    } else if (el.type === 'text') {
+      const c = el.content as TextContent;
+      kf.color = c.color;
+      kf.fontSize = c.fontSize;
+    }
+
+    addKeyframe(el.id, kf);
+  }, [selectedElementIds, project.elements, currentTime, addKeyframe]);
 
   // Format time as MM:SS.ms
   const formatTime = (ms: number) => {
@@ -348,14 +380,15 @@ export const Timeline: React.FC = () => {
               cursor: selectedElementIds.length === 1 ? 'pointer' : 'not-allowed',
             }}
           >
-            ◆ Keyframe +
+            ◆ Keyframe bei {formatTime(currentTime)}
           </button>
+          {/* Play / Pause / Stop controls */}
           <button
-            onClick={isPlayingAll ? stopAllAnimations : playAllAnimations}
+            onClick={playbackState === 'playing' ? pauseAllAnimations : playAllAnimations}
             style={{
               padding: '4px 12px',
-              backgroundColor: isPlayingAll ? '#4CAF50' : 'transparent',
-              color: isPlayingAll ? '#fff' : '#666',
+              backgroundColor: playbackState === 'playing' ? '#FF9800' : playbackState === 'paused' ? '#4CAF50' : 'transparent',
+              color: playbackState !== 'stopped' ? '#fff' : '#666',
               border: '1px solid #e0e0e8',
               borderRadius: 4,
               fontSize: 11,
@@ -363,8 +396,25 @@ export const Timeline: React.FC = () => {
               cursor: 'pointer',
             }}
           >
-            {isPlayingAll ? 'Stop' : 'Play All'}
+            {playbackState === 'playing' ? '⏸ Pause' : playbackState === 'paused' ? '▶ Weiter' : '▶ Play'}
           </button>
+          {playbackState !== 'stopped' && (
+            <button
+              onClick={stopAllAnimations}
+              style={{
+                padding: '4px 12px',
+                backgroundColor: '#d32f2f',
+                color: '#fff',
+                border: '1px solid #e0e0e8',
+                borderRadius: 4,
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              ⏹ Stop
+            </button>
+          )}
         </div>
       </div>
 
@@ -570,7 +620,8 @@ export const Timeline: React.FC = () => {
               borderBottom: '1px solid #e0e0e8',
               minWidth: timelineWidth,
               flexShrink: 0,
-              cursor: 'pointer',
+              cursor: 'col-resize',
+              backgroundColor: '#f8f8fc',
             }}
           >
             {markers.map((t) => (
@@ -614,13 +665,13 @@ export const Timeline: React.FC = () => {
             return (
               <div
                 key={el.id}
-                onClick={(e) => handleRowClick(el.id, e)}
+                onClick={(e) => handleTrackClick(el.id, e)}
                 style={{
                   height: 28,
                   position: 'relative',
                   minWidth: timelineWidth,
                   borderBottom: '1px solid #e8e8ef',
-                  cursor: 'pointer',
+                  cursor: 'crosshair',
                   backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.05)' : 'transparent',
                   flexShrink: 0,
                 }}
@@ -688,8 +739,8 @@ export const Timeline: React.FC = () => {
                   );
                 })()}
 
-                {/* Position Keyframe diamonds */}
-                {el.positionKeyframes && el.positionKeyframes.map((kf) => (
+                {/* Keyframe diamonds */}
+                {el.keyframes && el.keyframes.map((kf) => (
                   <div
                     key={`kf-${kf.time}`}
                     onMouseDown={(e) => handleKfMouseDown(e, el.id, kf.time)}

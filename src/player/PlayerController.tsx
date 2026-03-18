@@ -3,7 +3,7 @@ import { Project, CanvasElement, ShapeContent, WidgetContent } from '../types/pr
 import { animationPresets } from '../animations/presets';
 import { WidgetRenderer } from '../editor/components/WidgetRenderer';
 import { useProjectStore } from '../store/useProjectStore';
-import { getInterpolatedPosition } from '../editor/utils/keyframeInterpolation';
+import { getInterpolatedProperties, InterpolatedProps } from '../editor/utils/keyframeInterpolation';
 
 interface PlayerControllerProps {
   project: Project;
@@ -11,7 +11,8 @@ interface PlayerControllerProps {
 
 export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) => {
   const currentTime = useProjectStore((state) => state.currentTime);
-  const renderContent = (element: CanvasElement) => {
+
+  const renderContent = (element: CanvasElement, interp: InterpolatedProps | null) => {
     switch (element.type) {
       case 'logo': {
         const c = element.content as { src: string; alt: string };
@@ -31,8 +32,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
         const c = element.content as { text: string; fontSize: number; color: string; fontFamily: string; fontWeight?: number };
         return (
           <div style={{
-            fontSize: c.fontSize,
-            color: c.color,
+            fontSize: interp?.fontSize ?? c.fontSize,
+            color: interp?.color ?? c.color,
             fontFamily: c.fontFamily,
             fontWeight: c.fontWeight,
             width: '100%',
@@ -47,12 +48,16 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
       }
       case 'shape': {
         const c = element.content as ShapeContent;
+        const fill = interp?.fill ?? c.fill;
+        const stroke = interp?.stroke ?? c.stroke;
+        const strokeWidth = interp?.strokeWidth ?? c.strokeWidth;
+
         const shapeStyle: React.CSSProperties = {
           width: '100%',
           height: '100%',
-          backgroundColor: c.fill,
-          border: c.stroke
-            ? `${c.strokeWidth || 1}px solid ${c.stroke}`
+          backgroundColor: fill,
+          border: stroke
+            ? `${strokeWidth || 1}px solid ${stroke}`
             : 'none',
         };
 
@@ -66,8 +71,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
         return (
           <WidgetRenderer
             content={element.content as WidgetContent}
-            width={element.size.width}
-            height={element.size.height}
+            width={interp?.width ?? element.size.width}
+            height={interp?.height ?? element.size.height}
           />
         );
       default:
@@ -125,9 +130,12 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
                 }
               : {};
 
-            const interpolatedPos = getInterpolatedPosition(element.positionKeyframes, currentTime);
-            const posX = interpolatedPos ? interpolatedPos.x : element.position.x;
-            const posY = interpolatedPos ? interpolatedPos.y : element.position.y;
+            const interp = getInterpolatedProperties(element.keyframes, currentTime);
+            const posX = interp ? interp.x : element.position.x;
+            const posY = interp ? interp.y : element.position.y;
+            const w = interp?.width ?? element.size.width;
+            const h = interp?.height ?? element.size.height;
+            const rot = interp?.rotation ?? element.rotation;
 
             return (
               <motion.div
@@ -137,16 +145,16 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
                   position: 'absolute',
                   left: posX,
                   top: posY,
-                  width: element.size.width,
-                  height: element.size.height,
-                  transform: `rotate(${element.rotation}deg)`,
+                  width: w,
+                  height: h,
+                  transform: `rotate(${rot}deg)`,
                   zIndex: element.zIndex,
                   ...(element.clip ? {
                     clipPath: `inset(${element.clip.top}% ${element.clip.right}% ${element.clip.bottom}% ${element.clip.left}%)`,
                   } : {}),
                 }}
               >
-                {renderContent(element)}
+                {renderContent(element, interp)}
               </motion.div>
             );
           })}

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Project, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent, PositionKeyframe } from '../types/project';
+import { Project, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent, Keyframe } from '../types/project';
 
 // Helper: Generate unique ID
 function generateId(): string {
@@ -37,7 +37,8 @@ interface ProjectStore {
   project: Project;
   selectedElementIds: string[];
   previewingElementId: string | null;
-  isPlayingAll: boolean;
+  playbackState: 'stopped' | 'playing' | 'paused';
+  isPlayingAll: boolean; // computed: playbackState === 'playing'
   currentTime: number; // ms
   croppingElementId: string | null;
   contextMenu: { x: number; y: number; elementId: string } | null;
@@ -74,6 +75,7 @@ interface ProjectStore {
   setCurrentTime: (time: number) => void;
   triggerPreview: (id: string) => void;
   playAllAnimations: () => void;
+  pauseAllAnimations: () => void;
   stopAllAnimations: () => void;
 
   // Project Management
@@ -89,9 +91,9 @@ interface ProjectStore {
   toggleElementVisibility: (id: string) => void;
   toggleElementLock: (id: string) => void;
 
-  // Position Keyframes
-  addPositionKeyframe: (elementId: string, keyframe: PositionKeyframe) => void;
-  removePositionKeyframe: (elementId: string, time: number) => void;
+  // Keyframes
+  addKeyframe: (elementId: string, keyframe: Keyframe) => void;
+  removeKeyframe: (elementId: string, time: number) => void;
 
   // Crop
   setCroppingElement: (id: string | null) => void;
@@ -117,6 +119,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   project: createBlankProject(),
   selectedElementIds: [],
   previewingElementId: null,
+  playbackState: 'stopped',
   isPlayingAll: false,
   currentTime: 0,
   croppingElementId: null,
@@ -285,12 +288,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   playAllAnimations: () => {
-    // Cancel any existing playback
+    // Cancel any existing playback RAF
     if (playAnimationFrameId !== null) {
       cancelAnimationFrame(playAnimationFrameId);
     }
 
-    const { project } = get();
+    const { project, playbackState, currentTime: resumeTime } = get();
 
     // Calculate max duration
     const maxFramerDuration = project.elements.reduce((max, el) => {
@@ -307,25 +310,28 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }, 0);
 
     const maxKeyframeDuration = project.elements.reduce((max, el) => {
-      if (!el.positionKeyframes || el.positionKeyframes.length === 0) return max;
-      return Math.max(max, ...el.positionKeyframes.map((kf) => kf.time));
+      if (!el.keyframes || el.keyframes.length === 0) return max;
+      return Math.max(max, ...el.keyframes.map((kf) => kf.time));
     }, 0);
 
     const maxDuration = Math.max(maxFramerDuration, maxWidgetDuration, maxKeyframeDuration + 500, 3000);
 
-    set({ isPlayingAll: true, selectedElementIds: [], currentTime: 0 });
+    // Resume from paused position, or start from 0
+    const startFrom = playbackState === 'paused' ? resumeTime : 0;
+
+    set({ playbackState: 'playing', isPlayingAll: true, selectedElementIds: [], currentTime: startFrom });
     playStartTimestamp = null;
 
     const tick = (timestamp: number) => {
       if (playStartTimestamp === null) playStartTimestamp = timestamp;
-      const elapsed = timestamp - playStartTimestamp;
+      const elapsed = startFrom + (timestamp - playStartTimestamp);
 
       set({ currentTime: elapsed });
 
       if (elapsed < maxDuration + 500) {
         playAnimationFrameId = requestAnimationFrame(tick);
       } else {
-        set({ isPlayingAll: false, currentTime: 0 });
+        set({ playbackState: 'stopped', isPlayingAll: false, currentTime: 0 });
         playAnimationFrameId = null;
         playStartTimestamp = null;
       }
@@ -334,13 +340,23 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     playAnimationFrameId = requestAnimationFrame(tick);
   },
 
+  pauseAllAnimations: () => {
+    if (playAnimationFrameId !== null) {
+      cancelAnimationFrame(playAnimationFrameId);
+      playAnimationFrameId = null;
+      playStartTimestamp = null;
+    }
+    // Keep currentTime as-is
+    set({ playbackState: 'paused', isPlayingAll: false });
+  },
+
   stopAllAnimations: () => {
     if (playAnimationFrameId !== null) {
       cancelAnimationFrame(playAnimationFrameId);
       playAnimationFrameId = null;
       playStartTimestamp = null;
     }
-    set({ isPlayingAll: false, currentTime: 0 });
+    set({ playbackState: 'stopped', isPlayingAll: false, currentTime: 0 });
   },
 
   // Project Management
@@ -458,34 +474,34 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }));
   },
 
-  // Position Keyframes
-  addPositionKeyframe: (elementId, keyframe) => {
+  // Keyframes
+  addKeyframe: (elementId, keyframe) => {
     set((state) => ({
       ...pushHistory(state),
       project: {
         ...state.project,
         elements: state.project.elements.map((el) => {
           if (el.id !== elementId) return el;
-          const existing = el.positionKeyframes || [];
+          const existing = el.keyframes || [];
           // Replace if same time exists, otherwise add
           const filtered = existing.filter((kf) => kf.time !== keyframe.time);
           const updated = [...filtered, keyframe].sort((a, b) => a.time - b.time);
-          return { ...el, positionKeyframes: updated };
+          return { ...el, keyframes: updated };
         }),
         metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
       },
     }));
   },
 
-  removePositionKeyframe: (elementId, time) => {
+  removeKeyframe: (elementId, time) => {
     set((state) => ({
       ...pushHistory(state),
       project: {
         ...state.project,
         elements: state.project.elements.map((el) => {
           if (el.id !== elementId) return el;
-          const updated = (el.positionKeyframes || []).filter((kf) => kf.time !== time);
-          return { ...el, positionKeyframes: updated.length > 0 ? updated : undefined };
+          const updated = (el.keyframes || []).filter((kf) => kf.time !== time);
+          return { ...el, keyframes: updated.length > 0 ? updated : undefined };
         }),
         metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
       },

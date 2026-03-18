@@ -1,5 +1,5 @@
 import { useProjectStore } from '../store/useProjectStore';
-import { ShapeContent, TextContent, WidgetContent } from '../types/project';
+import { ShapeContent, TextContent, WidgetContent, Keyframe } from '../types/project';
 import { AnimationPicker } from './components/AnimationPicker';
 
 export const PropertiesPanel: React.FC = () => {
@@ -8,8 +8,8 @@ export const PropertiesPanel: React.FC = () => {
   const updateElement = useProjectStore((state) => state.updateElement);
   const deleteElement = useProjectStore((state) => state.deleteElement);
   const currentTime = useProjectStore((state) => state.currentTime);
-  const addPositionKeyframe = useProjectStore((state) => state.addPositionKeyframe);
-  const removePositionKeyframe = useProjectStore((state) => state.removePositionKeyframe);
+  const addKeyframe = useProjectStore((state) => state.addKeyframe);
+  const removeKeyframe = useProjectStore((state) => state.removeKeyframe);
 
   // Multi-select: show count + delete button
   if (selectedElementIds.length > 1) {
@@ -320,15 +320,29 @@ export const PropertiesPanel: React.FC = () => {
         </PropertySection>
       )}
 
-      {/* Position Keyframes */}
+      {/* Keyframes */}
       <PropertySection title="Keyframes">
         <button
           onClick={() => {
-            addPositionKeyframe(selectedElement.id, {
+            const kf: Keyframe = {
               time: Math.round(currentTime / 50) * 50,
               x: selectedElement.position.x,
               y: selectedElement.position.y,
-            });
+              width: selectedElement.size.width,
+              height: selectedElement.size.height,
+              rotation: selectedElement.rotation,
+            };
+            if (selectedElement.type === 'shape') {
+              const c = selectedElement.content as ShapeContent;
+              kf.fill = c.fill;
+              kf.stroke = c.stroke;
+              kf.strokeWidth = c.strokeWidth;
+            } else if (selectedElement.type === 'text') {
+              const c = selectedElement.content as TextContent;
+              kf.color = c.color;
+              kf.fontSize = c.fontSize;
+            }
+            addKeyframe(selectedElement.id, kf);
           }}
           style={{
             width: '100%',
@@ -344,9 +358,9 @@ export const PropertiesPanel: React.FC = () => {
         >
           ◆ Keyframe bei {Math.round(currentTime)}ms
         </button>
-        {selectedElement.positionKeyframes && selectedElement.positionKeyframes.length > 0 && (
+        {selectedElement.keyframes && selectedElement.keyframes.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {selectedElement.positionKeyframes.map((kf) => (
+            {selectedElement.keyframes.map((kf) => (
               <div
                 key={kf.time}
                 style={{
@@ -365,9 +379,11 @@ export const PropertiesPanel: React.FC = () => {
                 </span>
                 <span style={{ color: '#888', fontSize: 10 }}>
                   ({Math.round(kf.x)}, {Math.round(kf.y)})
+                  {kf.width !== undefined && ` ${Math.round(kf.width)}×${Math.round(kf.height ?? 0)}`}
+                  {kf.fill !== undefined && ` ${kf.fill}`}
                 </span>
                 <button
-                  onClick={() => removePositionKeyframe(selectedElement.id, kf.time)}
+                  onClick={() => removeKeyframe(selectedElement.id, kf.time)}
                   style={{
                     marginLeft: 'auto',
                     border: 'none',

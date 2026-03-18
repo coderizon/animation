@@ -15,8 +15,9 @@ export const EditorLayout: React.FC = () => {
   const importProject = useProjectStore((state) => state.importProject);
   const resetProject = useProjectStore((state) => state.resetProject);
   const playAllAnimations = useProjectStore((state) => state.playAllAnimations);
+  const pauseAllAnimations = useProjectStore((state) => state.pauseAllAnimations);
   const stopAllAnimations = useProjectStore((state) => state.stopAllAnimations);
-  const isPlayingAll = useProjectStore((state) => state.isPlayingAll);
+  const playbackState = useProjectStore((state) => state.playbackState);
   const undo = useProjectStore((state) => state.undo);
   const redo = useProjectStore((state) => state.redo);
   const canUndo = useProjectStore((state) => state.canUndo());
@@ -256,12 +257,12 @@ export const EditorLayout: React.FC = () => {
           </button>
 
           <button
-            onClick={isPlayingAll ? stopAllAnimations : playAllAnimations}
+            onClick={playbackState === 'playing' ? pauseAllAnimations : playAllAnimations}
             style={{
               padding: '8px 16px',
-              backgroundColor: isPlayingAll ? '#4CAF50' : 'transparent',
-              color: isPlayingAll ? '#fff' : '#444',
-              border: isPlayingAll ? '1px solid #4CAF50' : '1px solid #e0e0e8',
+              backgroundColor: playbackState === 'playing' ? '#FF9800' : playbackState === 'paused' ? '#4CAF50' : 'transparent',
+              color: playbackState !== 'stopped' ? '#fff' : '#444',
+              border: playbackState !== 'stopped' ? `1px solid ${playbackState === 'playing' ? '#FF9800' : '#4CAF50'}` : '1px solid #e0e0e8',
               borderRadius: 6,
               fontSize: 13,
               fontWeight: 600,
@@ -272,20 +273,37 @@ export const EditorLayout: React.FC = () => {
               gap: 6,
             }}
             onMouseEnter={(e) => {
-              if (!isPlayingAll) {
+              if (playbackState === 'stopped') {
                 e.currentTarget.style.backgroundColor = '#f0f0f4';
                 e.currentTarget.style.borderColor = '#b0b0c0';
               }
             }}
             onMouseLeave={(e) => {
-              if (!isPlayingAll) {
+              if (playbackState === 'stopped') {
                 e.currentTarget.style.backgroundColor = 'transparent';
                 e.currentTarget.style.borderColor = '#e0e0e8';
               }
             }}
           >
-            {isPlayingAll ? 'Stop' : 'Play'}
+            {playbackState === 'playing' ? '⏸ Pause' : playbackState === 'paused' ? '▶ Weiter' : '▶ Play'}
           </button>
+          {playbackState !== 'stopped' && (
+            <button
+              onClick={stopAllAnimations}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#d32f2f',
+                color: '#fff',
+                border: '1px solid #d32f2f',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              ⏹ Stop
+            </button>
+          )}
 
           <div style={{
             width: 1,

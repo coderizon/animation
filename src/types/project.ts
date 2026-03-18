@@ -40,8 +40,8 @@ export interface CanvasElement {
   // Animation
   animation?: AnimationConfig;
 
-  // Position Keyframes (sorted by time)
-  positionKeyframes?: PositionKeyframe[];
+  // Keyframes (sorted by time)
+  keyframes?: Keyframe[];
 
   // Crop (inset percentages 0-100)
   clip?: { top: number; right: number; bottom: number; left: number };
@@ -124,13 +124,27 @@ export type EasingName =
   | 'spring'
   | 'bounce';
 
-// Position Keyframes
+// Keyframes (full property snapshots)
 
-export interface PositionKeyframe {
+export interface Keyframe {
   time: number;  // ms
   x: number;
   y: number;
+  // Optional property overrides (only interpolated when present in both neighbors)
+  width?: number;
+  height?: number;
+  rotation?: number;
+  // Shape properties
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  // Text properties
+  color?: string;
+  fontSize?: number;
 }
+
+// Backwards compatibility alias
+export type PositionKeyframe = Keyframe;
 
 // Helper Types
 
