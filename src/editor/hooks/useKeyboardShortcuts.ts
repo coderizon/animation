@@ -37,10 +37,17 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
-      // Escape: Clear selection
+      // Escape: exit crop mode first, then clear selection
       if (e.key === 'Escape') {
         e.preventDefault();
-        useProjectStore.getState().clearSelection();
+        const state = useProjectStore.getState();
+        if (state.croppingElementId) {
+          state.setCroppingElement(null);
+        } else if (state.contextMenu) {
+          state.setContextMenu(null);
+        } else {
+          state.clearSelection();
+        }
         return;
       }
 

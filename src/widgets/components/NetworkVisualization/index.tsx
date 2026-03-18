@@ -18,7 +18,7 @@ const NetworkVisualization: React.FC<WidgetComponentProps> = ({ frame, width, he
     <div style={{
       width,
       height,
-      backgroundColor: '#030305',
+      backgroundColor: 'transparent',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       position: 'relative',
       overflow: 'hidden',

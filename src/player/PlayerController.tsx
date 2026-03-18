@@ -134,6 +134,9 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project }) =
                   height: element.size.height,
                   transform: `rotate(${element.rotation}deg)`,
                   zIndex: element.zIndex,
+                  ...(element.clip ? {
+                    clipPath: `inset(${element.clip.top}% ${element.clip.right}% ${element.clip.bottom}% ${element.clip.left}%)`,
+                  } : {}),
                 }}
               >
                 {renderContent(element)}

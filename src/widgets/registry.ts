@@ -16,4 +16,8 @@ export function getAllWidgets(): WidgetRegistryEntry[] {
 
 // Auto-register built-in widgets
 import { networkVisualizationWidget } from './components/NetworkVisualization';
+import { serverAnimationWidget } from './components/ServerAnimation';
+import { neuralNetServerWidget } from './components/NeuralNetServer';
 registerWidget(networkVisualizationWidget);
+registerWidget(serverAnimationWidget);
+registerWidget(neuralNetServerWidget);

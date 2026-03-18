@@ -40,6 +40,9 @@ export interface CanvasElement {
   // Animation
   animation?: AnimationConfig;
 
+  // Crop (inset percentages 0-100)
+  clip?: { top: number; right: number; bottom: number; left: number };
+
   // State
   visible: boolean;
   locked: boolean;

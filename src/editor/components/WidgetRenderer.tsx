@@ -31,22 +31,31 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({ content, width, 
 
   return (
     <div style={{
-      width: entry.nativeWidth,
-      height: entry.nativeHeight,
-      transform: `scale(${scaleX}, ${scaleY})`,
-      transformOrigin: 'top left',
+      width,
+      height,
+      position: 'relative',
       overflow: 'hidden',
       pointerEvents: 'none',
     }}>
-      <WidgetComponent
-        frame={frame}
-        fps={content.fps}
-        durationInFrames={content.durationInFrames}
-        width={entry.nativeWidth}
-        height={entry.nativeHeight}
-        isPlaying={isPlaying}
-        props={content.props}
-      />
+      <div style={{
+        width: entry.nativeWidth,
+        height: entry.nativeHeight,
+        transform: `scale(${scaleX}, ${scaleY})`,
+        transformOrigin: 'top left',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+      }}>
+        <WidgetComponent
+          frame={frame}
+          fps={content.fps}
+          durationInFrames={content.durationInFrames}
+          width={entry.nativeWidth}
+          height={entry.nativeHeight}
+          isPlaying={isPlaying}
+          props={content.props}
+        />
+      </div>
     </div>
   );
 };

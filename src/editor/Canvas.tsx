@@ -7,6 +7,7 @@ import { CanvasElement } from './components/CanvasElement';
 import { ZoomControls } from './components/ZoomControls';
 import { SnapGuides } from './components/SnapGuides';
 import { Ruler } from './components/Ruler';
+import { ContextMenu } from './components/ContextMenu';
 
 const ZOOM_SENSITIVITY = 0.001;
 
@@ -25,6 +26,8 @@ export const Canvas: React.FC = () => {
   const selectElements = useProjectStore((state) => state.selectElements);
   const clearSelection = useProjectStore((state) => state.clearSelection);
   const selectedElementIds = useProjectStore((state) => state.selectedElementIds);
+  const setCroppingElement = useProjectStore((state) => state.setCroppingElement);
+  const setContextMenu = useProjectStore((state) => state.setContextMenu);
 
   const zoom = useViewportStore((state) => state.zoom);
   const panOffset = useViewportStore((state) => state.panOffset);
@@ -283,6 +286,8 @@ export const Canvas: React.FC = () => {
   // Deselect when clicking canvas background (only if not panning/marquee)
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget && !isPanning.current && !isMarqueeActive.current) {
+      setCroppingElement(null);
+      setContextMenu(null);
       clearSelection();
     }
   };
@@ -435,6 +440,9 @@ export const Canvas: React.FC = () => {
         {/* Zoom Controls */}
         <ZoomControls />
       </div>
+
+      {/* Context Menu (portal) */}
+      <ContextMenu />
     </div>
   );
 };

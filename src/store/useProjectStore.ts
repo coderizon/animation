@@ -39,6 +39,8 @@ interface ProjectStore {
   previewingElementId: string | null;
   isPlayingAll: boolean;
   currentTime: number; // ms
+  croppingElementId: string | null;
+  contextMenu: { x: number; y: number; elementId: string } | null;
 
   // History (Undo/Redo)
   history: Project[];
@@ -86,6 +88,10 @@ interface ProjectStore {
   toggleElementVisibility: (id: string) => void;
   toggleElementLock: (id: string) => void;
 
+  // Crop
+  setCroppingElement: (id: string | null) => void;
+  setContextMenu: (menu: { x: number; y: number; elementId: string } | null) => void;
+
   // Getters
   getSelectedElement: () => CanvasElement | null;
   getSelectedElements: () => CanvasElement[];
@@ -107,6 +113,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   previewingElementId: null,
   isPlayingAll: false,
   currentTime: 0,
+  croppingElementId: null,
+  contextMenu: null,
   history: [],
   future: [],
 
@@ -436,6 +444,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
       },
     }));
+  },
+
+  // Crop
+  setCroppingElement: (id) => {
+    set({ croppingElementId: id });
+  },
+
+  setContextMenu: (menu) => {
+    set({ contextMenu: menu });
   },
 
   // Getters

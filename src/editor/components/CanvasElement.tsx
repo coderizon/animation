@@ -5,6 +5,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useViewportStore } from '../../store/useViewportStore';
 import { animationPresets } from '../../animations/presets';
 import { WidgetRenderer } from './WidgetRenderer';
+import { CropOverlay } from './CropOverlay';
 import { computeSnap } from '../utils/snapping';
 
 interface CanvasElementProps {
@@ -23,6 +24,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const previewingElementId = useProjectStore((state) => state.previewingElementId);
   const isPlayingAll = useProjectStore((state) => state.isPlayingAll);
   const project = useProjectStore((state) => state.project);
+  const croppingElementId = useProjectStore((state) => state.croppingElementId);
+  const setContextMenu = useProjectStore((state) => state.setContextMenu);
+
+  const isCropping = croppingElementId === element.id;
 
   const [animationKey, setAnimationKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -46,7 +51,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
 
   // --- DRAG (native mouse events) ---
   const handleDragStart = useCallback((e: React.MouseEvent) => {
-    if (element.locked) return;
+    if (element.locked || isCropping) return;
     e.stopPropagation();
     e.preventDefault();
 
@@ -82,7 +87,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       elY: element.position.y,
     };
     setIsDragging(true);
-  }, [element.id, element.position.x, element.position.y, element.locked, project, isSelected, selectElement, addToSelection, toggleSelectElement]);
+  }, [element.id, element.position.x, element.position.y, element.locked, isCropping, project, isSelected, selectElement, addToSelection, toggleSelectElement]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -167,16 +172,64 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       const dx = (e.clientX - resizeStart.current.mouseX) / zoom;
       const dy = (e.clientY - resizeStart.current.mouseY) / zoom;
       const { handle, width, height, elX, elY } = resizeStart.current;
+      const aspectRatio = width / height;
+
+      // Lock aspect ratio for widgets always, or for any element when Shift is held
+      const isCorner = handle.includes('-'); // e.g. "top-left", "bottom-right"
+      const lockAspect = element.type === 'widget' || e.shiftKey;
 
       let newW = width;
       let newH = height;
       let newX = elX;
       let newY = elY;
 
-      if (handle.includes('right')) { newW = Math.max(20, width + dx); }
-      if (handle.includes('left')) { newW = Math.max(20, width - dx); newX = elX + (width - newW); }
-      if (handle.includes('bottom')) { newH = Math.max(20, height + dy); }
-      if (handle.includes('top')) { newH = Math.max(20, height - dy); newY = elY + (height - newH); }
+      if (lockAspect && isCorner) {
+        // For corner handles with locked aspect ratio: use dominant axis
+        // Determine the scale factor from the larger movement
+        let scale: number;
+        if (handle === 'bottom-right') {
+          scale = Math.max(dx / width, dy / height);
+          newW = Math.max(20, width + width * scale);
+          newH = newW / aspectRatio;
+        } else if (handle === 'bottom-left') {
+          scale = Math.max(-dx / width, dy / height);
+          newW = Math.max(20, width + width * scale);
+          newH = newW / aspectRatio;
+          newX = elX + (width - newW);
+        } else if (handle === 'top-right') {
+          scale = Math.max(dx / width, -dy / height);
+          newW = Math.max(20, width + width * scale);
+          newH = newW / aspectRatio;
+          newY = elY + (height - newH);
+        } else if (handle === 'top-left') {
+          scale = Math.max(-dx / width, -dy / height);
+          newW = Math.max(20, width + width * scale);
+          newH = newW / aspectRatio;
+          newX = elX + (width - newW);
+          newY = elY + (height - newH);
+        }
+      } else if (lockAspect && !isCorner) {
+        // Side handles with locked aspect: scale proportionally from the dragged side
+        if (handle === 'right' || handle === 'left') {
+          newW = handle === 'right' ? Math.max(20, width + dx) : Math.max(20, width - dx);
+          newH = newW / aspectRatio;
+          if (handle === 'left') newX = elX + (width - newW);
+          // Center vertically relative to original center
+          newY = elY + (height - newH) / 2;
+        } else {
+          newH = handle === 'bottom' ? Math.max(20, height + dy) : Math.max(20, height - dy);
+          newW = newH * aspectRatio;
+          if (handle === 'top') newY = elY + (height - newH);
+          // Center horizontally relative to original center
+          newX = elX + (width - newW) / 2;
+        }
+      } else {
+        // Free resize (no aspect lock)
+        if (handle.includes('right')) { newW = Math.max(20, width + dx); }
+        if (handle.includes('left')) { newW = Math.max(20, width - dx); newX = elX + (width - newW); }
+        if (handle.includes('bottom')) { newH = Math.max(20, height + dy); }
+        if (handle.includes('top')) { newH = Math.max(20, height - dy); newY = elY + (height - newH); }
+      }
 
       updateElementSilent(element.id, {
         size: { width: newW, height: newH },
@@ -205,6 +258,14 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     e.stopPropagation();
     // Selection is handled in handleDragStart
   };
+
+  // --- Right-click context menu ---
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isSelected) selectElement(element.id);
+    setContextMenu({ x: e.clientX, y: e.clientY, elementId: element.id });
+  }, [element.id, isSelected, selectElement, setContextMenu]);
 
   // --- Render content ---
   const renderContent = () => {
@@ -309,6 +370,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       data-canvas-element
       onMouseDown={handleDragStart}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
       style={{
         position: 'absolute',
         left: element.position.x,
@@ -335,13 +397,19 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          ...(element.clip && !isCropping ? {
+            clipPath: `inset(${element.clip.top}% ${element.clip.right}% ${element.clip.bottom}% ${element.clip.left}%)`,
+          } : {}),
         }}
       >
         {renderContent()}
       </motion.div>
 
+      {/* Crop overlay */}
+      {isCropping && <CropOverlay element={element} />}
+
       {/* Resize handles */}
-      {isSelected && !element.locked && (
+      {isSelected && !element.locked && !isCropping && (
         <>
           {/* Corner handles */}
           {(['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((position) => {
