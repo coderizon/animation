@@ -18,6 +18,14 @@ export function getAllWidgets(): WidgetRegistryEntry[] {
 import { networkVisualizationWidget } from './components/NetworkVisualization';
 import { serverAnimationWidget } from './components/ServerAnimation';
 import { neuralNetServerWidget } from './components/NeuralNetServer';
+import { logoCarouselWidget } from './components/LogoCarousel';
+import { logoOrbitWidget } from './components/LogoOrbit';
+import { logoGridRevealWidget } from './components/LogoGridReveal';
+import { logoMorphChainWidget } from './components/LogoMorphChain';
 registerWidget(networkVisualizationWidget);
 registerWidget(serverAnimationWidget);
 registerWidget(neuralNetServerWidget);
+registerWidget(logoCarouselWidget);
+registerWidget(logoOrbitWidget);
+registerWidget(logoGridRevealWidget);
+registerWidget(logoMorphChainWidget);

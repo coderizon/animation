@@ -451,14 +451,13 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
   // ─── STROKE & SHAPE ─────────────────────────────────
   strokeDraw: {
     name: 'strokeDraw',
-    displayName: 'Stroke Draw',
-    description: 'Element draws its outline progressively',
+    displayName: 'Kontur nachzeichnen',
+    description: 'Kontur wird progressiv gezeichnet, dann füllt sich das Element',
     icon: '✏️',
     defaultDuration: 1200,
     variants: {
-      hidden: { pathLength: 0, opacity: 0.5 },
+      hidden: { opacity: 0 },
       visible: {
-        pathLength: 1,
         opacity: 1,
         transition: { ease: [0.4, 0, 0.2, 1] }
       }

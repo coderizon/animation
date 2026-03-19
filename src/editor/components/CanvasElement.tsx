@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { CanvasElement as CanvasElementType, ImageContent, ShapeContent, TextContent, WidgetContent } from '../../types/project';
+import { CanvasElement as CanvasElementType, ImageContent, ShapeContent, TextContent, WidgetContent, Keyframe, getAnimations } from '../../types/project';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useViewportStore } from '../../store/useViewportStore';
 import { animationPresets } from '../../animations/presets';
@@ -8,6 +8,7 @@ import { WidgetRenderer } from './WidgetRenderer';
 import { CropOverlay } from './CropOverlay';
 import { computeSnap } from '../utils/snapping';
 import { getInterpolatedProperties } from '../utils/keyframeInterpolation';
+import { wrapWithEffects } from '../utils/effectStyles';
 import { getTypewriterText } from '../../utils/typewriter';
 
 interface CanvasElementProps {
@@ -20,6 +21,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const elementRef = useRef<HTMLDivElement>(null);
   const updateElementSilent = useProjectStore((state) => state.updateElementSilent);
   const pushSnapshot = useProjectStore((state) => state.pushSnapshot);
+  const addKeyframe = useProjectStore((state) => state.addKeyframe);
   const selectElement = useProjectStore((state) => state.selectElement);
   const addToSelection = useProjectStore((state) => state.addToSelection);
   const toggleSelectElement = useProjectStore((state) => state.toggleSelectElement);
@@ -34,22 +36,55 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
 
   const isCropping = croppingElementId === element.id;
 
+  // Auto-keyframe: after drag/resize, create keyframe if element has keyframes
+  const autoKeyframeOnDragEnd = useCallback(() => {
+    const el = useProjectStore.getState().project.elements.find((e) => e.id === element.id);
+    if (!el?.keyframes || el.keyframes.length === 0) return;
+    const snappedTime = Math.round(useProjectStore.getState().currentTime / 50) * 50;
+    const kf: Keyframe = {
+      time: snappedTime,
+      x: el.position.x,
+      y: el.position.y,
+      width: el.size.width,
+      height: el.size.height,
+      rotation: el.rotation,
+    };
+    if (el.type === 'shape') {
+      const c = el.content as ShapeContent;
+      kf.fill = c.fill;
+      kf.stroke = c.stroke;
+      kf.strokeWidth = c.strokeWidth;
+      kf.borderRadius = c.borderRadius;
+    } else if (el.type === 'text') {
+      const c = el.content as TextContent;
+      kf.color = c.color;
+      kf.fontSize = c.fontSize;
+    }
+    addKeyframe(element.id, kf);
+  }, [element.id, addKeyframe]);
+
   const [animationKey, setAnimationKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isRadiusDragging, setIsRadiusDragging] = useState(false);
   const [previewElapsed, setPreviewElapsed] = useState(0);
   const isPreviewing = previewingElementId === element.id;
-  const animDelay = element.animation?.delay || 0;
+  const anims = getAnimations(element);
+  const firstDelay = anims.length > 0 ? Math.min(...anims.map(a => a.delay || 0)) : 0;
   const isPlayback = isPlayingAll || playbackState === 'paused';
-  const pastDelay = isPreviewing || (isPlayback && currentTime >= animDelay);
+  const pastDelay = isPreviewing || (isPlayback && currentTime >= firstDelay);
   const shouldAnimate = isPreviewing || (isPlayingAll && pastDelay);
 
   // Refs for drag/resize to avoid stale closures
   const dragStart = useRef({ mouseX: 0, mouseY: 0, elX: 0, elY: 0 });
   const resizeStart = useRef({ mouseX: 0, mouseY: 0, width: 0, height: 0, elX: 0, elY: 0, handle: '' });
+  const radiusStart = useRef({ mouseX: 0, startRadius: 0 });
   const snapshotRef = useRef<typeof project | null>(null);
   // For multi-drag: initial positions of all selected elements
   const multiDragStartPositions = useRef<Map<string, { x: number; y: number }>>(new Map());
+  // For multi-resize: initial sizes/positions of all selected elements + bounding box
+  const multiResizeStart = useRef<Map<string, { x: number; y: number; w: number; h: number }>>(new Map());
+  const multiResizeBBox = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const prevPastDelay = useRef(false);
 
   // Trigger animation when crossing the delay threshold
@@ -176,6 +211,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         pushSnapshot(snapshotRef.current);
         snapshotRef.current = null;
       }
+      autoKeyframeOnDragEnd();
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -184,7 +220,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, element.id, element.size.width, element.size.height, zoom, updateElementSilent, pushSnapshot]);
+  }, [isDragging, element.id, element.size.width, element.size.height, zoom, updateElementSilent, pushSnapshot, autoKeyframeOnDragEnd]);
 
   // --- RESIZE (native mouse events) ---
   const handleResizeStart = useCallback((e: React.MouseEvent, handle: string) => {
@@ -202,8 +238,24 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       elY: element.position.y,
       handle,
     };
+
+    // Capture all selected elements for multi-resize
+    const { selectedElementIds } = useProjectStore.getState();
+    multiResizeStart.current.clear();
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const el of project.elements) {
+      if (selectedElementIds.includes(el.id) || el.id === element.id) {
+        multiResizeStart.current.set(el.id, { x: el.position.x, y: el.position.y, w: el.size.width, h: el.size.height });
+        minX = Math.min(minX, el.position.x);
+        minY = Math.min(minY, el.position.y);
+        maxX = Math.max(maxX, el.position.x + el.size.width);
+        maxY = Math.max(maxY, el.position.y + el.size.height);
+      }
+    }
+    multiResizeBBox.current = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+
     setIsResizing(true);
-  }, [element.size.width, element.size.height, element.position.x, element.position.y, project]);
+  }, [element.size.width, element.size.height, element.position.x, element.position.y, project, element.id]);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -275,10 +327,73 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         size: { width: newW, height: newH },
         position: { x: newX, y: newY },
       });
+
+      // Multi-resize: scale other selected elements proportionally
+      if (multiResizeStart.current.size > 1 && multiResizeBBox.current.w > 0 && multiResizeBBox.current.h > 0) {
+        const scaleX = newW / width;
+        const scaleY = newH / height;
+        const bbox = multiResizeBBox.current;
+
+        // Determine anchor point from handle (opposite corner)
+        let anchorX = bbox.x;
+        let anchorY = bbox.y;
+        if (handle.includes('left')) anchorX = bbox.x + bbox.w;
+        if (handle.includes('top')) anchorY = bbox.y + bbox.h;
+        if (handle === 'right' || handle === 'bottom-right' || handle === 'top-right') anchorX = bbox.x;
+        if (handle === 'bottom' || handle === 'bottom-left' || handle === 'bottom-right') anchorY = bbox.y;
+
+        for (const [id, start] of multiResizeStart.current) {
+          if (id === element.id) continue;
+          const relX = start.x - anchorX;
+          const relY = start.y - anchorY;
+          updateElementSilent(id, {
+            size: { width: Math.max(20, start.w * scaleX), height: Math.max(20, start.h * scaleY) },
+            position: { x: anchorX + relX * scaleX, y: anchorY + relY * scaleY },
+          });
+        }
+      }
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      if (snapshotRef.current) {
+        pushSnapshot(snapshotRef.current);
+        snapshotRef.current = null;
+      }
+      autoKeyframeOnDragEnd();
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, element.id, zoom, updateElementSilent, pushSnapshot, autoKeyframeOnDragEnd]);
+
+  // --- BORDER-RADIUS drag ---
+  const handleRadiusStart = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    snapshotRef.current = JSON.parse(JSON.stringify(project));
+    const content = element.content as ShapeContent;
+    radiusStart.current = { mouseX: e.clientX, startRadius: content.borderRadius || 0 };
+    setIsRadiusDragging(true);
+  }, [element.content, project]);
+
+  useEffect(() => {
+    if (!isRadiusDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const dx = (e.clientX - radiusStart.current.mouseX) / zoom;
+      const maxRadius = Math.min(element.size.width, element.size.height) / 2;
+      const newRadius = Math.round(Math.max(0, Math.min(maxRadius, radiusStart.current.startRadius + dx)));
+      const content = element.content as ShapeContent;
+      updateElementSilent(element.id, { content: { ...content, borderRadius: newRadius } });
+    };
+
+    const handleMouseUp = () => {
+      setIsRadiusDragging(false);
       if (snapshotRef.current) {
         pushSnapshot(snapshotRef.current);
         snapshotRef.current = null;
@@ -291,7 +406,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, element.id, zoom, updateElementSilent, pushSnapshot]);
+  }, [isRadiusDragging, element.id, element.content, element.size, zoom, updateElementSilent, pushSnapshot]);
 
   // --- Click to select (only if not dragging) ---
   const handleClick = (e: React.MouseEvent) => {
@@ -349,8 +464,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         const displayedText = getTypewriterText(
           tc.text,
           tc.typewriter,
-          isPreviewing ? previewElapsed : (isPlayback ? currentTime - animDelay : null),
-          element.animation?.duration,
+          isPreviewing ? previewElapsed : (isPlayback ? currentTime - firstDelay : null),
+          activeAnim?.config.duration,
         );
         return (
           <div style={{
@@ -395,6 +510,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
 
         if (content.shape === 'circle') {
           shapeStyle.borderRadius = '50%';
+        } else if (content.borderRadius) {
+          shapeStyle.borderRadius = interpolated?.borderRadius ?? content.borderRadius;
         }
 
         return <div style={shapeStyle} />;
@@ -412,14 +529,27 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     }
   };
 
-  // --- Animation ---
-  const animationConfig = element.animation && shouldAnimate
-    ? animationPresets[element.animation.preset]
+  // --- Animation (supports multiple) ---
+  // Find which animation is active at current time
+  const getActiveAnim = () => {
+    if (!shouldAnimate || anims.length === 0) return null;
+    const effectiveTime = isPreviewing ? previewElapsed : currentTime;
+    for (let i = anims.length - 1; i >= 0; i--) {
+      if (effectiveTime >= (anims[i].delay || 0)) {
+        return { config: anims[i], index: i };
+      }
+    }
+    return null;
+  };
+  const activeAnim = getActiveAnim();
+
+  const animationConfig = activeAnim
+    ? animationPresets[activeAnim.config.preset]
     : null;
 
   // Build motion props, stripping inner transition from variants so user controls take effect
   const motionProps = (() => {
-    if (!animationConfig) return {};
+    if (!animationConfig || !activeAnim) return {};
 
     // Clone variants and remove transition from visible to prevent override
     const cleanVariants = { ...animationConfig.variants };
@@ -429,16 +559,16 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
       cleanVariants.visible = visibleWithoutTransition;
     }
 
-    const easing = element.animation?.easing || 'easeOut';
+    const easing = activeAnim.config.easing || 'easeOut';
     const isSpring = easing === 'spring' || easing === 'bounce';
 
     return {
-      key: animationKey,
+      key: `${animationKey}-${activeAnim.index}`,
       initial: 'hidden',
       animate: 'visible',
       variants: cleanVariants,
       transition: {
-        duration: isSpring ? undefined : (element.animation?.duration || 600) / 1000,
+        duration: isSpring ? undefined : (activeAnim.config.duration || 600) / 1000,
         ease: isSpring ? undefined : easing,
         type: isSpring ? 'spring' : 'tween',
         ...(easing === 'spring' ? { stiffness: 200, damping: 20 } : {}),
@@ -447,8 +577,12 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     };
   })();
 
-  // Hide element before its delay during playback
-  const hiddenBeforeDelay = isPlayback && !isPreviewing && animDelay > 0 && currentTime < animDelay;
+  // Stroke draw overlay
+  const isStrokeDraw = activeAnim?.config.preset === 'strokeDraw' && shouldAnimate;
+  const strokeDrawDuration = activeAnim ? (activeAnim.config.duration || 1200) / 1000 : 1.2;
+
+  // Hide element before its first animation's delay during playback
+  const hiddenBeforeDelay = isPlayback && !isPreviewing && firstDelay > 0 && currentTime < firstDelay;
 
   // Full keyframe interpolation during playback or paused state
   const showInterpolated = isPlayback;
@@ -475,7 +609,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         width: renderW,
         height: renderH,
         transform: `rotate(${renderRotation}deg)`,
-        zIndex: isDragging ? 9999 : element.zIndex,
+        zIndex: isDragging ? 9999 : isSelected ? element.zIndex + 10000 : element.zIndex,
         cursor: element.locked ? 'not-allowed' : isDragging ? 'grabbing' : 'grab',
         border: isSelected ? '2px solid var(--ae-accent)' : '1px solid transparent',
         boxShadow: isSelected ? '0 0 0 1px var(--ae-accent)' : 'none',
@@ -486,21 +620,110 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         userSelect: 'none',
       }}
     >
-      <motion.div
-        {...motionProps}
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          ...(element.clip && !isCropping ? {
-            clipPath: `inset(${element.clip.top}% ${element.clip.right}% ${element.clip.bottom}% ${element.clip.left}%)`,
-          } : {}),
-        }}
-      >
-        {renderContent()}
-      </motion.div>
+      {wrapWithEffects(element.effects, (
+        <motion.div
+          {...motionProps}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            ...(element.clip && !isCropping ? {
+              clipPath: `inset(${element.clip.top}% ${element.clip.right}% ${element.clip.bottom}% ${element.clip.left}%)`,
+            } : {}),
+            ...(isStrokeDraw ? {
+              animation: `stroke-draw-fill ${strokeDrawDuration}s ease-in-out forwards`,
+            } : {}),
+          }}
+        >
+          {renderContent()}
+        </motion.div>
+      ), element.id)}
+
+      {/* Stroke draw SVG overlay */}
+      {isStrokeDraw && element.type === 'shape' && (() => {
+        const content = element.content as ShapeContent;
+        const sw = content.strokeWidth || 2;
+        const color = content.stroke || content.fill || '#ffffff';
+        const w = renderW;
+        const h = renderH;
+        const isCircle = content.shape === 'circle';
+        const isTriangle = content.shape === 'triangle';
+        const br = content.borderRadius || 0;
+        // Calculate perimeter
+        const perimeter = isCircle
+          ? Math.PI * Math.min(w, h)
+          : isTriangle
+            ? (Math.sqrt((w/2)**2 + h**2) * 2 + w)
+            : 2 * (w + h);
+
+        return (
+          <svg
+            key={animationKey}
+            width={w}
+            height={h}
+            viewBox={`0 0 ${w} ${h}`}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              pointerEvents: 'none',
+              overflow: 'visible',
+            }}
+          >
+            {isCircle ? (
+              <ellipse
+                cx={w / 2}
+                cy={h / 2}
+                rx={(w - sw) / 2}
+                ry={(h - sw) / 2}
+                fill="none"
+                stroke={color}
+                strokeWidth={sw}
+                strokeDasharray={perimeter}
+                style={{
+                  '--stroke-perimeter': perimeter,
+                  animation: `stroke-draw ${strokeDrawDuration * 0.7}s ease-in-out forwards`,
+                  strokeDashoffset: perimeter,
+                } as React.CSSProperties}
+              />
+            ) : isTriangle ? (
+              <polygon
+                points={`${w / 2},${sw / 2} ${w - sw / 2},${h - sw / 2} ${sw / 2},${h - sw / 2}`}
+                fill="none"
+                stroke={color}
+                strokeWidth={sw}
+                strokeLinejoin="round"
+                strokeDasharray={perimeter}
+                style={{
+                  '--stroke-perimeter': perimeter,
+                  animation: `stroke-draw ${strokeDrawDuration * 0.7}s ease-in-out forwards`,
+                  strokeDashoffset: perimeter,
+                } as React.CSSProperties}
+              />
+            ) : (
+              <rect
+                x={sw / 2}
+                y={sw / 2}
+                width={w - sw}
+                height={h - sw}
+                rx={br}
+                ry={br}
+                fill="none"
+                stroke={color}
+                strokeWidth={sw}
+                strokeDasharray={perimeter}
+                style={{
+                  '--stroke-perimeter': perimeter,
+                  animation: `stroke-draw ${strokeDrawDuration * 0.7}s ease-in-out forwards`,
+                  strokeDashoffset: perimeter,
+                } as React.CSSProperties}
+              />
+            )}
+          </svg>
+        );
+      })()}
 
       {/* Crop overlay */}
       {isCropping && <CropOverlay element={element} />}
@@ -561,6 +784,30 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
               />
             );
           })}
+
+          {/* Border-radius drag handle (yellow circle, rectangle shapes only) */}
+          {element.type === 'shape' && (element.content as ShapeContent).shape === 'rectangle' && (() => {
+            const radius = (element.content as ShapeContent).borderRadius || 0;
+            return (
+              <div
+                onMouseDown={handleRadiusStart}
+                title={`Eckenradius: ${radius}px`}
+                style={{
+                  position: 'absolute',
+                  left: Math.max(radius, 8) - 5,
+                  top: -1,
+                  width: 10,
+                  height: 10,
+                  backgroundColor: 'var(--ae-notice)',
+                  border: '2px solid var(--ae-gray-900)',
+                  borderRadius: '50%',
+                  cursor: 'ew-resize',
+                  pointerEvents: 'auto',
+                  zIndex: 11,
+                }}
+              />
+            );
+          })()}
         </>
       )}
     </div>

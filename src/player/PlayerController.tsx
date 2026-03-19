@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ImageContent, Project, CanvasElement, ShapeContent, TextContent, WidgetContent } from '../types/project';
+import { ImageContent, Project, CanvasElement, ShapeContent, TextContent, WidgetContent, getAnimations } from '../types/project';
 import { animationPresets } from '../animations/presets';
 import { WidgetRenderer } from '../editor/components/WidgetRenderer';
 import { useProjectStore } from '../store/useProjectStore';
-import { getInterpolatedProperties, InterpolatedProps } from '../editor/utils/keyframeInterpolation';
+import { getInterpolatedProperties, getInterpolatedCamera, InterpolatedProps } from '../editor/utils/keyframeInterpolation';
+import { wrapWithEffects } from '../editor/utils/effectStyles';
 import { getTypewriterText } from '../utils/typewriter';
 
 interface PlayerControllerProps {
@@ -14,9 +15,11 @@ interface PlayerControllerProps {
 
 function getProjectDuration(project: Project): number {
   const maxFramerDuration = project.elements.reduce((max, el) => {
-    if (!el.animation || el.type === 'widget') return max;
-    const totalTime = (el.animation.delay || 0) + (el.animation.duration || 600);
-    return Math.max(max, totalTime);
+    if (el.type === 'widget') return max;
+    const anims = getAnimations(el);
+    if (anims.length === 0) return max;
+    const maxAnimTime = anims.reduce((m, a) => Math.max(m, (a.delay || 0) + (a.duration || 600)), 0);
+    return Math.max(max, maxAnimTime);
   }, 0);
 
   const maxWidgetDuration = project.elements.reduce((max, el) => {
@@ -31,7 +34,11 @@ function getProjectDuration(project: Project): number {
     return Math.max(max, ...el.keyframes.map((kf) => kf.time));
   }, 0);
 
-  return Math.max(maxFramerDuration, maxWidgetDuration, maxKeyframeDuration + 500, 3000);
+  const maxCameraKeyframeDuration = (project.cameraKeyframes || []).reduce(
+    (max, kf) => Math.max(max, kf.time), 0
+  );
+
+  return Math.max(maxFramerDuration, maxWidgetDuration, maxKeyframeDuration + 500, maxCameraKeyframeDuration + 500, 3000);
 }
 
 function formatTime(ms: number): string {
@@ -120,12 +127,14 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
       }
       case 'text': {
         const c = element.content as TextContent;
-        const textElapsed = Math.max(0, currentTime - (element.animation?.delay || 0));
+        const elAnims = getAnimations(element);
+        const firstAnimDelay = elAnims.length > 0 ? Math.min(...elAnims.map(a => a.delay || 0)) : 0;
+        const textElapsed = Math.max(0, currentTime - firstAnimDelay);
         const displayedText = getTypewriterText(
           c.text,
           c.typewriter,
           textElapsed,
-          element.animation?.duration,
+          elAnims[0]?.duration,
         );
         return (
           <div style={{
@@ -160,6 +169,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
 
         if (c.shape === 'circle') {
           shapeStyle.borderRadius = '50%';
+        } else if (c.borderRadius) {
+          shapeStyle.borderRadius = interp?.borderRadius ?? c.borderRadius;
         }
 
         return <div style={shapeStyle} />;
@@ -292,29 +303,48 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
               overflow: 'hidden',
             }}
           >
-            {project.elements
+            {(() => {
+              const cam = getInterpolatedCamera(project.cameraKeyframes, currentTime);
+              const cameraStyle: React.CSSProperties = cam ? {
+                width: project.canvas.width,
+                height: project.canvas.height,
+                transform: `translate(${project.canvas.width / 2 - cam.x * cam.zoom}px, ${project.canvas.height / 2 - cam.y * cam.zoom}px) scale(${cam.zoom})`,
+                transformOrigin: '0 0',
+              } : {
+                width: '100%',
+                height: '100%',
+              };
+              return <div style={cameraStyle}>{project.elements
               .filter((el) => el.visible)
               .sort((a, b) => a.zIndex - b.zIndex)
               .map((element) => {
-                const animationConfig = element.animation
-                  ? animationPresets[element.animation.preset]
-                  : null;
+                // Find active animation from array
+                const anims = getAnimations(element);
+                let activeAnimConfig = null;
+                let activeAnimPreset = null;
+                for (let i = anims.length - 1; i >= 0; i--) {
+                  if (currentTime >= (anims[i].delay || 0)) {
+                    activeAnimConfig = anims[i];
+                    activeAnimPreset = animationPresets[anims[i].preset];
+                    break;
+                  }
+                }
 
                 const motionProps = (() => {
-                  if (!animationConfig) return {};
-                  const cleanVariants = { ...animationConfig.variants };
+                  if (!activeAnimPreset || !activeAnimConfig) return {};
+                  const cleanVariants = { ...activeAnimPreset.variants };
                   if (cleanVariants.visible && typeof cleanVariants.visible === 'object' && !Array.isArray(cleanVariants.visible)) {
                     const { transition: _t, ...rest } = cleanVariants.visible as Record<string, any>;
                     cleanVariants.visible = rest;
                   }
-                  const easing = element.animation?.easing || 'easeOut';
+                  const easing = activeAnimConfig.easing || 'easeOut';
                   const isSpring = easing === 'spring' || easing === 'bounce';
                   return {
                     initial: 'hidden',
                     animate: 'visible',
                     variants: cleanVariants,
                     transition: {
-                      duration: isSpring ? undefined : (element.animation?.duration || 600) / 1000,
+                      duration: isSpring ? undefined : (activeAnimConfig.duration || 600) / 1000,
                       ease: isSpring ? undefined : easing,
                       type: isSpring ? 'spring' : 'tween',
                       ...(easing === 'spring' ? { stiffness: 200, damping: 20 } : {}),
@@ -323,8 +353,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
                   };
                 })();
 
-                const animDelay = element.animation?.delay || 0;
-                const hiddenBeforeDelay = animDelay > 0 && currentTime < animDelay;
+                const firstDelay = anims.length > 0 ? Math.min(...anims.map(a => a.delay || 0)) : 0;
+                const hiddenBeforeDelay = firstDelay > 0 && currentTime < firstDelay;
 
                 const interp = getInterpolatedProperties(element.keyframes, currentTime);
                 const posX = interp ? interp.x : element.position.x;
@@ -333,10 +363,12 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
                 const h = interp?.height ?? element.size.height;
                 const rot = interp?.rotation ?? element.rotation;
 
+                const isStrokeDraw = activeAnimConfig?.preset === 'strokeDraw';
+                const strokeDrawDur = activeAnimConfig ? (activeAnimConfig.duration || 1200) / 1000 : 1.2;
+
                 return (
-                  <motion.div
+                  <div
                     key={element.id}
-                    {...motionProps}
                     style={{
                       position: 'absolute',
                       left: posX,
@@ -346,15 +378,64 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
                       transform: `rotate(${rot}deg)`,
                       zIndex: element.zIndex,
                       display: hiddenBeforeDelay ? 'none' : undefined,
-                      ...(element.clip ? {
-                        clipPath: `inset(${element.clip.top}% ${element.clip.right}% ${element.clip.bottom}% ${element.clip.left}%)`,
-                      } : {}),
                     }}
                   >
-                    {renderContent(element, interp)}
-                  </motion.div>
+                    {wrapWithEffects(element.effects, (
+                      <motion.div
+                        {...motionProps}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          ...(element.clip ? {
+                            clipPath: `inset(${element.clip.top}% ${element.clip.right}% ${element.clip.bottom}% ${element.clip.left}%)`,
+                          } : {}),
+                          ...(isStrokeDraw ? {
+                            animation: `stroke-draw-fill ${strokeDrawDur}s ease-in-out forwards`,
+                          } : {}),
+                        }}
+                      >
+                        {renderContent(element, interp)}
+                      </motion.div>
+                    ), element.id)}
+                    {isStrokeDraw && element.type === 'shape' && (() => {
+                      const c = element.content as ShapeContent;
+                      const sw = c.strokeWidth || 2;
+                      const color = c.stroke || c.fill || '#ffffff';
+                      const isCircle = c.shape === 'circle';
+                      const isTriangle = c.shape === 'triangle';
+                      const br = c.borderRadius || 0;
+                      const perimeter = isCircle
+                        ? Math.PI * Math.min(w, h)
+                        : isTriangle
+                          ? (Math.sqrt((w/2)**2 + h**2) * 2 + w)
+                          : 2 * (w + h);
+                      return (
+                        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}
+                          style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'visible' }}>
+                          {isCircle ? (
+                            <ellipse cx={w/2} cy={h/2} rx={(w-sw)/2} ry={(h-sw)/2}
+                              fill="none" stroke={color} strokeWidth={sw}
+                              strokeDasharray={perimeter}
+                              style={{ '--stroke-perimeter': perimeter, animation: `stroke-draw ${strokeDrawDur*0.7}s ease-in-out forwards`, strokeDashoffset: perimeter } as React.CSSProperties} />
+                          ) : isTriangle ? (
+                            <polygon points={`${w/2},${sw/2} ${w-sw/2},${h-sw/2} ${sw/2},${h-sw/2}`}
+                              fill="none" stroke={color} strokeWidth={sw} strokeLinejoin="round"
+                              strokeDasharray={perimeter}
+                              style={{ '--stroke-perimeter': perimeter, animation: `stroke-draw ${strokeDrawDur*0.7}s ease-in-out forwards`, strokeDashoffset: perimeter } as React.CSSProperties} />
+                          ) : (
+                            <rect x={sw/2} y={sw/2} width={w-sw} height={h-sw} rx={br} ry={br}
+                              fill="none" stroke={color} strokeWidth={sw}
+                              strokeDasharray={perimeter}
+                              style={{ '--stroke-perimeter': perimeter, animation: `stroke-draw ${strokeDrawDur*0.7}s ease-in-out forwards`, strokeDashoffset: perimeter } as React.CSSProperties} />
+                          )}
+                        </svg>
+                      );
+                    })()}
+                  </div>
                 );
               })}
+              </div>;
+            })()}
           </div>
         </div>
       </div>
