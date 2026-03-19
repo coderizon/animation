@@ -23,12 +23,14 @@ src/
 ├── App.tsx                        # Root: DnD provider wrapper
 ├── main.tsx                       # React DOM entry
 ├── index.css                      # Global styles (dark body, overflow hidden)
+├── vite-env.d.ts                  # Vite type definitions
 ├── animations/
 │   └── presets.ts                 # 46 animation presets in 12 categories
 ├── editor/
 │   ├── Canvas.tsx                 # Canvas with zoom/pan/marquee/rulers/drop-target
 │   ├── EditorLayout.tsx           # Main layout: toolbar + sidebars + timeline + statusbar
 │   ├── PropertiesPanel.tsx        # Right panel: position/size/rotation/color/animation/keyframes
+│   ├── insertPresets.ts           # Shape definitions and insertion utilities
 │   ├── components/
 │   │   ├── AnimationPicker.tsx    # Collapsible category UI, auto-preview on select
 │   │   ├── AssetLibrary.tsx       # Left panel: shapes/text/images/widgets/logos (drag sources)
@@ -38,6 +40,7 @@ src/
 │   │   ├── KeyboardShortcutsOverlay.tsx
 │   │   ├── ResizablePanel.tsx     # Horizontal resize handle for sidebars
 │   │   ├── Ruler.tsx              # Canvas measurement rulers
+│   │   ├── ShapeGalleryPopover.tsx # Shape gallery UI with filled/outline variants
 │   │   ├── SnapGuides.tsx         # Magenta alignment guides (SVG overlay)
 │   │   ├── TemplateSelector.tsx   # Template loader modal
 │   │   ├── Timeline.tsx           # Animation bars, keyframe diamonds, playhead, layer reorder
@@ -46,16 +49,21 @@ src/
 │   ├── hooks/
 │   │   └── useKeyboardShortcuts.ts
 │   └── utils/
+│       ├── effectStyles.ts           # CSS/SVG loop effect styles (24 effect types)
 │       ├── keyframeInterpolation.ts  # Linear lerp for all properties + hex color interpolation
+│       ├── keyframeInterpolation.test.ts  # Unit tests for keyframe interpolation
 │       └── snapping.ts               # 5px threshold snap to edges/centers of other elements
 ├── player/
 │   └── PlayerController.tsx       # Full-screen playback renderer
 ├── store/
 │   ├── useProjectStore.ts         # Project state, elements, history, playback, all actions
+│   ├── useProjectStore.test.ts    # Unit tests for project store
 │   └── useViewportStore.ts        # Zoom (0.1-4.0), pan offset, snap guides
 ├── types/
-│   ├── project.ts                 # Core types: Project, CanvasElement, AnimationConfig, Keyframe
+│   ├── project.ts                 # Core types: Project, CanvasElement, AnimationConfig, Keyframe, Effect
 │   └── animation.ts               # AnimationPreset interface, DragItem types, asset types
+├── utils/
+│   └── typewriter.ts              # Typewriter text animation utility (character-by-character reveal)
 ├── widgets/
 │   ├── registry.ts                # Widget registry (Map<name, entry>)
 │   ├── types.ts                   # WidgetComponentProps, WidgetRegistryEntry
@@ -64,7 +72,11 @@ src/
 │   └── components/
 │       ├── ServerAnimation/       # Blinking LED server rack
 │       ├── NetworkVisualization/  # User counter + connection lines
-│       └── NeuralNetServer/       # Floating neural network graph
+│       ├── NeuralNetServer/       # Floating neural network graph
+│       ├── LogoCarousel/          # Carousel display of logos
+│       ├── LogoGridReveal/        # Grid layout with reveal animation
+│       ├── LogoMorphChain/        # Morphing logo chain animation
+│       └── LogoOrbit/             # Logo orbit animation
 └── templates/
     └── index.ts                   # Built-in starter templates
 ```
@@ -84,13 +96,17 @@ src/
   rotation: number;          // degrees
   zIndex: number;
   content: LogoContent | TextContent | ShapeContent | ImageContent | WidgetContent;
-  animation?: AnimationConfig;  // preset + delay + duration + easing
-  keyframes?: Keyframe[];       // sorted by time, linear interpolation
+  animation?: AnimationConfig;   // legacy single animation (backward compat)
+  animations?: AnimationConfig[]; // ordered list of animations (preferred)
+  keyframes?: Keyframe[];        // sorted by time, linear interpolation
   clip?: { top, right, bottom, left };  // crop inset percentages 0-100
+  effects?: Effect[];            // continuous loop effects (24 types)
   visible: boolean;
   locked: boolean;
 }
 ```
+
+**Note**: `animation` (singular) is retained for backward compatibility. Use `getAnimations(el)` helper to get the effective animations array.
 
 ### AnimationConfig
 ```typescript
@@ -108,6 +124,26 @@ src/
 - Linear interpolation between keyframes (numeric lerp, hex color RGB lerp)
 - Optional fields only interpolate when present in BOTH neighboring keyframes
 
+### Effect (Loop Effects)
+```typescript
+{ type: EffectType, intensity: number, speed: number, enabled: boolean, color?: string }
+```
+- **24 effect types** in 6 categories:
+  - **Bewegung (Motion)**: float, pulse, wobble, spin, bounce, shake, heartbeat
+  - **Licht & Farbe (Light & Color)**: glow, neonFlicker, shine, rainbow, blink
+  - **Perspektive (Perspective)**: tilt3d
+  - **Verzerrung (Distortion)**: ripple, heatShimmer, emboss, pixelate, chromaSplit, morphBlur
+  - **Kombi (Combo)**: hologram, electrified
+  - **Digital**: glitch
+- Implemented via CSS keyframes and SVG filters in `editor/utils/effectStyles.ts`
+- `EFFECT_DEFINITIONS` constant provides display names, icons, and descriptions
+
+### CameraKeyframe
+```typescript
+{ time: number (ms), x: number, y: number, zoom: number }
+```
+- `Project.cameraKeyframes?` enables camera zoom/pan animation over the canvas
+
 ---
 
 ## State Management (Zustand)
@@ -121,14 +157,29 @@ src/
 | `pushSnapshot(project)` | Manually push to history (on mouse up) |
 | `deleteElement(id)` | Remove + deselect |
 | `selectElement(id)` / `addToSelection(id)` / `selectElements(ids)` | Selection |
+| `toggleSelectElement(id)` | Toggle selection for element |
+| `clearSelection()` | Deselect all |
 | `undo()` / `redo()` | History (max 50 snapshots) |
+| `canUndo()` / `canRedo()` | History state checks |
 | `playAllAnimations()` | Start RAF playback loop |
 | `pauseAllAnimations()` / `stopAllAnimations()` | Pause (keep time) / Stop (reset to 0) |
 | `setCurrentTime(ms)` | Move playhead |
 | `triggerPreview(id)` | 3-second preview of single element |
 | `addKeyframe(id, kf)` / `removeKeyframe(id, time)` | Keyframe CRUD |
 | `reorderElements(from, to)` | Timeline layer drag |
+| `renameElement(id, name)` | Rename element |
+| `toggleElementVisibility(id)` | Toggle element visible |
+| `toggleElementLock(id)` | Toggle element locked |
+| `updateElementPosition(id, x, y)` | Update position |
+| `updateElementSize(id, w, h)` | Update size |
+| `updateElementAnimation(id, anim)` | Update animation config |
+| `loadProject(project)` / `resetProject()` | Project loading |
+| `updateProjectName(name)` | Rename project |
 | `exportProject()` / `importProject(json)` | JSON serialization |
+| `setCroppingElement(id)` | Enter crop mode |
+| `setContextMenu(menu)` | Show context menu |
+| `setLastDragStartPosition(pos)` | Track drag origin |
+| `getSelectedElement()` / `getSelectedElements()` | Selection getters |
 
 ### useViewportStore
 | Field | Purpose |
@@ -152,6 +203,8 @@ if currentTime < element.animation.delay → display: none (hidden)
 if currentTime >= delay (first crossing) → increment animationKey → framer-motion triggers hidden→visible
     ↓
 Keyframe interpolation also applies (position, size, rotation, colors)
+    ↓
+Loop effects (CSS/SVG) run continuously regardless of playback state
     ↓
 On stop: reset currentTime=0, prevPastDelay=false
 ```
@@ -204,6 +257,11 @@ On stop: reset currentTime=0, prevPastDelay=false
 2. Add preset object in `animations/presets.ts` (name, displayName, icon, defaultDuration, variants)
 3. Add to appropriate category in `presetCategories` array
 
+### Add a new loop effect
+1. Add type to `EffectType` union in `types/project.ts`
+2. Add definition to `EFFECT_DEFINITIONS` in `types/project.ts` (displayName, icon, description, category)
+3. Implement CSS/SVG styles in `editor/utils/effectStyles.ts`
+
 ### Add a new widget
 1. Create component in `widgets/components/YourWidget/`
 2. Implement `WidgetComponentProps` interface
@@ -215,6 +273,12 @@ Image elements can also point at files in `/public/assets/` via the Properties p
 
 ### Add a keyboard shortcut
 Edit `editor/hooks/useKeyboardShortcuts.ts`
+
+---
+
+## Testing
+- `editor/utils/keyframeInterpolation.test.ts` - Unit tests for keyframe interpolation logic
+- `store/useProjectStore.test.ts` - Unit tests for project store actions
 
 ---
 
