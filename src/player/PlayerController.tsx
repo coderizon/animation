@@ -185,9 +185,9 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
         display: 'flex',
         flexDirection: 'column',
         background:
-          'radial-gradient(circle at top, rgba(79, 115, 255, 0.12), transparent 34%), linear-gradient(180deg, #050816 0%, #0a1020 100%)',
+          'radial-gradient(circle at top, rgba(86, 129, 255, 0.12), transparent 30%), linear-gradient(180deg, var(--ae-bg-shell) 0%, var(--ae-bg-base) 100%)',
         overflow: 'hidden',
-        color: '#f7f9ff',
+        color: 'var(--ae-text-primary)',
       }}
     >
       <div
@@ -196,8 +196,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
           display: 'flex',
           alignItems: 'center',
           padding: '0 20px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          backgroundColor: 'rgba(5, 8, 22, 0.72)',
+          borderBottom: '1px solid var(--ae-border)',
+          backgroundColor: 'rgba(14, 14, 14, 0.82)',
           backdropFilter: 'blur(16px)',
           gap: 16,
         }}
@@ -207,8 +207,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
           style={{
             padding: '10px 14px',
             backgroundColor: 'transparent',
-            color: '#e8f0fe',
-            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'var(--ae-text-primary)',
+            border: '1px solid var(--ae-border)',
             borderRadius: 8,
             fontSize: 13,
             fontWeight: 600,
@@ -218,8 +218,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
           Zurück
         </button>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#f7f9ff' }}>{project.name}</div>
-          <div style={{ fontSize: 12, color: '#9fb0d1' }}>Player / Preview mode</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ae-text-primary)' }}>{project.name}</div>
+          <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)' }}>Player / Preview mode</div>
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -227,8 +227,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
             onClick={playbackState === 'playing' ? pauseAllAnimations : playAllAnimations}
             style={{
               padding: '10px 16px',
-              backgroundColor: playbackState === 'playing' ? '#ff9800' : '#4f73ff',
-              color: '#fff',
+              backgroundColor: playbackState === 'playing' ? 'var(--ae-notice)' : 'var(--ae-accent)',
+              color: 'var(--ae-gray-900)',
               border: 'none',
               borderRadius: 8,
               fontSize: 13,
@@ -245,9 +245,9 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
             }}
             style={{
               padding: '10px 16px',
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.1)',
+              backgroundColor: 'var(--ae-bg-panel-raised)',
+              color: 'var(--ae-text-primary)',
+              border: '1px solid var(--ae-border)',
               borderRadius: 8,
               fontSize: 13,
               fontWeight: 700,
@@ -288,7 +288,7 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
               top: 0,
               left: 0,
               backgroundColor: project.canvas.backgroundColor,
-              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.45)',
+              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.55)',
               overflow: 'hidden',
             }}
           >
@@ -363,15 +363,15 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
         style={{
           height: 96,
           padding: '18px 24px 20px',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          backgroundColor: 'rgba(5, 8, 22, 0.72)',
+          borderTop: '1px solid var(--ae-border)',
+          backgroundColor: 'rgba(14, 14, 14, 0.82)',
           backdropFilter: 'blur(16px)',
           display: 'flex',
           alignItems: 'center',
           gap: 18,
         }}
       >
-        <div style={{ minWidth: 72, fontSize: 13, color: '#b8c4dd', fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ minWidth: 72, fontSize: 13, color: 'var(--ae-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
           {formatTime(currentTime)}
         </div>
         <input
@@ -383,10 +383,10 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
           onChange={(e) => setCurrentTime(Number(e.target.value))}
           style={{
             flex: 1,
-            accentColor: '#4f73ff',
+            accentColor: 'var(--ae-accent)',
           }}
         />
-        <div style={{ minWidth: 72, textAlign: 'right', fontSize: 13, color: '#b8c4dd', fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ minWidth: 72, textAlign: 'right', fontSize: 13, color: 'var(--ae-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
           {formatTime(duration)}
         </div>
       </div>
@@ -399,7 +399,7 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
           height: 4,
           width: 'calc(100% - 48px)',
           borderRadius: 999,
-          backgroundColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: 'rgba(255, 255, 255, 0.08)',
           overflow: 'hidden',
           pointerEvents: 'none',
         }}
@@ -408,7 +408,7 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
           style={{
             width: `${progress * 100}%`,
             height: '100%',
-            background: 'linear-gradient(90deg, #4f73ff, #8ddcff)',
+            background: 'linear-gradient(90deg, var(--ae-accent), var(--ae-accent-strong))',
           }}
         />
       </div>

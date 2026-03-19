@@ -281,8 +281,8 @@ export const Canvas: React.FC = () => {
     top: Math.min(marquee.startY, marquee.currentY),
     width: Math.abs(marquee.currentX - marquee.startX),
     height: Math.abs(marquee.currentY - marquee.startY),
-    backgroundColor: 'rgba(33, 150, 243, 0.15)',
-    border: '1px solid rgba(33, 150, 243, 0.6)',
+    backgroundColor: 'var(--ae-accent-overlay)',
+    border: '1px solid var(--ae-accent)',
     pointerEvents: 'none' as const,
     zIndex: 9999,
   } : null;
@@ -309,7 +309,7 @@ export const Canvas: React.FC = () => {
           height: '100%',
           position: 'relative',
           overflow: 'hidden',
-          backgroundColor: '#ebe9e8',
+          backgroundColor: 'var(--ae-bg-shell)',
           cursor: 'default',
         }}
       >
@@ -333,45 +333,26 @@ export const Canvas: React.FC = () => {
               width: project.canvas.width,
               height: project.canvas.height,
               backgroundColor: project.canvas.backgroundColor,
-              border: isOver ? '2px solid #0f6cbd' : '1px solid #c8c6c4',
+              border: isOver ? '2px solid var(--ae-accent)' : '1px solid var(--ae-border)',
               borderRadius: 0,
               position: 'relative',
-              boxShadow: isOver ? '0 0 0 3px rgba(15, 108, 189, 0.18), 0 12px 26px rgba(0, 0, 0, 0.12)' : '0 8px 24px rgba(0, 0, 0, 0.10)',
+              boxShadow: isOver ? '0 0 0 3px rgba(86, 129, 255, 0.18), 0 18px 40px rgba(0, 0, 0, 0.45)' : '0 12px 30px rgba(0, 0, 0, 0.38)',
             }}
           >
-            {/* Placeholder text when empty */}
-            {project.elements.length === 0 && (
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                textAlign: 'center',
-                color: '#605e5c',
-                fontSize: 22,
-                pointerEvents: 'none',
-              }}>
-                <div style={{ fontSize: 24, marginBottom: 10, fontWeight: 600 }}>Leere Folie</div>
-                <div style={{ fontSize: 14, marginTop: 10, color: '#8a8886' }}>
-                  Ziehe Logos, Widgets oder Inhalte auf die Folie
-                </div>
-              </div>
-            )}
-
             {/* Canvas info overlay */}
             <div style={{
               position: 'absolute',
               top: 12,
               right: 12,
               padding: '4px 10px',
-              backgroundColor: 'rgba(255, 255, 255, 0.92)',
-              border: '1px solid #d2d0ce',
+              backgroundColor: 'rgba(29, 29, 29, 0.92)',
+              border: '1px solid var(--ae-border)',
               borderRadius: 999,
               fontSize: 11,
-              color: '#605e5c',
+              color: 'var(--ae-text-secondary)',
               pointerEvents: 'none',
-              fontFamily: 'Segoe UI, sans-serif',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
+              fontFamily: 'Adobe Clean, Segoe UI, sans-serif',
+              boxShadow: '0 6px 16px rgba(0, 0, 0, 0.28)',
             }}>
               {project.canvas.width} × {project.canvas.height} | {Math.round(zoom * 100)}%
             </div>

@@ -10,7 +10,7 @@ interface ShapeGalleryPopoverProps {
 }
 
 export const ShapeGlyph: React.FC<{ shape: ShapeInsertDef; size?: number }> = ({ shape, size = 28 }) => {
-  const stroke = shape.stroke || (shape.fill === 'transparent' ? '#667085' : 'none');
+  const stroke = shape.stroke || (shape.fill === 'transparent' ? 'var(--ae-text-secondary)' : 'none');
   const strokeWidth = shape.fill === 'transparent' ? (shape.strokeWidth || 2) : 0;
 
   switch (shape.shape) {
@@ -95,7 +95,7 @@ export const ShapeGalleryPopover: React.FC<ShapeGalleryPopoverProps> = ({
 
     return (
       <div key={title} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#475467', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ae-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {title}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 8 }}>
@@ -104,8 +104,8 @@ export const ShapeGalleryPopover: React.FC<ShapeGalleryPopoverProps> = ({
               key={shape.id}
               onClick={() => onSelectShape(shape)}
               style={{
-                border: '1px solid #e4e7ec',
-                backgroundColor: '#ffffff',
+                border: '1px solid var(--ae-border)',
+                backgroundColor: 'var(--ae-bg-input)',
                 borderRadius: 10,
                 padding: '10px 6px 8px',
                 display: 'flex',
@@ -114,16 +114,16 @@ export const ShapeGalleryPopover: React.FC<ShapeGalleryPopoverProps> = ({
                 gap: 6,
                 cursor: 'pointer',
                 transition: 'all 0.18s ease',
-                color: '#344054',
+                color: 'var(--ae-text-primary)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#98a2b3';
-                e.currentTarget.style.backgroundColor = '#f8fafc';
+                e.currentTarget.style.borderColor = 'var(--ae-border-strong)';
+                e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
                 e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e4e7ec';
-                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.borderColor = 'var(--ae-border)';
+                e.currentTarget.style.backgroundColor = 'var(--ae-bg-input)';
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
@@ -146,10 +146,10 @@ export const ShapeGalleryPopover: React.FC<ShapeGalleryPopoverProps> = ({
         width,
         maxHeight: '70vh',
         overflowY: 'auto',
-        backgroundColor: '#ffffff',
-        border: '1px solid #d0d5dd',
+        backgroundColor: 'var(--ae-bg-panel)',
+        border: '1px solid var(--ae-border)',
         borderRadius: 16,
-        boxShadow: '0 24px 60px rgba(16, 24, 40, 0.18)',
+        boxShadow: 'var(--ae-shadow-floating)',
         padding: 18,
         zIndex: 1200,
         display: 'flex',
@@ -159,8 +159,8 @@ export const ShapeGalleryPopover: React.FC<ShapeGalleryPopoverProps> = ({
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#101828' }}>Formen</div>
-          <div style={{ fontSize: 12, color: '#667085' }}>Zuletzt verwendet zuerst, dann die Standardgruppen.</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ae-text-primary)' }}>Formen</div>
+          <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)' }}>Zuletzt verwendet zuerst, dann die Standardgruppen.</div>
         </div>
         <button
           onClick={onClose}
@@ -168,9 +168,9 @@ export const ShapeGalleryPopover: React.FC<ShapeGalleryPopoverProps> = ({
             width: 30,
             height: 30,
             borderRadius: 999,
-            border: '1px solid #e4e7ec',
-            backgroundColor: '#ffffff',
-            color: '#475467',
+            border: '1px solid var(--ae-border)',
+            backgroundColor: 'var(--ae-bg-panel-raised)',
+            color: 'var(--ae-text-secondary)',
             fontSize: 16,
             cursor: 'pointer',
           }}

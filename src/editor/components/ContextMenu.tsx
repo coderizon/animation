@@ -110,13 +110,13 @@ export const ContextMenu: React.FC = () => {
         position: 'fixed',
         top: contextMenu.y,
         left: contextMenu.x,
-        backgroundColor: '#1e1e2e',
-        border: '1px solid #3a3a4a',
+        backgroundColor: 'var(--ae-bg-panel)',
+        border: '1px solid var(--ae-border)',
         borderRadius: 6,
         padding: '4px 0',
         minWidth: 180,
         zIndex: 100000,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+        boxShadow: 'var(--ae-shadow-floating)',
       }}
     >
       {visibleItems.map((item, i) => (
@@ -125,13 +125,13 @@ export const ContextMenu: React.FC = () => {
           onClick={item.onClick}
           style={{
             padding: '8px 16px',
-            color: '#e0e0e0',
+            color: 'var(--ae-text-primary)',
             fontSize: 13,
             cursor: 'pointer',
             userSelect: 'none',
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLDivElement).style.backgroundColor = '#2a2a3e';
+            (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';

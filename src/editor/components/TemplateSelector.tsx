@@ -35,7 +35,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: 'var(--ae-bg-overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -45,14 +45,15 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
     >
       <div
         style={{
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--ae-bg-panel)',
           borderRadius: 12,
           padding: 40,
           maxWidth: 900,
           width: '90%',
           maxHeight: '80vh',
           overflowY: 'auto',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+          boxShadow: 'var(--ae-shadow-floating)',
+          border: '1px solid var(--ae-border)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -61,14 +62,14 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
           <h2 style={{
             fontSize: 28,
             fontWeight: 700,
-            color: '#1a1a2e',
+            color: 'var(--ae-text-primary)',
             marginBottom: 8,
           }}>
             Template auswählen
           </h2>
           <p style={{
             fontSize: 14,
-            color: '#888',
+            color: 'var(--ae-text-secondary)',
           }}>
             Starte mit einer Vorlage oder einem leeren Canvas
           </p>
@@ -89,8 +90,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                 onClick={() => setSelectedTemplate(template.id)}
                 style={{
                   padding: 32,
-                  backgroundColor: isSelected ? '#2196F3' : '#f0f0f4',
-                  border: isSelected ? '3px solid #2196F3' : '2px solid #e0e0e8',
+                  backgroundColor: isSelected ? 'var(--ae-accent)' : 'var(--ae-bg-input)',
+                  border: isSelected ? '3px solid var(--ae-accent)' : '2px solid var(--ae-border)',
                   borderRadius: 16,
                   cursor: 'pointer',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -102,23 +103,23 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                   overflow: 'hidden',
                   transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                   boxShadow: isSelected
-                    ? '0 8px 24px rgba(33, 150, 243, 0.3)'
-                    : '0 2px 8px rgba(0, 0, 0, 0.06)',
+                    ? '0 12px 28px rgba(86, 129, 255, 0.32)'
+                    : 'var(--ae-shadow-elevated)',
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#e0e0e8';
-                    e.currentTarget.style.borderColor = '#b0b0c0';
+                    e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
+                    e.currentTarget.style.borderColor = 'var(--ae-border-strong)';
                     e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.08)';
+                    e.currentTarget.style.boxShadow = '0 14px 32px rgba(0, 0, 0, 0.38)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#f0f0f4';
-                    e.currentTarget.style.borderColor = '#e0e0e8';
+                    e.currentTarget.style.backgroundColor = 'var(--ae-bg-input)';
+                    e.currentTarget.style.borderColor = 'var(--ae-border)';
                     e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)';
+                    e.currentTarget.style.boxShadow = 'var(--ae-shadow-elevated)';
                   }
                 }}
               >
@@ -127,13 +128,13 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                   width: 120,
                   height: 120,
                   borderRadius: '50%',
-                  backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.04)',
+                  backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.16)' : 'var(--ae-bg-panel-raised)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: 32,
                   fontWeight: 700,
-                  color: isSelected ? '#fff' : '#888',
+                  color: isSelected ? 'var(--ae-gray-900)' : 'var(--ae-text-muted)',
                   letterSpacing: '-1px',
                   transition: 'all 0.3s',
                   marginBottom: 8,
@@ -145,7 +146,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                 <h3 style={{
                   fontSize: 20,
                   fontWeight: 700,
-                  color: isSelected ? '#fff' : '#444',
+                  color: isSelected ? 'var(--ae-gray-900)' : 'var(--ae-text-primary)',
                   textAlign: 'center',
                   margin: 0,
                   letterSpacing: '-0.5px',
@@ -156,7 +157,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                 {/* Description */}
                 <p style={{
                   fontSize: 13,
-                  color: isSelected ? 'rgba(255, 255, 255, 0.9)' : '#888',
+                  color: isSelected ? 'rgba(255, 255, 255, 0.88)' : 'var(--ae-text-secondary)',
                   textAlign: 'center',
                   lineHeight: 1.6,
                   margin: 0,
@@ -169,11 +170,11 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                 {template.data.elements.length > 0 && (
                   <div style={{
                     padding: '6px 16px',
-                    backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.2)' : 'rgba(33, 150, 243, 0.1)',
+                    backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.18)' : 'var(--ae-accent-overlay)',
                     borderRadius: 20,
                     fontSize: 12,
                     fontWeight: 600,
-                    color: isSelected ? '#fff' : '#2196F3',
+                    color: isSelected ? 'var(--ae-gray-900)' : 'var(--ae-accent-strong)',
                     marginTop: 4,
                   }}>
                     {template.data.elements.length} {template.data.elements.length === 1 ? 'Element' : 'Elemente'}
@@ -189,8 +190,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
                     width: 32,
                     height: 32,
                     borderRadius: '50%',
-                    backgroundColor: '#fff',
-                    color: '#2196F3',
+                    backgroundColor: 'var(--ae-gray-900)',
+                    color: 'var(--ae-accent)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -216,8 +217,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
             style={{
               padding: '12px 24px',
               backgroundColor: 'transparent',
-              color: '#888',
-              border: '1px solid #e0e0e8',
+              color: 'var(--ae-text-secondary)',
+              border: '1px solid var(--ae-border)',
               borderRadius: 8,
               fontSize: 14,
               fontWeight: 600,
@@ -225,12 +226,12 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f0f0f4';
-              e.currentTarget.style.color = '#444';
+              e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
+              e.currentTarget.style.color = 'var(--ae-text-primary)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#888';
+              e.currentTarget.style.color = 'var(--ae-text-secondary)';
             }}
           >
             Abbrechen
@@ -240,8 +241,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
             disabled={!selectedTemplate}
             style={{
               padding: '12px 24px',
-              backgroundColor: selectedTemplate ? '#2196F3' : '#e0e0e8',
-              color: selectedTemplate ? '#fff' : '#999',
+              backgroundColor: selectedTemplate ? 'var(--ae-accent)' : 'var(--ae-bg-panel-raised)',
+              color: selectedTemplate ? 'var(--ae-gray-900)' : 'var(--ae-text-disabled)',
               border: 'none',
               borderRadius: 8,
               fontSize: 14,
@@ -251,12 +252,12 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ isOpen, onCl
             }}
             onMouseEnter={(e) => {
               if (selectedTemplate) {
-                e.currentTarget.style.backgroundColor = '#1976D2';
+                e.currentTarget.style.backgroundColor = 'var(--ae-accent-strong)';
               }
             }}
             onMouseLeave={(e) => {
               if (selectedTemplate) {
-                e.currentTarget.style.backgroundColor = '#2196F3';
+                e.currentTarget.style.backgroundColor = 'var(--ae-accent)';
               }
             }}
           >

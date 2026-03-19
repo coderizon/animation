@@ -98,8 +98,8 @@ export const CropOverlay: React.FC<CropOverlayProps> = ({ element }) => {
       position: 'absolute',
       width: HANDLE_SIZE,
       height: HANDLE_SIZE,
-      backgroundColor: '#FF9800',
-      border: '2px solid #fff',
+      backgroundColor: 'var(--ae-notice)',
+      border: '2px solid var(--ae-gray-900)',
       borderRadius: '50%',
       zIndex: 10,
       pointerEvents: 'auto',
@@ -144,28 +144,28 @@ export const CropOverlay: React.FC<CropOverlayProps> = ({ element }) => {
       {cropTop > 0 && (
         <div style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: cropTop,
-          backgroundColor: 'rgba(0,0,0,0.6)', pointerEvents: 'none',
+          backgroundColor: 'rgba(0, 0, 0, 0.68)', pointerEvents: 'none',
         }} />
       )}
       {/* Bottom */}
       {cropBottom > 0 && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, width: '100%', height: cropBottom,
-          backgroundColor: 'rgba(0,0,0,0.6)', pointerEvents: 'none',
+          backgroundColor: 'rgba(0, 0, 0, 0.68)', pointerEvents: 'none',
         }} />
       )}
       {/* Left */}
       {cropLeft > 0 && (
         <div style={{
           position: 'absolute', top: cropTop, left: 0, width: cropLeft, height: visibleH,
-          backgroundColor: 'rgba(0,0,0,0.6)', pointerEvents: 'none',
+          backgroundColor: 'rgba(0, 0, 0, 0.68)', pointerEvents: 'none',
         }} />
       )}
       {/* Right */}
       {cropRight > 0 && (
         <div style={{
           position: 'absolute', top: cropTop, right: 0, width: cropRight, height: visibleH,
-          backgroundColor: 'rgba(0,0,0,0.6)', pointerEvents: 'none',
+          backgroundColor: 'rgba(0, 0, 0, 0.68)', pointerEvents: 'none',
         }} />
       )}
 
@@ -176,7 +176,7 @@ export const CropOverlay: React.FC<CropOverlayProps> = ({ element }) => {
         left: cropLeft,
         width: visibleW,
         height: visibleH,
-        border: '1px dashed #FF9800',
+        border: '1px dashed var(--ae-notice-strong)',
         pointerEvents: 'none',
       }} />
 

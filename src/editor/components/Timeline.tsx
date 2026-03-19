@@ -2,6 +2,18 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { ShapeContent, TextContent, WidgetContent, Keyframe } from '../../types/project';
 
+const TL_BORDER = 'var(--ae-border)';
+const TL_ROW_BORDER = 'rgba(255, 255, 255, 0.05)';
+const TL_BG = 'var(--ae-bg-panel)';
+const TL_BG_MUTED = 'var(--ae-bg-panel-muted)';
+const TL_BG_RAISED = 'var(--ae-bg-panel-raised)';
+const TL_TEXT = 'var(--ae-text-primary)';
+const TL_TEXT_SECONDARY = 'var(--ae-text-secondary)';
+const TL_TEXT_MUTED = 'var(--ae-text-muted)';
+const TL_TEXT_DISABLED = 'var(--ae-text-disabled)';
+const TL_ACCENT = 'var(--ae-accent)';
+const TL_ACCENT_STRONG = 'var(--ae-accent-strong)';
+
 export const Timeline: React.FC = () => {
   const project = useProjectStore((state) => state.project);
   const selectedElementIds = useProjectStore((state) => state.selectedElementIds);
@@ -365,8 +377,8 @@ export const Timeline: React.FC = () => {
   return (
     <div style={{
       height: '100%',
-      backgroundColor: '#ffffff',
-      borderTop: '1px solid #d2d0ce',
+      backgroundColor: TL_BG,
+      borderTop: `1px solid ${TL_BORDER}`,
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
@@ -377,18 +389,18 @@ export const Timeline: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '6px 16px',
-        borderBottom: '1px solid #d2d0ce',
+        borderBottom: `1px solid ${TL_BORDER}`,
         minHeight: 32,
-        backgroundColor: '#fbfbfb',
+        backgroundColor: TL_BG_MUTED,
       }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#605e5c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: TL_TEXT_SECONDARY, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Ebenen & Timeline
         </span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: '#8a8886' }}>
+          <span style={{ fontSize: 11, color: TL_TEXT_MUTED }}>
             {project.elements.length} elements | {animatedElements.length} animated
           </span>
-          <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#605e5c', minWidth: 70, textAlign: 'right' }}>
+          <span style={{ fontSize: 11, fontFamily: 'monospace', color: TL_TEXT_SECONDARY, minWidth: 70, textAlign: 'right' }}>
             {formatTime(currentTime)}
           </span>
           <button
@@ -397,9 +409,9 @@ export const Timeline: React.FC = () => {
             title="Keyframe an aktueller Position hinzufügen"
             style={{
               padding: '4px 10px',
-              backgroundColor: selectedElementIds.length === 1 ? '#FFC107' : 'transparent',
-              color: selectedElementIds.length === 1 ? '#000' : '#ccc',
-              border: '1px solid #d2d0ce',
+              backgroundColor: selectedElementIds.length === 1 ? 'var(--ae-notice)' : 'transparent',
+              color: selectedElementIds.length === 1 ? 'var(--ae-gray-900)' : TL_TEXT_DISABLED,
+              border: `1px solid ${TL_BORDER}`,
               borderRadius: 4,
               fontSize: 11,
               fontWeight: 600,
@@ -413,9 +425,9 @@ export const Timeline: React.FC = () => {
             onClick={playbackState === 'playing' ? pauseAllAnimations : playAllAnimations}
             style={{
               padding: '4px 12px',
-              backgroundColor: playbackState === 'playing' ? '#FF9800' : playbackState === 'paused' ? '#4CAF50' : 'transparent',
-              color: playbackState !== 'stopped' ? '#fff' : '#666',
-              border: '1px solid #d2d0ce',
+              backgroundColor: playbackState === 'playing' ? 'var(--ae-notice)' : playbackState === 'paused' ? 'var(--ae-positive)' : 'transparent',
+              color: playbackState !== 'stopped' ? 'var(--ae-gray-900)' : TL_TEXT_MUTED,
+              border: `1px solid ${TL_BORDER}`,
               borderRadius: 4,
               fontSize: 11,
               fontWeight: 600,
@@ -429,9 +441,9 @@ export const Timeline: React.FC = () => {
               onClick={stopAllAnimations}
               style={{
                 padding: '4px 12px',
-                backgroundColor: '#d32f2f',
-                color: '#fff',
-                border: '1px solid #d2d0ce',
+                backgroundColor: 'var(--ae-danger)',
+                color: 'var(--ae-gray-900)',
+                border: `1px solid ${TL_BORDER}`,
                 borderRadius: 4,
                 fontSize: 11,
                 fontWeight: 600,
@@ -454,21 +466,21 @@ export const Timeline: React.FC = () => {
         <div style={{
           minWidth: 220,
           maxWidth: 220,
-          borderRight: '1px solid #d2d0ce',
+          borderRight: `1px solid ${TL_BORDER}`,
           overflow: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#f3f2f1',
+          backgroundColor: TL_BG_MUTED,
         }}>
           {/* Column header */}
           <div style={{
             height: 20,
-            borderBottom: '1px solid #d2d0ce',
+            borderBottom: `1px solid ${TL_BORDER}`,
             display: 'flex',
             alignItems: 'center',
             padding: '0 8px',
             fontSize: 9,
-            color: '#8a8886',
+            color: TL_TEXT_MUTED,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
             flexShrink: 0,
@@ -497,14 +509,14 @@ export const Timeline: React.FC = () => {
                   padding: '0 4px',
                   fontSize: 11,
                   cursor: 'pointer',
-                  backgroundColor: isSelected ? 'rgba(15, 108, 189, 0.10)' : 'transparent',
-                  borderBottom: '1px solid #e1dfdd',
-                  borderTop: dragOverIndex === reversedIndex ? '2px solid #0f6cbd' : '2px solid transparent',
+                  backgroundColor: isSelected ? 'var(--ae-accent-overlay)' : 'transparent',
+                  borderBottom: `1px solid ${TL_ROW_BORDER}`,
+                  borderTop: dragOverIndex === reversedIndex ? `2px solid ${TL_ACCENT}` : '2px solid transparent',
                   flexShrink: 0,
                 }}
               >
                 {/* Drag handle */}
-                <span style={{ cursor: 'grab', color: '#ccc', fontSize: 10, userSelect: 'none', width: 16, textAlign: 'center' }}>
+                <span style={{ cursor: 'grab', color: TL_TEXT_DISABLED, fontSize: 10, userSelect: 'none', width: 16, textAlign: 'center' }}>
                   ⋮⋮
                 </span>
 
@@ -524,7 +536,7 @@ export const Timeline: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     opacity: el.visible ? 1 : 0.3,
-                    color: '#666',
+                    color: TL_TEXT_MUTED,
                   }}
                 >
                   {el.visible ? '👁' : '👁'}
@@ -545,7 +557,7 @@ export const Timeline: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: el.locked ? '#d32f2f' : '#ccc',
+                    color: el.locked ? 'var(--ae-danger)' : TL_TEXT_DISABLED,
                   }}
                 >
                   {el.locked ? '🔒' : '🔓'}
@@ -566,10 +578,12 @@ export const Timeline: React.FC = () => {
                     style={{
                       flex: 1,
                       fontSize: 11,
-                      border: '1px solid #0f6cbd',
+                      border: `1px solid ${TL_ACCENT}`,
                       borderRadius: 3,
                       padding: '2px 4px',
                       outline: 'none',
+                      backgroundColor: 'var(--ae-bg-input)',
+                      color: TL_TEXT,
                       minWidth: 0,
                     }}
                   />
@@ -584,7 +598,7 @@ export const Timeline: React.FC = () => {
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
-                      color: isSelected ? '#0f6cbd' : el.visible ? '#323130' : '#a19f9d',
+                      color: isSelected ? TL_ACCENT_STRONG : el.visible ? TL_TEXT : TL_TEXT_DISABLED,
                       fontWeight: isSelected ? 600 : 400,
                       textDecoration: el.visible ? 'none' : 'line-through',
                     }}
@@ -597,7 +611,7 @@ export const Timeline: React.FC = () => {
           })}
 
           {elements.length === 0 && (
-            <div style={{ padding: '16px 8px', fontSize: 11, color: '#8a8886', textAlign: 'center' }}>
+            <div style={{ padding: '16px 8px', fontSize: 11, color: TL_TEXT_MUTED, textAlign: 'center' }}>
               Keine Elemente
             </div>
           )}
@@ -620,7 +634,7 @@ export const Timeline: React.FC = () => {
               top: 0,
               bottom: 0,
               width: 1,
-              backgroundColor: '#ff0000',
+              backgroundColor: TL_ACCENT,
               zIndex: 10,
               pointerEvents: 'none',
             }}>
@@ -633,7 +647,7 @@ export const Timeline: React.FC = () => {
                 height: 0,
                 borderLeft: '5px solid transparent',
                 borderRight: '5px solid transparent',
-                borderTop: '8px solid #ff0000',
+                borderTop: `8px solid ${TL_ACCENT}`,
               }} />
             </div>
           )}
@@ -644,11 +658,11 @@ export const Timeline: React.FC = () => {
             style={{
               height: 20,
               position: 'relative',
-              borderBottom: '1px solid #d2d0ce',
+              borderBottom: `1px solid ${TL_BORDER}`,
               minWidth: timelineWidth,
               flexShrink: 0,
               cursor: 'col-resize',
-              backgroundColor: '#f3f2f1',
+              backgroundColor: TL_BG_MUTED,
             }}
           >
             {markers.map((t) => (
@@ -666,7 +680,7 @@ export const Timeline: React.FC = () => {
               >
                 <span style={{
                   fontSize: 9,
-                  color: '#8a8886',
+                  color: TL_TEXT_MUTED,
                   fontFamily: 'monospace',
                   marginLeft: 2,
                 }}>
@@ -678,7 +692,7 @@ export const Timeline: React.FC = () => {
                   top: 0,
                   width: 1,
                   height: '100%',
-                  backgroundColor: '#d2d0ce',
+                  backgroundColor: TL_BORDER,
                 }} />
               </div>
             ))}
@@ -697,9 +711,9 @@ export const Timeline: React.FC = () => {
                   height: 28,
                   position: 'relative',
                   minWidth: timelineWidth,
-                  borderBottom: '1px solid #e1dfdd',
+                  borderBottom: `1px solid ${TL_ROW_BORDER}`,
                   cursor: 'crosshair',
-                  backgroundColor: isSelected ? 'rgba(15, 108, 189, 0.05)' : 'transparent',
+                  backgroundColor: isSelected ? 'rgba(86, 129, 255, 0.12)' : 'transparent',
                   flexShrink: 0,
                 }}
               >
@@ -716,9 +730,9 @@ export const Timeline: React.FC = () => {
                         width: barWidth,
                         top: 5,
                         height: 18,
-                        backgroundColor: isSelected ? '#0f6cbd' : '#c7dff1',
+                        backgroundColor: isSelected ? TL_ACCENT : 'rgba(86, 129, 255, 0.3)',
                         borderRadius: 3,
-                        border: isSelected ? '1px solid #6ea9db' : '1px solid #9ec3de',
+                        border: isSelected ? `1px solid ${TL_ACCENT_STRONG}` : '1px solid rgba(86, 129, 255, 0.4)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -742,7 +756,7 @@ export const Timeline: React.FC = () => {
                       />
                       <span style={{
                         fontSize: 9,
-                        color: isSelected ? '#fff' : '#777',
+                        color: isSelected ? 'var(--ae-gray-900)' : TL_TEXT,
                         whiteSpace: 'nowrap',
                         padding: '0 8px',
                         pointerEvents: 'none',
@@ -774,9 +788,9 @@ export const Timeline: React.FC = () => {
                     width: Math.max(60, 500 * pxPerMs),
                     top: 5,
                     height: 18,
-                    backgroundColor: isSelected ? 'rgba(15, 108, 189, 0.15)' : 'rgba(50, 49, 48, 0.05)',
+                    backgroundColor: isSelected ? 'rgba(86, 129, 255, 0.16)' : 'rgba(255, 255, 255, 0.04)',
                     borderRadius: 3,
-                    border: isSelected ? '1px dashed #6ea9db' : '1px dashed #c8c6c4',
+                    border: isSelected ? `1px dashed ${TL_ACCENT_STRONG}` : '1px dashed var(--ae-border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -785,7 +799,7 @@ export const Timeline: React.FC = () => {
                   }}>
                     <span style={{
                       fontSize: 9,
-                      color: isSelected ? '#0f6cbd' : '#8a8886',
+                      color: isSelected ? TL_ACCENT_STRONG : TL_TEXT_MUTED,
                       whiteSpace: 'nowrap',
                       padding: '0 8px',
                       fontStyle: 'italic',
@@ -810,9 +824,9 @@ export const Timeline: React.FC = () => {
                         width: wBarWidth,
                         top: 5,
                         height: 18,
-                        backgroundColor: isSelected ? '#605e5c' : '#d2d0ce',
+                        backgroundColor: isSelected ? TL_BG_RAISED : 'var(--ae-gray-400)',
                         borderRadius: 3,
-                        border: isSelected ? '1px solid #8a8886' : '1px solid #b3b0ad',
+                        border: isSelected ? `1px solid ${TL_TEXT_SECONDARY}` : '1px solid var(--ae-gray-500)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -836,7 +850,7 @@ export const Timeline: React.FC = () => {
                       />
                       <span style={{
                         fontSize: 9,
-                        color: isSelected ? '#fff' : '#777',
+                        color: isSelected ? TL_TEXT : 'var(--ae-gray-50)',
                         whiteSpace: 'nowrap',
                         padding: '0 8px',
                         pointerEvents: 'none',
@@ -872,8 +886,8 @@ export const Timeline: React.FC = () => {
                       top: 9,
                       width: 10,
                       height: 10,
-                      backgroundColor: '#FFC107',
-                      border: '1px solid #FF9800',
+                      backgroundColor: 'var(--ae-notice-strong)',
+                      border: '1px solid var(--ae-notice)',
                       transform: 'rotate(45deg)',
                       cursor: 'ew-resize',
                       zIndex: 5,

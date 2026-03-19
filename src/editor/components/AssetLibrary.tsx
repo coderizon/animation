@@ -51,8 +51,8 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move',
         padding: 12,
-        backgroundColor: '#f8fafc',
-        border: '1px solid #e4e7ec',
+        backgroundColor: 'var(--ae-bg-input)',
+        border: '1px solid var(--ae-border)',
         borderRadius: 12,
         display: 'flex',
         flexDirection: 'column',
@@ -63,12 +63,12 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
         minHeight: 92,
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#98a2b3';
-        e.currentTarget.style.backgroundColor = '#ffffff';
+        e.currentTarget.style.borderColor = 'var(--ae-border-strong)';
+        e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#e4e7ec';
-        e.currentTarget.style.backgroundColor = '#f8fafc';
+        e.currentTarget.style.borderColor = 'var(--ae-border)';
+        e.currentTarget.style.backgroundColor = 'var(--ae-bg-input)';
       }}
     >
       <img
@@ -85,7 +85,7 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
         style={{
           fontSize: 10,
           fontWeight: 600,
-          color: '#344054',
+          color: 'var(--ae-text-primary)',
           textAlign: 'center',
           lineHeight: 1.25,
         }}
@@ -123,8 +123,8 @@ const DraggableWidget: React.FC<{ entry: WidgetRegistryEntry }> = ({ entry }) =>
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move',
         padding: 14,
-        backgroundColor: '#f8fafc',
-        border: '1px solid #e4e7ec',
+        backgroundColor: 'var(--ae-bg-input)',
+        border: '1px solid var(--ae-border)',
         borderRadius: 12,
         display: 'flex',
         flexDirection: 'column',
@@ -134,24 +134,24 @@ const DraggableWidget: React.FC<{ entry: WidgetRegistryEntry }> = ({ entry }) =>
         userSelect: 'none',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#98a2b3';
-        e.currentTarget.style.backgroundColor = '#ffffff';
+        e.currentTarget.style.borderColor = 'var(--ae-border-strong)';
+        e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#e4e7ec';
-        e.currentTarget.style.backgroundColor = '#f8fafc';
+        e.currentTarget.style.borderColor = 'var(--ae-border)';
+        e.currentTarget.style.backgroundColor = 'var(--ae-bg-input)';
       }}
     >
       <div
         style={{
           width: 54,
           height: 34,
-          backgroundColor: '#111827',
+          backgroundColor: 'var(--ae-bg-shell)',
           borderRadius: 8,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#8ddcff',
+          color: 'var(--ae-accent-strong)',
           fontWeight: 700,
           fontSize: 18,
         }}
@@ -159,10 +159,10 @@ const DraggableWidget: React.FC<{ entry: WidgetRegistryEntry }> = ({ entry }) =>
         {entry.icon}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#101828' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ae-text-primary)' }}>
           {entry.displayName}
         </span>
-        <span style={{ fontSize: 11, color: '#667085', lineHeight: 1.35 }}>
+        <span style={{ fontSize: 11, color: 'var(--ae-text-secondary)', lineHeight: 1.35 }}>
           {entry.description}
         </span>
       </div>
@@ -235,10 +235,10 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
         width,
         maxHeight: '72vh',
         overflow: 'hidden',
-        backgroundColor: '#ffffff',
-        border: '1px solid #d0d5dd',
+        backgroundColor: 'var(--ae-bg-panel)',
+        border: '1px solid var(--ae-border)',
         borderRadius: 18,
-        boxShadow: '0 24px 60px rgba(16, 24, 40, 0.18)',
+        boxShadow: 'var(--ae-shadow-floating)',
         zIndex: 1250,
         display: 'flex',
         flexDirection: 'column',
@@ -247,7 +247,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
       <div
         style={{
           padding: 18,
-          borderBottom: '1px solid #eaecf0',
+          borderBottom: '1px solid var(--ae-border)',
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
@@ -256,8 +256,8 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#101828' }}>Bibliothek</div>
-            <div style={{ fontSize: 12, color: '#667085', marginTop: 4 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ae-text-primary)' }}>Bibliothek</div>
+            <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)', marginTop: 4 }}>
               Ziehe Elemente direkt auf den Canvas. Die linke Leiste ist jetzt frei.
             </div>
           </div>
@@ -274,9 +274,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
                   onClick={() => onChangeView(view.id)}
                   style={{
                     borderRadius: 12,
-                    border: isActive ? '1px solid #1d4ed8' : '1px solid #d0d5dd',
-                    backgroundColor: isActive ? '#eef2ff' : '#f8fafc',
-                    color: isActive ? '#1d4ed8' : '#344054',
+                    border: isActive ? '1px solid var(--ae-accent)' : '1px solid var(--ae-border)',
+                    backgroundColor: isActive ? 'var(--ae-accent-overlay)' : 'var(--ae-bg-input)',
+                    color: isActive ? 'var(--ae-accent-strong)' : 'var(--ae-text-primary)',
                     padding: '10px 12px',
                     textAlign: 'left',
                     cursor: 'pointer',
@@ -300,9 +300,9 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
             width: 32,
             height: 32,
             borderRadius: 999,
-            border: '1px solid #e4e7ec',
-            backgroundColor: '#ffffff',
-            color: '#475467',
+            border: '1px solid var(--ae-border)',
+            backgroundColor: 'var(--ae-bg-panel-raised)',
+            color: 'var(--ae-text-secondary)',
             fontSize: 18,
             cursor: 'pointer',
             flexShrink: 0,
@@ -332,15 +332,15 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
               width: '100%',
               padding: '10px 12px',
               borderRadius: 10,
-              border: '1px solid #d0d5dd',
-              backgroundColor: '#f8fafc',
-              color: '#101828',
+              border: '1px solid var(--ae-border)',
+              backgroundColor: 'var(--ae-bg-input)',
+              color: 'var(--ae-text-primary)',
               fontSize: 13,
               outline: 'none',
             }}
           />
 
-          <div style={{ fontSize: 12, color: '#667085' }}>
+          <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)' }}>
             {filteredLogos.length} Treffer. Ziehe ein Logo auf den Canvas.
           </div>
 
@@ -373,7 +373,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
             flex: 1,
           }}
         >
-          <div style={{ fontSize: 12, color: '#667085' }}>
+          <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)' }}>
             Ziehe ein Widget auf den Canvas oder fuege es im Ribbon direkt ein.
           </div>
 

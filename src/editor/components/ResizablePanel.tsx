@@ -17,8 +17,8 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
   minWidth = 250,
   maxWidth = 600,
   position = 'left',
-  backgroundColor = '#f3f2f1',
-  borderColor = '#d2d0ce',
+  backgroundColor = 'var(--ae-bg-panel)',
+  borderColor = 'var(--ae-border)',
   padding = 16,
 }) => {
   const [width, setWidth] = useState(defaultWidth);
@@ -94,7 +94,7 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
           transition: isResizing ? 'none' : 'background-color 0.2s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(33, 150, 243, 0.3)';
+          e.currentTarget.style.backgroundColor = 'var(--ae-accent-overlay-strong)';
         }}
         onMouseLeave={(e) => {
           if (!isResizing) {
@@ -111,7 +111,7 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
             transform: 'translate(-50%, -50%)',
             width: 2,
             height: 40,
-            backgroundColor: isResizing ? '#0f6cbd' : '#a19f9d',
+            backgroundColor: isResizing ? 'var(--ae-accent)' : 'var(--ae-gray-400)',
             borderRadius: 2,
             opacity: isResizing ? 1 : 0.5,
             transition: 'opacity 0.2s',

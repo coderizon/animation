@@ -27,7 +27,7 @@ function App() {
 
   if (mode === 'player') {
     return (
-      <Suspense fallback={<div style={{ width: '100vw', height: '100vh', backgroundColor: '#050816' }} />}>
+      <Suspense fallback={<div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--ae-bg-base)' }} />}>
         <LazyPlayerController project={project} onExit={handleExitPlayer} />
       </Suspense>
     );

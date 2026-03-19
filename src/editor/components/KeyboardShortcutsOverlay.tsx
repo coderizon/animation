@@ -47,7 +47,7 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'var(--ae-bg-overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -58,14 +58,15 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
     >
       <div
         style={{
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--ae-bg-panel)',
           borderRadius: 12,
           padding: 40,
           maxWidth: 700,
           width: '90%',
           maxHeight: '80vh',
           overflowY: 'auto',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+          boxShadow: 'var(--ae-shadow-floating)',
+          border: '1px solid var(--ae-border)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -79,7 +80,7 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
           <h2 style={{
             fontSize: 28,
             fontWeight: 700,
-            color: '#1a1a2e',
+            color: 'var(--ae-text-primary)',
             margin: 0,
           }}>
             Keyboard Shortcuts
@@ -90,7 +91,7 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
               width: 32,
               height: 32,
               backgroundColor: 'transparent',
-              color: '#888',
+              color: 'var(--ae-text-muted)',
               border: 'none',
               borderRadius: 6,
               fontSize: 20,
@@ -101,12 +102,12 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
               justifyContent: 'center',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f0f0f4';
-              e.currentTarget.style.color = '#333';
+              e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
+              e.currentTarget.style.color = 'var(--ae-text-primary)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#888';
+              e.currentTarget.style.color = 'var(--ae-text-muted)';
             }}
           >
             ✕
@@ -119,7 +120,7 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
             <h3 style={{
               fontSize: 14,
               fontWeight: 600,
-              color: '#888',
+              color: 'var(--ae-text-secondary)',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: 15,
@@ -141,25 +142,25 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '12px 16px',
-                      backgroundColor: '#f5f5fa',
+                      backgroundColor: 'var(--ae-bg-input)',
                       borderRadius: 8,
-                      border: '1px solid #e0e0e8',
+                      border: '1px solid var(--ae-border)',
                     }}
                   >
                     <span style={{
                       fontSize: 14,
-                      color: '#333',
+                      color: 'var(--ae-text-primary)',
                     }}>
                       {shortcut.description}
                     </span>
                     <kbd style={{
                       padding: '4px 12px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #d0d0da',
+                      backgroundColor: 'var(--ae-bg-panel-raised)',
+                      border: '1px solid var(--ae-border)',
                       borderRadius: 6,
                       fontSize: 12,
                       fontWeight: 600,
-                      color: '#333',
+                      color: 'var(--ae-text-primary)',
                       fontFamily: 'monospace',
                       whiteSpace: 'nowrap',
                     }}>
@@ -175,28 +176,28 @@ export const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> =
         <div style={{
           marginTop: 30,
           paddingTop: 20,
-          borderTop: '1px solid #e0e0e8',
+          borderTop: '1px solid var(--ae-border)',
           fontSize: 12,
-          color: '#999',
+          color: 'var(--ae-text-muted)',
           textAlign: 'center',
         }}>
           Press <kbd style={{
             padding: '2px 8px',
-            backgroundColor: '#f5f5fa',
-            border: '1px solid #d0d0da',
+            backgroundColor: 'var(--ae-bg-panel-raised)',
+            border: '1px solid var(--ae-border)',
             borderRadius: 4,
             fontSize: 11,
             fontWeight: 600,
-            color: '#666',
+            color: 'var(--ae-text-secondary)',
             fontFamily: 'monospace',
           }}>?</kbd> or <kbd style={{
             padding: '2px 8px',
-            backgroundColor: '#f5f5fa',
-            border: '1px solid #d0d0da',
+            backgroundColor: 'var(--ae-bg-panel-raised)',
+            border: '1px solid var(--ae-border)',
             borderRadius: 4,
             fontSize: 11,
             fontWeight: 600,
-            color: '#666',
+            color: 'var(--ae-text-secondary)',
             fontFamily: 'monospace',
           }}>Esc</kbd> to close this overlay
         </div>

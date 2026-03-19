@@ -35,11 +35,11 @@ export const ZoomControls: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        border: '1px solid #d2d0ce',
+        backgroundColor: 'rgba(29, 29, 29, 0.96)',
+        border: '1px solid var(--ae-border)',
         borderRadius: 999,
         padding: '4px 6px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        boxShadow: 'var(--ae-shadow-elevated)',
         zIndex: 100,
       }}
     >
@@ -51,7 +51,7 @@ export const ZoomControls: React.FC = () => {
           width: 30,
           height: 30,
           backgroundColor: 'transparent',
-          color: '#323130',
+          color: 'var(--ae-text-primary)',
           border: 'none',
           borderRadius: 999,
           fontSize: 18,
@@ -62,7 +62,7 @@ export const ZoomControls: React.FC = () => {
           justifyContent: 'center',
         }}
         onMouseEnter={(e) => {
-          if (zoom < MAX_ZOOM) e.currentTarget.style.backgroundColor = '#f3f2f1';
+          if (zoom < MAX_ZOOM) e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
@@ -82,7 +82,7 @@ export const ZoomControls: React.FC = () => {
           justifyContent: 'center',
           fontSize: 11,
           fontWeight: 600,
-          color: '#605e5c',
+          color: 'var(--ae-text-secondary)',
           padding: '0 8px',
         }}
       >
@@ -97,7 +97,7 @@ export const ZoomControls: React.FC = () => {
           width: 30,
           height: 30,
           backgroundColor: 'transparent',
-          color: '#323130',
+          color: 'var(--ae-text-primary)',
           border: 'none',
           borderRadius: 999,
           fontSize: 18,
@@ -108,7 +108,7 @@ export const ZoomControls: React.FC = () => {
           justifyContent: 'center',
         }}
         onMouseEnter={(e) => {
-          if (zoom > MIN_ZOOM) e.currentTarget.style.backgroundColor = '#f3f2f1';
+          if (zoom > MIN_ZOOM) e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
@@ -125,7 +125,7 @@ export const ZoomControls: React.FC = () => {
           width: 30,
           height: 30,
           backgroundColor: 'transparent',
-          color: '#323130',
+          color: 'var(--ae-text-primary)',
           border: 'none',
           borderRadius: 999,
           fontSize: 14,
@@ -137,7 +137,7 @@ export const ZoomControls: React.FC = () => {
           marginLeft: 2,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#f3f2f1';
+          e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';

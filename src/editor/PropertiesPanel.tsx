@@ -2,11 +2,12 @@ import { useProjectStore } from '../store/useProjectStore';
 import { ImageContent, ShapeContent, TextContent, WidgetContent, Keyframe } from '../types/project';
 import { AnimationPicker } from './components/AnimationPicker';
 
-const OFFICE_BLUE = '#0f6cbd';
-const PANEL_BORDER = '#d2d0ce';
-const FIELD_BORDER = '#c8c6c4';
-const FIELD_BG = '#ffffff';
-const MUTED_TEXT = '#605e5c';
+const AE_ACCENT = 'var(--ae-accent)';
+const PANEL_BORDER = 'var(--ae-border)';
+const FIELD_BORDER = 'var(--ae-border)';
+const FIELD_BG = 'var(--ae-bg-input)';
+const PANEL_BG = 'var(--ae-bg-panel-raised)';
+const MUTED_TEXT = 'var(--ae-text-secondary)';
 
 export const PropertiesPanel: React.FC = () => {
   const selectedElement = useProjectStore((state) => state.getSelectedElement());
@@ -27,13 +28,13 @@ export const PropertiesPanel: React.FC = () => {
       }}>
         <div style={{
           padding: '10px 14px',
-          backgroundColor: '#ffffff',
+          backgroundColor: PANEL_BG,
           border: `1px solid ${PANEL_BORDER}`,
           borderRadius: 8,
           fontSize: 14,
           fontWeight: 600,
           textAlign: 'center',
-          color: '#323130',
+          color: 'var(--ae-text-primary)',
         }}>
           {selectedElementIds.length} Elemente ausgewählt
         </div>
@@ -46,8 +47,8 @@ export const PropertiesPanel: React.FC = () => {
           style={{
             width: '100%',
             padding: '10px 16px',
-            backgroundColor: '#c42b1c',
-            color: '#fff',
+            backgroundColor: 'var(--ae-danger)',
+            color: 'var(--ae-gray-900)',
             border: 'none',
             borderRadius: 8,
             fontSize: 14,
@@ -72,7 +73,7 @@ export const PropertiesPanel: React.FC = () => {
         color: MUTED_TEXT,
         textAlign: 'center',
         padding: 20,
-        backgroundColor: '#ffffff',
+        backgroundColor: PANEL_BG,
         border: `1px solid ${PANEL_BORDER}`,
         borderRadius: 12,
       }}>
@@ -172,7 +173,7 @@ export const PropertiesPanel: React.FC = () => {
           style={{
             width: '100%',
             marginTop: 4,
-            accentColor: OFFICE_BLUE,
+            accentColor: AE_ACCENT,
           }}
         />
       </PropertySection>
@@ -244,11 +245,11 @@ export const PropertiesPanel: React.FC = () => {
                   backgroundColor: FIELD_BG,
                   border: `1px solid ${FIELD_BORDER}`,
                   borderRadius: 8,
-                  color: '#323130',
+                  color: 'var(--ae-text-primary)',
                   fontSize: 13,
                   outline: 'none',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = OFFICE_BLUE; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = AE_ACCENT; }}
                 onBlur={(e) => { e.currentTarget.style.borderColor = FIELD_BORDER; }}
               />
               <ColorInput
@@ -296,7 +297,7 @@ export const PropertiesPanel: React.FC = () => {
             <div style={{
               width: '100%',
               aspectRatio: '16 / 9',
-              backgroundColor: '#f8f8f8',
+              backgroundColor: 'var(--ae-bg-panel-muted)',
               border: `1px solid ${PANEL_BORDER}`,
               borderRadius: 8,
               overflow: 'hidden',
@@ -344,11 +345,11 @@ export const PropertiesPanel: React.FC = () => {
           <PropertySection title="Widget">
             <div style={{
               padding: '5px 8px',
-              backgroundColor: '#ffffff',
+              backgroundColor: PANEL_BG,
               border: `1px solid ${PANEL_BORDER}`,
               borderRadius: 8,
               fontSize: 13,
-              color: '#323130',
+              color: 'var(--ae-text-primary)',
               fontWeight: 500,
             }}>
               {content.widgetName}
@@ -405,8 +406,8 @@ export const PropertiesPanel: React.FC = () => {
           style={{
             width: '100%',
             padding: '7px 10px',
-            backgroundColor: '#ffb900',
-            color: '#000',
+            backgroundColor: 'var(--ae-notice)',
+            color: 'var(--ae-gray-900)',
             border: 'none',
             borderRadius: 8,
             fontSize: 12,
@@ -426,14 +427,14 @@ export const PropertiesPanel: React.FC = () => {
                   alignItems: 'center',
                   gap: 6,
                   padding: '4px 6px',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: PANEL_BG,
                   border: `1px solid ${PANEL_BORDER}`,
                   borderRadius: 8,
                   fontSize: 11,
                 }}
               >
-                <span style={{ color: '#FFC107', fontWeight: 700 }}>◆</span>
-                <span style={{ color: '#323130', fontFamily: 'monospace', minWidth: 55 }}>
+                <span style={{ color: 'var(--ae-notice-strong)', fontWeight: 700 }}>◆</span>
+                <span style={{ color: 'var(--ae-text-primary)', fontFamily: 'monospace', minWidth: 55 }}>
                   {kf.time >= 1000 ? `${(kf.time / 1000).toFixed(1)}s` : `${kf.time}ms`}
                 </span>
                 <span style={{ color: MUTED_TEXT, fontSize: 10 }}>
@@ -447,7 +448,7 @@ export const PropertiesPanel: React.FC = () => {
                     marginLeft: 'auto',
                     border: 'none',
                     backgroundColor: 'transparent',
-                    color: '#d32f2f',
+                    color: 'var(--ae-danger)',
                     cursor: 'pointer',
                     fontSize: 14,
                     padding: '0 4px',
@@ -473,8 +474,8 @@ export const PropertiesPanel: React.FC = () => {
           style={{
             width: '100%',
             padding: '10px 16px',
-            backgroundColor: '#c42b1c',
-            color: '#fff',
+            backgroundColor: 'var(--ae-danger)',
+            color: 'var(--ae-gray-900)',
             border: 'none',
             borderRadius: 8,
             fontSize: 14,
@@ -483,10 +484,10 @@ export const PropertiesPanel: React.FC = () => {
             transition: 'background-color 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#a4262c';
+            e.currentTarget.style.backgroundColor = 'var(--ae-danger-muted)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#c42b1c';
+            e.currentTarget.style.backgroundColor = 'var(--ae-danger)';
           }}
         >
           Element löschen
@@ -519,11 +520,11 @@ const LabeledTextInput: React.FC<LabeledTextInputProps> = ({ label, value, onCha
           backgroundColor: FIELD_BG,
           border: `1px solid ${FIELD_BORDER}`,
           borderRadius: 8,
-          color: '#323130',
+          color: 'var(--ae-text-primary)',
           fontSize: 13,
           outline: 'none',
         }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = OFFICE_BLUE; }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = AE_ACCENT; }}
         onBlur={(e) => { e.currentTarget.style.borderColor = FIELD_BORDER; }}
       />
     </div>
@@ -542,7 +543,7 @@ const PropertySection: React.FC<PropertySectionProps> = ({ title, children }) =>
       display: 'flex',
       flexDirection: 'column',
       gap: 8,
-      backgroundColor: '#ffffff',
+      backgroundColor: PANEL_BG,
       border: `1px solid ${PANEL_BORDER}`,
       borderRadius: 8,
       padding: 10,
@@ -550,7 +551,7 @@ const PropertySection: React.FC<PropertySectionProps> = ({ title, children }) =>
       <h3 style={{
         fontSize: 12,
         fontWeight: 600,
-        color: '#323130',
+        color: 'var(--ae-text-primary)',
         letterSpacing: '0.02em',
         marginBottom: 0,
       }}>
@@ -592,7 +593,7 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, allowNo
             height: 28,
             border: `1px solid ${FIELD_BORDER}`,
             borderRadius: 6,
-            backgroundColor: '#ffffff',
+            backgroundColor: FIELD_BG,
             cursor: isNone ? 'not-allowed' : 'pointer',
             padding: 2,
             opacity: isNone ? 0.4 : 1,
@@ -606,8 +607,8 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, allowNo
             onClick={() => onChange(isNone ? '#ffffff' : 'transparent')}
             style={{
               padding: '3px 6px',
-              backgroundColor: isNone ? OFFICE_BLUE : 'transparent',
-              color: isNone ? '#fff' : MUTED_TEXT,
+              backgroundColor: isNone ? AE_ACCENT : 'transparent',
+              color: isNone ? 'var(--ae-gray-900)' : MUTED_TEXT,
               border: `1px solid ${FIELD_BORDER}`,
               borderRadius: 4,
               fontSize: 10,
@@ -668,13 +669,13 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
           backgroundColor: FIELD_BG,
           border: `1px solid ${FIELD_BORDER}`,
           borderRadius: 8,
-          color: '#323130',
+          color: 'var(--ae-text-primary)',
           fontSize: 13,
           outline: 'none',
           transition: 'border-color 0.2s',
         }}
         onFocus={(e) => {
-          e.currentTarget.style.borderColor = OFFICE_BLUE;
+          e.currentTarget.style.borderColor = AE_ACCENT;
         }}
         onBlur={(e) => {
           e.currentTarget.style.borderColor = FIELD_BORDER;

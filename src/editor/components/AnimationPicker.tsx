@@ -85,7 +85,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
         <h4 style={{
           fontSize: 12,
           fontWeight: 600,
-          color: '#666',
+          color: 'var(--ae-text-secondary)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
           marginBottom: 8,
@@ -97,11 +97,11 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
         {currentAnimation && currentAnimation.preset !== 'none' && (
           <div style={{
             padding: '6px 10px',
-            backgroundColor: '#e3f2fd',
+            backgroundColor: 'var(--ae-accent-overlay)',
             borderRadius: 6,
             marginBottom: 8,
             fontSize: 12,
-            color: '#1565c0',
+            color: 'var(--ae-accent-strong)',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
@@ -126,9 +126,9 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                   style={{
                     width: '100%',
                     padding: '8px 10px',
-                    backgroundColor: hasCurrent ? '#e3f2fd' : '#f8f8fa',
+                    backgroundColor: hasCurrent ? 'var(--ae-accent-overlay)' : 'var(--ae-bg-input)',
                     border: '1px solid',
-                    borderColor: hasCurrent ? '#90caf9' : '#e0e0e8',
+                    borderColor: hasCurrent ? 'var(--ae-accent)' : 'var(--ae-border)',
                     borderRadius: isExpanded ? '6px 6px 0 0' : 6,
                     cursor: 'pointer',
                     display: 'flex',
@@ -136,24 +136,24 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                     justifyContent: 'space-between',
                     fontSize: 12,
                     fontWeight: 600,
-                    color: hasCurrent ? '#1565c0' : '#555',
+                    color: hasCurrent ? 'var(--ae-accent-strong)' : 'var(--ae-text-primary)',
                     transition: 'all 0.15s',
                   }}
                   onMouseEnter={(e) => {
                     if (!hasCurrent) {
-                      e.currentTarget.style.backgroundColor = '#ececf0';
+                      e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!hasCurrent) {
-                      e.currentTarget.style.backgroundColor = '#f8f8fa';
+                      e.currentTarget.style.backgroundColor = 'var(--ae-bg-input)';
                     }
                   }}
                 >
                   <span>{category.name}</span>
                   <span style={{
                     fontSize: 10,
-                    color: '#999',
+                    color: 'var(--ae-text-muted)',
                     transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 0.15s',
                   }}>
@@ -164,7 +164,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 {/* Category Presets */}
                 {isExpanded && (
                   <div style={{
-                    border: '1px solid #e0e0e8',
+                    border: '1px solid var(--ae-border)',
                     borderTop: 'none',
                     borderRadius: '0 0 6px 6px',
                     padding: 6,
@@ -183,8 +183,8 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                           onClick={() => handleSelectPreset(presetName)}
                           style={{
                             padding: '8px 6px',
-                            backgroundColor: isSelected ? '#2196F3' : '#fff',
-                            border: isSelected ? '1.5px solid #2196F3' : '1.5px solid #e0e0e8',
+                            backgroundColor: isSelected ? 'var(--ae-accent)' : 'var(--ae-bg-input)',
+                            border: isSelected ? '1.5px solid var(--ae-accent)' : '1.5px solid var(--ae-border)',
                             borderRadius: 6,
                             cursor: 'pointer',
                             transition: 'all 0.15s',
@@ -195,14 +195,14 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                           }}
                           onMouseEnter={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.backgroundColor = '#f0f0f4';
-                              e.currentTarget.style.borderColor = '#b0b0c0';
+                              e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
+                              e.currentTarget.style.borderColor = 'var(--ae-border-strong)';
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.backgroundColor = '#fff';
-                              e.currentTarget.style.borderColor = '#e0e0e8';
+                              e.currentTarget.style.backgroundColor = 'var(--ae-bg-input)';
+                              e.currentTarget.style.borderColor = 'var(--ae-border)';
                             }
                           }}
                           title={preset.description}
@@ -211,7 +211,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                           <span style={{
                             fontSize: 10,
                             fontWeight: 500,
-                            color: isSelected ? '#fff' : '#444',
+                            color: isSelected ? 'var(--ae-gray-900)' : 'var(--ae-text-primary)',
                             textAlign: 'center',
                             lineHeight: 1.2,
                           }}>
@@ -236,7 +236,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
             <label style={{
               fontSize: 12,
               fontWeight: 600,
-              color: '#666',
+              color: 'var(--ae-text-secondary)',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: 8,
@@ -259,24 +259,24 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 style={{
                   flex: 1,
                   padding: '8px 12px',
-                  backgroundColor: '#f0f0f4',
-                  border: '1px solid #e0e0e8',
+                  backgroundColor: 'var(--ae-bg-input)',
+                  border: '1px solid var(--ae-border)',
                   borderRadius: 6,
-                  color: '#1a1a2e',
+                  color: 'var(--ae-text-primary)',
                   fontSize: 13,
                   outline: 'none',
                   transition: 'border-color 0.2s',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#2196F3';
+                  e.currentTarget.style.borderColor = 'var(--ae-accent)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e0e0e8';
+                  e.currentTarget.style.borderColor = 'var(--ae-border)';
                 }}
               />
               <span style={{
                 fontSize: 12,
-                color: '#888',
+                color: 'var(--ae-text-muted)',
                 minWidth: 25,
               }}>
                 ms
@@ -292,7 +292,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
               style={{
                 width: '100%',
                 marginTop: 8,
-                accentColor: '#2196F3',
+                accentColor: 'var(--ae-accent)',
               }}
             />
           </div>
@@ -302,7 +302,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
             <label style={{
               fontSize: 12,
               fontWeight: 600,
-              color: '#666',
+              color: 'var(--ae-text-secondary)',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: 8,
@@ -325,24 +325,24 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
                 style={{
                   flex: 1,
                   padding: '8px 12px',
-                  backgroundColor: '#f0f0f4',
-                  border: '1px solid #e0e0e8',
+                  backgroundColor: 'var(--ae-bg-input)',
+                  border: '1px solid var(--ae-border)',
                   borderRadius: 6,
-                  color: '#1a1a2e',
+                  color: 'var(--ae-text-primary)',
                   fontSize: 13,
                   outline: 'none',
                   transition: 'border-color 0.2s',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#2196F3';
+                  e.currentTarget.style.borderColor = 'var(--ae-accent)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e0e0e8';
+                  e.currentTarget.style.borderColor = 'var(--ae-border)';
                 }}
               />
               <span style={{
                 fontSize: 12,
-                color: '#888',
+                color: 'var(--ae-text-muted)',
                 minWidth: 25,
               }}>
                 ms
@@ -358,7 +358,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
               style={{
                 width: '100%',
                 marginTop: 8,
-                accentColor: '#2196F3',
+                accentColor: 'var(--ae-accent)',
               }}
             />
           </div>
@@ -368,7 +368,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
             <label style={{
               fontSize: 12,
               fontWeight: 600,
-              color: '#666',
+              color: 'var(--ae-text-secondary)',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: 8,
@@ -382,20 +382,20 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
               style={{
                 width: '100%',
                 padding: '8px 12px',
-                backgroundColor: '#f0f0f4',
-                border: '1px solid #e0e0e8',
+                backgroundColor: 'var(--ae-bg-input)',
+                border: '1px solid var(--ae-border)',
                 borderRadius: 6,
-                color: '#1a1a2e',
+                color: 'var(--ae-text-primary)',
                 fontSize: 13,
                 outline: 'none',
                 cursor: 'pointer',
                 transition: 'border-color 0.2s',
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#2196F3';
+                e.currentTarget.style.borderColor = 'var(--ae-accent)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#e0e0e8';
+                e.currentTarget.style.borderColor = 'var(--ae-border)';
               }}
             >
               <option value="linear">Linear</option>
@@ -413,8 +413,8 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
             style={{
               width: '100%',
               padding: '12px 16px',
-              backgroundColor: '#2196F3',
-              color: '#fff',
+              backgroundColor: 'var(--ae-accent)',
+              color: 'var(--ae-gray-900)',
               border: 'none',
               borderRadius: 6,
               fontSize: 13,
@@ -423,10 +423,10 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
               transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#1976D2';
+              e.currentTarget.style.backgroundColor = 'var(--ae-accent-strong)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#2196F3';
+              e.currentTarget.style.backgroundColor = 'var(--ae-accent)';
             }}
           >
             Vorschau
@@ -439,8 +439,8 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
               width: '100%',
               padding: '10px 16px',
               backgroundColor: 'transparent',
-              color: '#ff5252',
-              border: '1px solid #ff5252',
+              color: 'var(--ae-danger)',
+              border: '1px solid var(--ae-danger)',
               borderRadius: 6,
               fontSize: 12,
               fontWeight: 600,
@@ -448,7 +448,7 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 82, 82, 0.1)';
+              e.currentTarget.style.backgroundColor = 'var(--ae-danger-muted)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -462,10 +462,10 @@ export const AnimationPicker: React.FC<AnimationPickerProps> = ({ elementId }) =
       {/* Tip */}
       <div style={{
         padding: 10,
-        backgroundColor: '#f0f0f4',
+        backgroundColor: 'var(--ae-bg-input)',
         borderRadius: 6,
         fontSize: 11,
-        color: '#888',
+        color: 'var(--ae-text-muted)',
         lineHeight: 1.4,
       }}>
         <strong>Tipp:</strong> Wähle eine Kategorie und dann eine Animation aus

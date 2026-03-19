@@ -24,9 +24,9 @@ const LazyTemplateSelector = lazy(() =>
   })),
 );
 
-const OFFICE_ACCENT = '#d24726';
-const OFFICE_BLUE = '#0f6cbd';
-const OFFICE_BORDER = '#d2d0ce';
+const AE_ACCENT = 'var(--ae-accent)';
+const AE_ACCENT_STRONG = 'var(--ae-accent-strong)';
+const AE_BORDER = 'var(--ae-border)';
 
 interface EditorLayoutProps {
   onOpenPlayer: () => void;
@@ -35,7 +35,6 @@ interface EditorLayoutProps {
 export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const project = useProjectStore((state) => state.project);
   const addElement = useProjectStore((state) => state.addElement);
-  const loadProject = useProjectStore((state) => state.loadProject);
   const exportProject = useProjectStore((state) => state.exportProject);
   const importProject = useProjectStore((state) => state.importProject);
   const resetProject = useProjectStore((state) => state.resetProject);
@@ -81,22 +80,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizingTimeline]);
-
-  useEffect(() => {
-    if (
-      project.name === 'Untitled Project' &&
-      project.elements.length === 0 &&
-      project.canvas.backgroundColor.toLowerCase() === '#000000'
-    ) {
-      loadProject({
-        ...project,
-        canvas: {
-          ...project.canvas,
-          backgroundColor: '#ffffff',
-        },
-      });
-    }
-  }, [loadProject, project]);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
@@ -314,13 +297,13 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      backgroundColor: '#f3f2f1',
+      backgroundColor: 'var(--ae-bg-base)',
     }}>
       {/* Ribbon */}
       <div style={{
-        backgroundColor: '#ffffff',
-        borderBottom: `1px solid ${OFFICE_BORDER}`,
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.06)',
+        backgroundColor: 'var(--ae-bg-panel)',
+        borderBottom: `1px solid ${AE_BORDER}`,
+        boxShadow: 'var(--ae-shadow-elevated)',
       }}>
         <div style={{
           height: 42,
@@ -328,16 +311,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
           alignItems: 'center',
           gap: 18,
           padding: '0 12px',
-          borderBottom: `1px solid ${OFFICE_BORDER}`,
+          borderBottom: `1px solid ${AE_BORDER}`,
         }}>
           <button
             style={{
               height: 28,
               padding: '0 12px',
               borderRadius: 4,
-              border: 'none',
-              backgroundColor: OFFICE_ACCENT,
-              color: '#ffffff',
+              border: `1px solid ${AE_BORDER}`,
+              backgroundColor: 'var(--ae-bg-panel-raised)',
+              color: 'var(--ae-text-primary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'default',
@@ -370,7 +353,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
               active={assetLibraryView === 'widgets'}
               onClick={() => handleAssetLibraryToggle('widgets')}
             />
-            <div style={{ fontSize: 12, color: '#667085' }}>
+            <div style={{ fontSize: 12, color: 'var(--ae-text-muted)' }}>
               {project.name}
             </div>
             <button
@@ -378,9 +361,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
               style={{
                 height: 30,
                 padding: '0 14px',
-                backgroundColor: OFFICE_ACCENT,
-                color: '#fff',
-                border: `1px solid ${OFFICE_ACCENT}`,
+                backgroundColor: AE_ACCENT,
+                color: 'var(--ae-gray-900)',
+                border: `1px solid ${AE_ACCENT}`,
                 borderRadius: 4,
                 fontSize: 12,
                 fontWeight: 600,
@@ -398,7 +381,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
           gap: 0,
           alignItems: 'stretch',
           overflowX: 'auto',
-          backgroundColor: '#fbfbfb',
+          backgroundColor: 'var(--ae-bg-panel-muted)',
         }}>
           {renderRibbonContent()}
         </div>
@@ -409,15 +392,15 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
         flex: 1,
         display: 'flex',
         overflow: 'hidden',
-        backgroundColor: '#ebe9e8',
+        backgroundColor: 'var(--ae-bg-shell)',
       }}>
         <ResizablePanel
           defaultWidth={290}
           minWidth={230}
           maxWidth={380}
           position="left"
-          backgroundColor="#f3f2f1"
-          borderColor={OFFICE_BORDER}
+          backgroundColor="var(--ae-bg-panel)"
+          borderColor={AE_BORDER}
           padding={0}
         >
           <div style={{ padding: 8 }}>
@@ -443,7 +426,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             cursor: 'ns-resize',
             zIndex: 10,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(15, 108, 189, 0.22)'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ae-accent-overlay)'; }}
           onMouseLeave={(e) => { if (!isResizingTimeline) e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
           <div style={{
@@ -453,7 +436,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             transform: 'translate(-50%, -50%)',
             width: 40,
             height: 2,
-            backgroundColor: isResizingTimeline ? OFFICE_BLUE : '#a19f9d',
+            backgroundColor: isResizingTimeline ? AE_ACCENT : 'var(--ae-gray-400)',
             borderRadius: 2,
             opacity: isResizingTimeline ? 1 : 0.5,
           }} />
@@ -512,11 +495,11 @@ const RibbonTab: React.FC<RibbonTabProps> = ({ label, active, onClick }) => {
         borderRadius: 0,
         border: 'none',
         backgroundColor: 'transparent',
-        color: '#201f1e',
+        color: active ? 'var(--ae-text-primary)' : 'var(--ae-text-secondary)',
         fontSize: 13,
         fontWeight: active ? 600 : 500,
         cursor: 'pointer',
-        borderBottom: active ? `2px solid ${OFFICE_ACCENT}` : '2px solid transparent',
+        borderBottom: active ? `2px solid ${AE_ACCENT}` : '2px solid transparent',
       }}
     >
       {label}
@@ -530,7 +513,7 @@ const StaticHeaderTab: React.FC<{ label: string }> = ({ label }) => {
       height: '100%',
       display: 'inline-flex',
       alignItems: 'center',
-      color: '#201f1e',
+      color: 'var(--ae-text-muted)',
       fontSize: 13,
       fontWeight: 500,
       borderBottom: '2px solid transparent',
@@ -561,9 +544,9 @@ const HeaderActionButton: React.FC<HeaderActionButtonProps> = ({
         height: 30,
         padding: '0 12px',
         borderRadius: 4,
-        border: `1px solid ${active ? OFFICE_BLUE : OFFICE_BORDER}`,
-        backgroundColor: active ? '#eff6fc' : '#ffffff',
-        color: active ? OFFICE_BLUE : '#323130',
+        border: `1px solid ${active ? AE_ACCENT : AE_BORDER}`,
+        backgroundColor: active ? 'var(--ae-accent-overlay)' : 'var(--ae-bg-panel-raised)',
+        color: active ? AE_ACCENT_STRONG : 'var(--ae-text-primary)',
         fontSize: 12,
         fontWeight: 600,
         cursor: 'pointer',
@@ -589,14 +572,14 @@ const RibbonGroup: React.FC<RibbonGroupProps> = ({ title, children }) => {
       gap: 4,
       justifyContent: 'space-between',
       flexShrink: 0,
-      borderRight: `1px solid ${OFFICE_BORDER}`,
+      borderRight: `1px solid ${AE_BORDER}`,
     }}>
       <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
         {children}
       </div>
       <div style={{
         fontSize: 8,
-        color: '#605e5c',
+        color: 'var(--ae-text-muted)',
         textAlign: 'center',
         fontWeight: 500,
       }}>
@@ -629,15 +612,15 @@ const RibbonButton: React.FC<RibbonButtonProps> = ({
 }) => {
   const tones = {
     default: {
-      backgroundColor: active ? '#eff6fc' : 'transparent',
-      border: active ? '#b7d6f2' : 'transparent',
-      color: active ? OFFICE_BLUE : '#323130',
+      backgroundColor: active ? 'var(--ae-accent-overlay)' : 'var(--ae-bg-panel-raised)',
+      border: active ? AE_ACCENT : AE_BORDER,
+      color: active ? AE_ACCENT_STRONG : 'var(--ae-text-primary)',
     },
-    blue: { backgroundColor: OFFICE_BLUE, border: OFFICE_BLUE, color: '#ffffff' },
-    dark: { backgroundColor: '#323130', border: '#323130', color: '#ffffff' },
-    amber: { backgroundColor: '#ffb900', border: '#ffb900', color: '#201f1e' },
-    green: { backgroundColor: '#107c10', border: '#107c10', color: '#ffffff' },
-    danger: { backgroundColor: '#c42b1c', border: '#c42b1c', color: '#ffffff' },
+    blue: { backgroundColor: AE_ACCENT, border: AE_ACCENT, color: 'var(--ae-gray-900)' },
+    dark: { backgroundColor: 'var(--ae-bg-panel-raised)', border: AE_BORDER, color: 'var(--ae-text-primary)' },
+    amber: { backgroundColor: 'var(--ae-notice)', border: 'var(--ae-notice)', color: 'var(--ae-gray-900)' },
+    green: { backgroundColor: 'var(--ae-positive)', border: 'var(--ae-positive)', color: 'var(--ae-gray-900)' },
+    danger: { backgroundColor: 'var(--ae-danger)', border: 'var(--ae-danger)', color: 'var(--ae-gray-900)' },
   } as const;
 
   const palette = tones[tone];
@@ -652,8 +635,8 @@ const RibbonButton: React.FC<RibbonButtonProps> = ({
         minHeight: 30,
         borderRadius: 4,
         border: `1px solid ${palette.border}`,
-        backgroundColor: disabled ? '#f2f4f7' : palette.backgroundColor,
-        color: disabled ? '#98a2b3' : palette.color,
+        backgroundColor: disabled ? 'var(--ae-bg-panel-muted)' : palette.backgroundColor,
+        color: disabled ? 'var(--ae-text-disabled)' : palette.color,
         padding: '2px 5px',
         display: 'flex',
         flexDirection: 'column',
@@ -685,15 +668,15 @@ const RibbonInfoCard: React.FC<RibbonInfoCardProps> = ({ headline, text }) => {
       width: 188,
       padding: '8px 12px',
       borderRadius: 8,
-      backgroundColor: '#ffffff',
-      border: `1px solid ${OFFICE_BORDER}`,
+      backgroundColor: 'var(--ae-bg-panel-raised)',
+      border: `1px solid ${AE_BORDER}`,
       display: 'flex',
       flexDirection: 'column',
       gap: 4,
       justifyContent: 'space-between',
     }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: '#323130' }}>{headline}</div>
-      <div style={{ fontSize: 10, color: '#605e5c', lineHeight: 1.35 }}>{text}</div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ae-text-primary)' }}>{headline}</div>
+      <div style={{ fontSize: 10, color: 'var(--ae-text-secondary)', lineHeight: 1.35 }}>{text}</div>
     </div>
   );
 };
