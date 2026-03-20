@@ -9,6 +9,23 @@ import {
 
 // Core Project Data Structure
 
+// Scene transition types
+export type SceneTransitionType = 'cut' | 'fade' | 'morph';
+
+export interface SceneTransition {
+  type: SceneTransitionType;
+  duration: number; // ms
+}
+
+export interface Scene {
+  id: string;
+  name: string;
+  duration?: number; // manual duration in ms (if not set, auto-calculated from content)
+  elements: CanvasElement[];
+  cameraKeyframes?: CameraKeyframe[];
+  transition?: SceneTransition; // transition INTO this scene (from previous)
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -20,9 +37,12 @@ export interface Project {
     backgroundColor: string;
   };
 
-  elements: CanvasElement[];
+  // Multi-scene support
+  scenes: Scene[];
+  activeSceneId: string;
 
-  // Camera keyframes (sorted by time) — zoom/pan animation over canvas
+  // Legacy flat fields — kept for backward compat during import, mapped to scenes internally
+  elements: CanvasElement[];
   cameraKeyframes?: CameraKeyframe[];
 
   metadata: {
@@ -74,6 +94,7 @@ export interface LogoContent {
   type: 'logo';
   src: string;   // '/assets/deepseek.svg'
   alt: string;
+  filter?: string; // CSS filter, e.g. 'brightness(0) invert(1)' for white
 }
 
 export interface TextContent {

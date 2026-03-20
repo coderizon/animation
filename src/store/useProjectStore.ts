@@ -1,28 +1,78 @@
 import { create } from 'zustand';
-import { Project, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent, Keyframe, CameraKeyframe, Effect, getAnimations } from '../types/project';
+import { Project, Scene, SceneTransition, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent, Keyframe, CameraKeyframe, Effect, getAnimations } from '../types/project';
 
 // Helper: Generate unique ID
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// Helper: Create blank scene
+function createBlankScene(name = 'Szene 1'): Scene {
+  return {
+    id: generateId(),
+    name,
+    elements: [],
+    cameraKeyframes: [],
+  };
+}
+
 // Helper: Create blank project
 export function createBlankProject(): Project {
+  const scene = createBlankScene();
   return {
     id: generateId(),
     name: 'Untitled Project',
     version: '1.0',
     canvas: {
-      width: 1920,  // YouTube 16:9 format
+      width: 1920,
       height: 1080,
       backgroundColor: '#000000',
     },
-    elements: [],
+    scenes: [scene],
+    activeSceneId: scene.id,
+    elements: scene.elements,
+    cameraKeyframes: scene.cameraKeyframes,
     metadata: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
   };
+}
+
+// Helper: Ensure project has scenes (migrate old format)
+function ensureScenes(project: Project): Project {
+  if (project.scenes && project.scenes.length > 0) {
+    // Sync elements/cameraKeyframes to active scene view
+    const activeScene = project.scenes.find(s => s.id === project.activeSceneId) || project.scenes[0];
+    return {
+      ...project,
+      activeSceneId: activeScene.id,
+      elements: activeScene.elements,
+      cameraKeyframes: activeScene.cameraKeyframes,
+    };
+  }
+  // Legacy project without scenes — wrap existing elements in a scene
+  const scene: Scene = {
+    id: generateId(),
+    name: 'Szene 1',
+    elements: project.elements || [],
+    cameraKeyframes: project.cameraKeyframes || [],
+  };
+  return {
+    ...project,
+    scenes: [scene],
+    activeSceneId: scene.id,
+  };
+}
+
+// Helper: Update active scene's elements/cameraKeyframes from project.elements
+function syncToActiveScene(project: Project): Project {
+  const scenes = project.scenes.map(s =>
+    s.id === project.activeSceneId
+      ? { ...s, elements: project.elements, cameraKeyframes: project.cameraKeyframes }
+      : s
+  );
+  return { ...project, scenes };
 }
 
 const MAX_HISTORY = 50;
@@ -86,6 +136,18 @@ interface ProjectStore {
   resetProject: () => void;
   updateProjectName: (name: string) => void;
 
+  // Scene Management
+  addScene: (name?: string) => void;
+  duplicateScene: (sceneId: string) => void;
+  deleteScene: (sceneId: string) => void;
+  switchScene: (sceneId: string) => void;
+  renameScene: (sceneId: string, name: string) => void;
+  reorderScenes: (fromIndex: number, toIndex: number) => void;
+  setSceneTransition: (sceneId: string, transition: SceneTransition | undefined) => void;
+  setSceneDuration: (sceneId: string, duration: number | undefined) => void;
+  getActiveScene: () => Scene;
+  getScenes: () => Scene[];
+
   // Layer operations
   reorderElements: (fromIndex: number, toIndex: number) => void;
   bringToFront: (id: string) => void;
@@ -126,7 +188,9 @@ interface ProjectStore {
 
 // Helper to push current project to history
 function pushHistory(state: ProjectStore): { history: Project[]; future: Project[] } {
-  const snapshot = JSON.parse(JSON.stringify(state.project));
+  // Sync active scene before snapshotting
+  const synced = syncToActiveScene(state.project);
+  const snapshot = JSON.parse(JSON.stringify(synced));
   const history = [...state.history, snapshot];
   if (history.length > MAX_HISTORY) history.shift();
   return { history, future: [] };
@@ -437,15 +501,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   // Project Management
   loadProject: (project) => {
+    const migrated = ensureScenes(project);
     set((state) => ({
       ...pushHistory(state),
-      project,
+      project: migrated,
       selectedElementIds: [],
     }));
   },
 
   exportProject: () => {
-    return JSON.stringify(get().project, null, 2);
+    const synced = syncToActiveScene(get().project);
+    return JSON.stringify(synced, null, 2);
   },
 
   importProject: (json) => {
@@ -471,7 +537,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         return updated;
       });
 
-      get().loadProject(project);
+      get().loadProject(ensureScenes(project));
     } catch (error) {
       console.error('Failed to import project:', error);
       throw error;
@@ -497,6 +563,154 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         },
       },
     }));
+  },
+
+  // Scene Management
+  addScene: (name) => {
+    set((state) => {
+      const synced = syncToActiveScene(state.project);
+      const count = synced.scenes.length + 1;
+      const scene = createBlankScene(name || `Szene ${count}`);
+      const scenes = [...synced.scenes, scene];
+      return {
+        ...pushHistory(state),
+        project: {
+          ...synced,
+          scenes,
+          activeSceneId: scene.id,
+          elements: scene.elements,
+          cameraKeyframes: scene.cameraKeyframes,
+          metadata: { ...synced.metadata, updatedAt: new Date().toISOString() },
+        },
+        selectedElementIds: [],
+      };
+    });
+  },
+
+  duplicateScene: (sceneId) => {
+    set((state) => {
+      const synced = syncToActiveScene(state.project);
+      const source = synced.scenes.find(s => s.id === sceneId);
+      if (!source) return state;
+      const newScene: Scene = {
+        ...JSON.parse(JSON.stringify(source)),
+        id: generateId(),
+        name: `${source.name} (Kopie)`,
+      };
+      const idx = synced.scenes.findIndex(s => s.id === sceneId);
+      const scenes = [...synced.scenes];
+      scenes.splice(idx + 1, 0, newScene);
+      return {
+        ...pushHistory(state),
+        project: {
+          ...synced,
+          scenes,
+          activeSceneId: newScene.id,
+          elements: newScene.elements,
+          cameraKeyframes: newScene.cameraKeyframes,
+          metadata: { ...synced.metadata, updatedAt: new Date().toISOString() },
+        },
+        selectedElementIds: [],
+      };
+    });
+  },
+
+  deleteScene: (sceneId) => {
+    set((state) => {
+      const synced = syncToActiveScene(state.project);
+      if (synced.scenes.length <= 1) return state; // can't delete last scene
+      const scenes = synced.scenes.filter(s => s.id !== sceneId);
+      const newActive = sceneId === synced.activeSceneId
+        ? scenes[Math.max(0, synced.scenes.findIndex(s => s.id === sceneId) - 1)]
+        : scenes.find(s => s.id === synced.activeSceneId) || scenes[0];
+      return {
+        ...pushHistory(state),
+        project: {
+          ...synced,
+          scenes,
+          activeSceneId: newActive.id,
+          elements: newActive.elements,
+          cameraKeyframes: newActive.cameraKeyframes,
+          metadata: { ...synced.metadata, updatedAt: new Date().toISOString() },
+        },
+        selectedElementIds: [],
+      };
+    });
+  },
+
+  switchScene: (sceneId) => {
+    set((state) => {
+      if (sceneId === state.project.activeSceneId) return state;
+      // Save current scene's elements before switching
+      const synced = syncToActiveScene(state.project);
+      const target = synced.scenes.find(s => s.id === sceneId);
+      if (!target) return state;
+      return {
+        project: {
+          ...synced,
+          activeSceneId: sceneId,
+          elements: target.elements,
+          cameraKeyframes: target.cameraKeyframes,
+        },
+        selectedElementIds: [],
+        currentTime: 0,
+        playbackState: 'stopped' as const,
+        isPlayingAll: false,
+      };
+    });
+  },
+
+  renameScene: (sceneId, name) => {
+    set((state) => ({
+      project: {
+        ...state.project,
+        scenes: state.project.scenes.map(s => s.id === sceneId ? { ...s, name } : s),
+      },
+    }));
+  },
+
+  reorderScenes: (fromIndex, toIndex) => {
+    set((state) => {
+      const synced = syncToActiveScene(state.project);
+      const scenes = [...synced.scenes];
+      const [moved] = scenes.splice(fromIndex, 1);
+      scenes.splice(toIndex, 0, moved);
+      return {
+        ...pushHistory(state),
+        project: { ...synced, scenes, metadata: { ...synced.metadata, updatedAt: new Date().toISOString() } },
+      };
+    });
+  },
+
+  setSceneTransition: (sceneId, transition) => {
+    set((state) => ({
+      ...pushHistory(state),
+      project: {
+        ...state.project,
+        scenes: state.project.scenes.map(s => s.id === sceneId ? { ...s, transition } : s),
+        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+      },
+    }));
+  },
+
+  setSceneDuration: (sceneId, duration) => {
+    set((state) => ({
+      ...pushHistory(state),
+      project: {
+        ...state.project,
+        scenes: state.project.scenes.map(s => s.id === sceneId ? { ...s, duration } : s),
+        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+      },
+    }));
+  },
+
+  getActiveScene: () => {
+    const state = get();
+    return state.project.scenes.find(s => s.id === state.project.activeSceneId) || state.project.scenes[0];
+  },
+
+  getScenes: () => {
+    return get().project.scenes;
   },
 
   // Layer operations

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { CanvasElement as CanvasElementType, ImageContent, ShapeContent, TextContent, WidgetContent, Keyframe, getAnimations } from '../../types/project';
+import { CanvasElement as CanvasElementType, ImageContent, LogoContent, ShapeContent, TextContent, WidgetContent, Keyframe, getAnimations } from '../../types/project';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useViewportStore } from '../../store/useViewportStore';
 import { animationPresets } from '../../animations/presets';
@@ -425,11 +425,12 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   // --- Render content ---
   const renderContent = () => {
     switch (element.type) {
-      case 'logo':
+      case 'logo': {
+        const lc = element.content as LogoContent;
         return (
           <img
-            src={(element.content as { src: string }).src}
-            alt={(element.content as { alt: string }).alt}
+            src={lc.src}
+            alt={lc.alt}
             style={{
               width: '100%',
               height: '100%',
@@ -437,10 +438,12 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
               pointerEvents: 'none',
               userSelect: 'none',
               draggable: false,
+              filter: lc.filter || undefined,
             } as React.CSSProperties}
             draggable={false}
           />
         );
+      }
       case 'image': {
         const ic = element.content as ImageContent;
         return (

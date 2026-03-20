@@ -18,6 +18,7 @@ export interface TemplateInfo {
 const now = () => new Date().toISOString();
 
 function baseProject(id: string, name: string, elements: CanvasElement[]): Project {
+  const sceneId = `scene-${id}`;
   return {
     id,
     name,
@@ -27,6 +28,8 @@ function baseProject(id: string, name: string, elements: CanvasElement[]): Proje
       height: 1080,
       backgroundColor: '#000000',
     },
+    scenes: [{ id: sceneId, name: 'Szene 1', elements, cameraKeyframes: [] }],
+    activeSceneId: sceneId,
     elements,
     metadata: {
       createdAt: now(),

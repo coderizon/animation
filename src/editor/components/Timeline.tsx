@@ -21,6 +21,7 @@ export const Timeline: React.FC = () => {
   const project = useProjectStore((state) => state.project);
   const selectedElementIds = useProjectStore((state) => state.selectedElementIds);
   const selectElement = useProjectStore((state) => state.selectElement);
+  const selectElements = useProjectStore((state) => state.selectElements);
   const addToSelection = useProjectStore((state) => state.addToSelection);
   const toggleElementVisibility = useProjectStore((state) => state.toggleElementVisibility);
   const toggleElementLock = useProjectStore((state) => state.toggleElementLock);
@@ -420,12 +421,19 @@ export const Timeline: React.FC = () => {
 
     // Jump playhead to clicked keyframe time
     setCurrentTime(time);
-    selectElement(elementId);
+
+    // Select all canvas elements that have selected keyframes
+    const selectedElIds = [...new Set(Array.from(effectiveSelection).map((k) => k.split(':')[0]))];
+    if (selectedElIds.length === 1) {
+      selectElement(selectedElIds[0]);
+    } else if (selectedElIds.length > 1) {
+      selectElements(selectedElIds);
+    }
 
     const snapshot = JSON.parse(JSON.stringify(project));
     kfDragRef.current = { startMouseX: e.clientX, items, snapshot };
     setKfDragActive(true);
-  }, [project, selectedKeyframes, setCurrentTime, selectElement]);
+  }, [project, selectedKeyframes, setCurrentTime, selectElement, selectElements]);
 
   useEffect(() => {
     if (!kfDragActive) return;
@@ -1386,6 +1394,42 @@ export const Timeline: React.FC = () => {
             boxShadow: 'var(--ae-shadow-floating)',
           }}
         >
+          {/* Select all keyframes at this time (column select) */}
+          {(() => {
+            const time = kfContextMenu.time;
+            const allAtTime = project.elements.flatMap((el) =>
+              (el.keyframes || []).filter((k) => k.time === time).map((k) => kfKey(el.id, k.time))
+            );
+            if (allAtTime.length > 1) {
+              return (
+                <>
+                  <div
+                    onClick={() => {
+                      setSelectedKeyframes(new Set(allAtTime));
+                      const elIds = [...new Set(allAtTime.map((k) => k.split(':')[0]))];
+                      selectElements(elIds);
+                      setCurrentTime(time);
+                      setKfContextMenu(null);
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      color: 'var(--ae-accent-strong)',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+                  >
+                    Alle Keyframes bei {time}ms auswählen ({allAtTime.length})
+                  </div>
+                  <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />
+                </>
+              );
+            }
+            return null;
+          })()}
+
           {/* Duplicate options */}
           {[500, 1000, 2000].map((offset) => {
             const label = offset >= 1000 ? `${offset / 1000}s` : `${offset}ms`;

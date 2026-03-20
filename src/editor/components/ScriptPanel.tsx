@@ -198,29 +198,185 @@ api.log(count + ' Partikel erstellt!');`,
   },
 ];
 
-const DEFAULT_CODE = `// Script Panel — schreibe JavaScript um Elemente zu erstellen
-// Alle Funktionen sind über "api" verfügbar.
+const DEFAULT_CODE = `// === Szene 1: Server + Inferenz-Engine Logos ===
+// === Szene 2: Drei Logos groß verteilt (Morph) ===
 // Drücke Strg+Enter zum Ausführen.
 
-const id = api.addElement({
-  type: 'shape',
-  shape: 'rectangle',
-  x: 960,
-  y: 540,
-  width: 300,
-  height: 200,
-  fill: '#4a90d9',
-  borderRadius: 12,
+// =============================================
+// SZENE 1
+// =============================================
+
+const serverW = 420;
+const server = api.addElement({
+  type: 'widget', widgetName: 'serverAnimation',
+  x: 960 - serverW / 2, y: 220,
+  width: serverW, height: 300,
+  fps: 30, durationInFrames: 600, name: 'Server',
+});
+api.addAnimation(server, { preset: 'scaleIn', delay: 0, duration: 900, easing: 'easeOut' });
+
+const rectW = serverW;
+const rectH = 110;
+const rectX = 960 - rectW / 2;
+const rectY = 570;
+
+const rect = api.addElement({
+  type: 'shape', shape: 'rectangle',
+  x: rectX, y: rectY, width: rectW, height: rectH,
+  fill: 'transparent', stroke: '#ffffff', strokeWidth: 2, borderRadius: 10,
+  name: 'Rect Outline',
+});
+api.addAnimation(rect, { preset: 'strokeDraw', delay: 2000, duration: 700, easing: 'easeOut' });
+
+const logoSize = 70;
+const logoY = rectY + (rectH - logoSize) / 2;
+const gap = 40;
+const vllmX = 960 - gap / 2 - logoSize;
+const nvidiaX = 960 + gap / 2;
+
+const vllm = api.addElement({
+  type: 'logo', src: '/assets/vllm-color.svg',
+  x: vllmX, y: logoY, width: logoSize, height: logoSize, name: 'VLLM',
+});
+api.addAnimation(vllm, { preset: 'elasticScale', delay: 2800, duration: 800, easing: 'spring' });
+api.addEffect(vllm, 'float', 0.4, 0.7);
+
+const nvidia = api.addElement({
+  type: 'logo', src: '/assets/nvidia-color.svg',
+  x: nvidiaX, y: logoY, width: logoSize, height: logoSize, name: 'Nvidia',
+});
+api.addAnimation(nvidia, { preset: 'elasticScale', delay: 3100, duration: 800, easing: 'spring' });
+api.addEffect(nvidia, 'float', 0.4, 0.7);
+
+const textY = rectY + rectH + 16;
+const textDelay = 5100;
+
+const vllmText = api.addElement({
+  type: 'text', text: 'vLLM',
+  x: vllmX + logoSize / 2 - 50, y: textY, width: 100, height: 36,
+  fontSize: 20, color: '#ffffff', name: 'vLLM Label',
+});
+api.addAnimation(vllmText, { preset: 'fadeIn', delay: textDelay, duration: 500, easing: 'easeOut' });
+
+const nvidiaText = api.addElement({
+  type: 'text', text: 'TensorRT-LLM',
+  x: nvidiaX + logoSize / 2 - 75, y: textY, width: 150, height: 36,
+  fontSize: 20, color: '#76b900', name: 'TensorRT Label',
+});
+api.addAnimation(nvidiaText, { preset: 'fadeIn', delay: textDelay + 300, duration: 500, easing: 'easeOut' });
+
+const lineDelay = textDelay + 1300;
+const lineW = 260;
+const lineY = textY + 40;
+
+api.addElement({
+  type: 'shape', shape: 'rectangle',
+  x: 960 - lineW / 2, y: lineY, width: lineW, height: 2,
+  fill: '#ffffff', borderRadius: 1, name: 'Divider Line',
+});
+api.addAnimation(api.getElementIds().at(-1), { preset: 'wipeRight', delay: lineDelay, duration: 600, easing: 'easeOut' });
+
+api.addElement({
+  type: 'text', text: 'Inferenz-Engine',
+  x: 960 - 120, y: lineY + 12, width: 240, height: 40,
+  fontSize: 18, color: '#888888', name: 'Engine Label',
+});
+api.addAnimation(api.getElementIds().at(-1), { preset: 'fadeIn', delay: lineDelay + 400, duration: 600, easing: 'easeOut' });
+
+const expandTime = lineDelay + 1500;
+const expandedRectW = 600;
+const expandedRectX = 960 - expandedRectW / 2;
+
+api.addKeyframe(rect, { time: expandTime, x: rectX, y: rectY, width: rectW });
+api.addKeyframe(rect, { time: expandTime + 800, x: expandedRectX, y: rectY, width: expandedRectW });
+
+const vllmTargetX = expandedRectX + 25;
+api.addKeyframe(vllm, { time: expandTime, x: vllmX, y: logoY });
+api.addKeyframe(vllm, { time: expandTime + 800, x: vllmTargetX, y: logoY });
+api.addKeyframe(vllmText, { time: expandTime, x: vllmX + logoSize / 2 - 50, y: textY });
+api.addKeyframe(vllmText, { time: expandTime + 800, x: vllmTargetX + logoSize / 2 - 50, y: textY });
+
+const nvidiaTargetX = expandedRectX + expandedRectW - logoSize - 25;
+api.addKeyframe(nvidia, { time: expandTime, x: nvidiaX, y: logoY });
+api.addKeyframe(nvidia, { time: expandTime + 800, x: nvidiaTargetX, y: logoY });
+api.addKeyframe(nvidiaText, { time: expandTime, x: nvidiaX + logoSize / 2 - 75, y: textY });
+api.addKeyframe(nvidiaText, { time: expandTime + 800, x: nvidiaTargetX + logoSize / 2 - 75, y: textY });
+
+const ollama = api.addElement({
+  type: 'logo', src: '/assets/ollama.svg', filter: 'brightness(0) invert(1)',
+  x: 960 - logoSize / 2, y: logoY, width: logoSize, height: logoSize, name: 'Ollama',
+});
+api.addAnimation(ollama, { preset: 'scalePop', delay: expandTime + 1200, duration: 600, easing: 'spring' });
+
+const ollamaText = api.addElement({
+  type: 'text', text: 'Ollama',
+  x: 960 - 50, y: textY, width: 100, height: 36,
+  fontSize: 20, color: '#ffffff', name: 'Ollama Label',
+});
+api.addAnimation(ollamaText, { preset: 'fadeIn', delay: expandTime + 1600, duration: 500, easing: 'easeOut' });
+
+api.log('Szene 1 erstellt!');
+
+// =============================================
+// SZENE 2 erstellen + Morph-Übergang
+// =============================================
+
+api.addScene('Szene 2');
+// Jetzt sind wir automatisch in Szene 2
+
+const scenes = api.getScenes();
+const scene2Id = scenes[scenes.length - 1].id;
+api.setSceneTransition(scene2Id, 'morph', 1000);
+
+const s2LogoSize = 140;
+const s2CenterY = 480;
+const s2Spacing = 420;
+const s2StartX = 960 - s2Spacing;
+
+// VLLM (links) — gleicher Name wie Szene 1!
+api.addElement({
+  type: 'logo', src: '/assets/vllm-color.svg',
+  x: s2StartX - s2LogoSize / 2, y: s2CenterY - s2LogoSize / 2,
+  width: s2LogoSize, height: s2LogoSize, name: 'VLLM',
+});
+api.addEffect(api.getElementIds().at(-1), 'float', 0.3, 0.6);
+
+api.addElement({
+  type: 'text', text: 'vLLM',
+  x: s2StartX - 60, y: s2CenterY + s2LogoSize / 2 + 16,
+  width: 120, height: 40, fontSize: 24, color: '#ffffff', name: 'vLLM Label',
 });
 
-api.addAnimation(id, {
-  preset: 'fadeIn',
-  delay: 0,
-  duration: 600,
-  easing: 'easeOut',
+// Ollama (Mitte)
+api.addElement({
+  type: 'logo', src: '/assets/ollama.svg', filter: 'brightness(0) invert(1)',
+  x: 960 - s2LogoSize / 2, y: s2CenterY - s2LogoSize / 2,
+  width: s2LogoSize, height: s2LogoSize, name: 'Ollama',
+});
+api.addEffect(api.getElementIds().at(-1), 'float', 0.3, 0.6);
+
+api.addElement({
+  type: 'text', text: 'Ollama',
+  x: 960 - 60, y: s2CenterY + s2LogoSize / 2 + 16,
+  width: 120, height: 40, fontSize: 24, color: '#ffffff', name: 'Ollama Label',
 });
 
-api.log('Element erstellt: ' + id);
+// Nvidia (rechts)
+api.addElement({
+  type: 'logo', src: '/assets/nvidia-color.svg',
+  x: s2StartX + 2 * s2Spacing - s2LogoSize / 2, y: s2CenterY - s2LogoSize / 2,
+  width: s2LogoSize, height: s2LogoSize, name: 'Nvidia',
+});
+api.addEffect(api.getElementIds().at(-1), 'float', 0.3, 0.6);
+
+api.addElement({
+  type: 'text', text: 'TensorRT-LLM',
+  x: s2StartX + 2 * s2Spacing - 90, y: s2CenterY + s2LogoSize / 2 + 16,
+  width: 180, height: 40, fontSize: 24, color: '#76b900', name: 'TensorRT Label',
+});
+
+api.log('Szene 2 + Morph-Übergang erstellt!');
+api.log('Klicke "Vorschau" um die gesamte Animation zu sehen.');
 `;
 
 export const ScriptPanel: React.FC = () => {

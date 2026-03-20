@@ -35,6 +35,7 @@ interface ElementOptions {
   fontWeight?: number;
   // Logo / Image
   src?: string;
+  filter?: string;
   // Widget
   widgetName?: string;
   fps?: number;
@@ -89,6 +90,7 @@ function buildContent(opts: ElementOptions) {
         type: 'logo' as const,
         src: opts.src || '/assets/placeholder.svg',
         alt: opts.name || 'Logo',
+        ...(opts.filter ? { filter: opts.filter } : {}),
       };
     case 'image':
       return {
@@ -210,6 +212,24 @@ export function createScriptApi() {
     sendToBack(elementId: string) { store().sendToBack(elementId); },
 
     /**
+     * Scene management.
+     */
+    addScene(name?: string) { store().addScene(name); },
+    switchScene(sceneId: string) { store().switchScene(sceneId); },
+    getScenes() { return store().project.scenes.map(s => ({ id: s.id, name: s.name, elementCount: s.elements.length })); },
+    getActiveSceneId() { return store().project.activeSceneId; },
+    setSceneDuration(sceneId: string, durationMs: number | undefined) {
+      store().setSceneDuration(sceneId, durationMs);
+    },
+    setSceneTransition(sceneId: string, type: 'cut' | 'fade' | 'morph', duration?: number) {
+      if (type === 'cut') {
+        store().setSceneTransition(sceneId, undefined);
+      } else {
+        store().setSceneTransition(sceneId, { type, duration: duration ?? 800 });
+      }
+    },
+
+    /**
      * Playback controls.
      */
     play() { store().playAllAnimations(); },
@@ -290,6 +310,7 @@ interface ElementOptions {
   fontWeight?: number;
   // Logo / Image
   src?: string;
+  filter?: string;
   // Widget
   widgetName?: string;
   fps?: number;

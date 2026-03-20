@@ -6,6 +6,7 @@ import { ResizablePanel } from './components/ResizablePanel';
 import { PropertiesPanel } from './PropertiesPanel';
 import { KeyboardShortcutsOverlay } from './components/KeyboardShortcutsOverlay';
 import { Timeline } from './components/Timeline';
+import { SceneBar } from './components/SceneBar';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 const LazyScriptPanel = lazy(() =>
   import('./components/ScriptPanel').then((m) => ({ default: m.ScriptPanel })),
@@ -424,6 +425,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
           </Suspense>
         )}
       </div>
+
+      {/* Scene Bar */}
+      <SceneBar />
 
       {/* Timeline */}
       <div ref={timelineRef} style={{ position: 'relative', height: timelineHeight, flexShrink: 0 }}>
