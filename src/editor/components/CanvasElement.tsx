@@ -581,11 +581,12 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const isStrokeDraw = activeAnim?.config.preset === 'strokeDraw' && shouldAnimate;
   const strokeDrawDuration = activeAnim ? (activeAnim.config.duration || 1200) / 1000 : 1.2;
 
-  // Hide element before its first animation's delay during playback
-  const hiddenBeforeDelay = isPlayback && !isPreviewing && firstDelay > 0 && currentTime < firstDelay;
+  // Hide element before its first animation's delay — only while actively playing, not when paused
+  const hiddenBeforeDelay = isPlayingAll && !isPreviewing && firstDelay > 0 && currentTime < firstDelay;
 
-  // Full keyframe interpolation during playback or paused state
-  const showInterpolated = isPlayback;
+  // Full keyframe interpolation during playback, paused, or when scrubbed (currentTime > 0)
+  // Disable during drag so the user can freely move the element
+  const showInterpolated = !isDragging && !isResizing && (isPlayback || currentTime > 0);
   const interpolated = showInterpolated
     ? getInterpolatedProperties(element.keyframes, currentTime)
     : null;

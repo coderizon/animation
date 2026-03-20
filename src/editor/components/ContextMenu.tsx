@@ -28,6 +28,11 @@ export const ContextMenu: React.FC = () => {
   const addKeyframe = useProjectStore((s) => s.addKeyframe);
   const addAnimation = useProjectStore((s) => s.addAnimation);
   const addEffect = useProjectStore((s) => s.addEffect);
+  const bringToFront = useProjectStore((s) => s.bringToFront);
+  const sendToBack = useProjectStore((s) => s.sendToBack);
+  const bringForward = useProjectStore((s) => s.bringForward);
+  const sendBackward = useProjectStore((s) => s.sendBackward);
+  const duplicateElement = useProjectStore((s) => s.duplicateElement);
   const lastDragStartPosition = useProjectStore((s) => s.lastDragStartPosition);
   const setLastDragStartPosition = useProjectStore((s) => s.setLastDragStartPosition);
   const project = useProjectStore((s) => s.project);
@@ -35,11 +40,15 @@ export const ContextMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [animSubmenu, setAnimSubmenu] = useState(false);
   const [effectSubmenu, setEffectSubmenu] = useState(false);
+  const [duplicateSubmenu, setDuplicateSubmenu] = useState(false);
+  const [duplicateSeconds, setDuplicateSeconds] = useState('1');
 
   useEffect(() => {
     if (!contextMenu) {
       setAnimSubmenu(false);
       setEffectSubmenu(false);
+      setDuplicateSubmenu(false);
+      setDuplicateSeconds('1');
       return;
     }
     const handleClickOutside = (e: MouseEvent) => {
@@ -94,6 +103,99 @@ export const ContextMenu: React.FC = () => {
     }
     setContextMenu(null);
   };
+
+  // --- Duplicate submenu view ---
+  if (duplicateSubmenu) {
+    return ReactDOM.createPortal(
+      <div
+        ref={menuRef}
+        style={{
+          position: 'fixed',
+          top: contextMenu.y,
+          left: contextMenu.x,
+          backgroundColor: 'var(--ae-bg-panel)',
+          border: '1px solid var(--ae-border)',
+          borderRadius: 6,
+          padding: '4px 0',
+          minWidth: 240,
+          zIndex: 100000,
+          boxShadow: 'var(--ae-shadow-floating)',
+        }}
+      >
+        <div
+          onClick={() => setDuplicateSubmenu(false)}
+          onMouseEnter={hoverIn}
+          onMouseLeave={hoverOut}
+          style={{
+            ...menuItemStyle,
+            color: 'var(--ae-text-muted)',
+            fontSize: 12,
+            borderBottom: '1px solid var(--ae-border)',
+            marginBottom: 4,
+          }}
+        >
+          ← Zurück
+        </div>
+        <div style={{ padding: '8px 16px' }}>
+          <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)', marginBottom: 6 }}>
+            Zeitversatz (Sekunden)
+          </div>
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={duplicateSeconds}
+            onChange={(e) => setDuplicateSeconds(e.target.value)}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const ms = Math.max(0, parseFloat(duplicateSeconds) || 0) * 1000;
+                for (const id of targetIds) {
+                  duplicateElement(id, ms);
+                }
+                setContextMenu(null);
+              }
+              e.stopPropagation();
+            }}
+            style={{
+              width: '100%',
+              padding: '6px 8px',
+              backgroundColor: 'var(--ae-bg-panel-muted)',
+              border: '1px solid var(--ae-border)',
+              borderRadius: 4,
+              color: 'var(--ae-text-primary)',
+              fontSize: 13,
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          <div
+            onClick={() => {
+              const ms = Math.max(0, parseFloat(duplicateSeconds) || 0) * 1000;
+              for (const id of targetIds) {
+                duplicateElement(id, ms);
+              }
+              setContextMenu(null);
+            }}
+            onMouseEnter={hoverIn}
+            onMouseLeave={hoverOut}
+            style={{
+              ...menuItemStyle,
+              marginTop: 8,
+              textAlign: 'center',
+              backgroundColor: 'var(--ae-accent)',
+              color: '#fff',
+              borderRadius: 4,
+              fontWeight: 600,
+            }}
+          >
+            Duplizieren
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   // --- Effect submenu view ---
   if (effectSubmenu) {
@@ -294,6 +396,50 @@ export const ContextMenu: React.FC = () => {
     onClick: () => setEffectSubmenu(true),
     visible: true,
   });
+
+  // Duplicate quick options
+  const doDuplicate = (ms: number) => {
+    for (const id of targetIds) {
+      duplicateElement(id, ms);
+    }
+    setContextMenu(null);
+  };
+  menuItems.push({ label: 'Duplizieren +500ms', onClick: () => doDuplicate(500), visible: true });
+  menuItems.push({ label: 'Duplizieren +1s', onClick: () => doDuplicate(1000), visible: true });
+  menuItems.push({ label: 'Duplizieren +2s', onClick: () => doDuplicate(2000), visible: true });
+  menuItems.push({
+    label: 'Duplizieren (eigene Zeit) →',
+    onClick: () => setDuplicateSubmenu(true),
+    visible: true,
+  });
+
+  // Layer ordering (single element only)
+  if (!isMultiSelect) {
+    const elIndex = project.elements.findIndex((el) => el.id === contextMenu.elementId);
+    const isTop = elIndex === project.elements.length - 1;
+    const isBottom = elIndex === 0;
+
+    menuItems.push({
+      label: 'Ganz nach vorne',
+      onClick: () => { bringToFront(contextMenu.elementId); setContextMenu(null); },
+      visible: !isTop,
+    });
+    menuItems.push({
+      label: 'Eine Ebene nach vorne',
+      onClick: () => { bringForward(contextMenu.elementId); setContextMenu(null); },
+      visible: !isTop,
+    });
+    menuItems.push({
+      label: 'Eine Ebene nach hinten',
+      onClick: () => { sendBackward(contextMenu.elementId); setContextMenu(null); },
+      visible: !isBottom,
+    });
+    menuItems.push({
+      label: 'Ganz nach hinten',
+      onClick: () => { sendToBack(contextMenu.elementId); setContextMenu(null); },
+      visible: !isBottom,
+    });
+  }
 
   // Single-element options
   if (!isMultiSelect) {

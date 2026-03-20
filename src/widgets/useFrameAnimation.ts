@@ -18,6 +18,7 @@ interface FrameAnimationResult {
 export function useFrameAnimation(options: UseFrameAnimationOptions): FrameAnimationResult {
   const { fps, durationInFrames, loop = false } = options;
   const isPlayingAll = useProjectStore((state) => state.isPlayingAll);
+  const playbackState = useProjectStore((state) => state.playbackState);
   const [frame, setFrame] = useState(0);
   const [localPlaying, setLocalPlaying] = useState(false);
   const rafRef = useRef<number>(0);
@@ -26,18 +27,37 @@ export function useFrameAnimation(options: UseFrameAnimationOptions): FrameAnima
 
   const isPlaying = isPlayingAll || localPlaying;
   const msPerFrame = 1000 / fps;
+  const wasPausedRef = useRef(false);
+
+  // Track pause state so we know when resuming
+  useEffect(() => {
+    if (playbackState === 'paused') {
+      wasPausedRef.current = true;
+    } else if (playbackState === 'stopped') {
+      wasPausedRef.current = false;
+    }
+  }, [playbackState]);
 
   useEffect(() => {
     if (!isPlaying) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      setFrame(0);
-      frameRef.current = 0;
+      // Only reset to frame 0 on full stop, not on pause — freeze current frame
+      if (playbackState === 'stopped') {
+        setFrame(0);
+        frameRef.current = 0;
+      }
       return;
     }
 
     lastTimeRef.current = performance.now();
-    frameRef.current = 0;
-    setFrame(0);
+    // Only reset to frame 0 on fresh play, not when resuming from pause
+    if (wasPausedRef.current) {
+      // Resume: keep current frame, just continue the RAF loop
+      wasPausedRef.current = false;
+    } else {
+      frameRef.current = 0;
+      setFrame(0);
+    }
 
     const tick = (now: number) => {
       const elapsed = now - lastTimeRef.current;

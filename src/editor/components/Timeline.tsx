@@ -76,11 +76,14 @@ export const Timeline: React.FC = () => {
   } | null>(null);
   const [barDragActive, setBarDragActive] = useState(false);
 
-  // Keyframe diamond drag state
+  // Multi-keyframe selection: Set of "elementId:time" keys
+  const [selectedKeyframes, setSelectedKeyframes] = useState<Set<string>>(new Set());
+
+  // Keyframe diamond drag state (supports multi-select)
   const kfDragRef = useRef<{
-    elementId: string;
     startMouseX: number;
-    startTime: number;
+    // For each selected keyframe: original elementId + time at drag start
+    items: { elementId: string; startTime: number }[];
     snapshot: typeof project;
   } | null>(null);
   const [kfDragActive, setKfDragActive] = useState(false);
@@ -150,15 +153,38 @@ export const Timeline: React.FC = () => {
   const pxPerMs = Math.max(0.02, basePxPerMs * timelineZoom);
   const timelineWidth = Math.max(tracksWidth, maxTime * pxPerMs);
 
-  // Wheel handler for timeline zoom (Ctrl+Scroll or Shift+Scroll)
+  // Wheel handler for timeline zoom — Alt+Scroll (like Premiere/AE), also Ctrl+Scroll
+  // Zooms toward the cursor position so the time under the cursor stays in place.
   const handleTimelineWheel = useCallback((e: React.WheelEvent) => {
-    if (e.ctrlKey || e.shiftKey) {
+    if (e.altKey || e.ctrlKey || e.metaKey) {
       e.preventDefault();
       e.stopPropagation();
-      const delta = -e.deltaY * 0.002;
-      setTimelineZoom((prev) => Math.max(0.2, Math.min(20, prev + prev * delta)));
+
+      const container = tracksRef.current;
+      if (!container) return;
+
+      // Mouse position relative to the scrollable tracks container
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left + container.scrollLeft;
+      // Time at cursor before zoom
+      const timeBefore = mouseX / pxPerMs;
+
+      const factor = -e.deltaY * 0.003;
+      const newZoom = Math.max(0.2, Math.min(30, timelineZoom * (1 + factor)));
+      const newPxPerMs = Math.max(0.02, basePxPerMs * newZoom);
+
+      // Pixel position of that same time after zoom
+      const mouseXAfter = timeBefore * newPxPerMs;
+      // Adjust scroll so the time stays under the cursor
+      const scrollOffset = mouseXAfter - (e.clientX - rect.left);
+
+      setTimelineZoom(newZoom);
+      // Apply scroll in next frame after render
+      requestAnimationFrame(() => {
+        container.scrollLeft = Math.max(0, scrollOffset);
+      });
     }
-  }, []);
+  }, [pxPerMs, basePxPerMs, timelineZoom]);
 
   // Time markers - adaptive intervals based on visible pixel density
   const msPerPx = 1 / pxPerMs;
@@ -229,6 +255,10 @@ export const Timeline: React.FC = () => {
   // Scrubbing handlers
   const handleScrubStart = useCallback((e: React.MouseEvent) => {
     if (!tracksRef.current) return;
+    // Clear keyframe selection when clicking empty timeline area
+    if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      setSelectedKeyframes(new Set());
+    }
     isScrubbing.current = true;
     const rect = tracksRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left + tracksRef.current.scrollLeft;
@@ -351,45 +381,99 @@ export const Timeline: React.FC = () => {
     };
   }, [barDragActive, pxPerMs, updateElementSilent, pushSnapshot]);
 
-  // Keyframe diamond drag handlers
+  // Helper to make a keyframe key
+  const kfKey = (elementId: string, time: number) => `${elementId}:${time}`;
+
+  // Keyframe diamond drag handlers (multi-select aware)
   const handleKfMouseDown = useCallback((
     e: React.MouseEvent,
     elementId: string,
     time: number,
   ) => {
-    if (e.button !== 0) return; // Only left-click initiates drag
+    if (e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
-    const snapshot = JSON.parse(JSON.stringify(project));
-    kfDragRef.current = { elementId, startMouseX: e.clientX, startTime: time, snapshot };
-    setKfDragActive(true);
+
+    const key = kfKey(elementId, time);
+
+    // Determine effective selection for this drag
+    let effectiveSelection: Set<string>;
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      effectiveSelection = new Set(selectedKeyframes);
+      if (effectiveSelection.has(key)) effectiveSelection.delete(key);
+      else effectiveSelection.add(key);
+      setSelectedKeyframes(effectiveSelection);
+    } else if (selectedKeyframes.has(key)) {
+      // Already selected - drag all selected
+      effectiveSelection = selectedKeyframes;
+    } else {
+      // New solo selection
+      effectiveSelection = new Set([key]);
+      setSelectedKeyframes(effectiveSelection);
+    }
+
+    // Build drag items from effective selection
+    const items = Array.from(effectiveSelection).map((k) => {
+      const [elId, t] = k.split(':');
+      return { elementId: elId, startTime: parseInt(t) };
+    });
+
+    // Jump playhead to clicked keyframe time
+    setCurrentTime(time);
     selectElement(elementId);
-  }, [project, selectElement]);
+
+    const snapshot = JSON.parse(JSON.stringify(project));
+    kfDragRef.current = { startMouseX: e.clientX, items, snapshot };
+    setKfDragActive(true);
+  }, [project, selectedKeyframes, setCurrentTime, selectElement]);
 
   useEffect(() => {
     if (!kfDragActive) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!kfDragRef.current) return;
-      const { elementId, startMouseX, startTime } = kfDragRef.current;
+      const { startMouseX, items } = kfDragRef.current;
       const dxPx = e.clientX - startMouseX;
-      const dxMs = dxPx / pxPerMs;
-      let newTime = Math.max(0, Math.round(startTime + dxMs));
-      newTime = Math.round(newTime / 50) * 50; // 50ms snap
+      const dxMs = Math.round(dxPx / pxPerMs);
+      const snappedDx = Math.round(dxMs / 50) * 50;
+      if (snappedDx === 0) return;
 
-      const el = useProjectStore.getState().project.elements.find((el) => el.id === elementId);
-      if (!el || !el.keyframes) return;
+      // Check all items can move (no negative times)
+      const canMove = items.every((item) => item.startTime + snappedDx >= 0);
+      if (!canMove) return;
 
-      const kf = el.keyframes.find((k) => k.time === startTime) ||
-                 el.keyframes.find((k) => Math.abs(k.time - startTime) < 50);
-      if (!kf) return;
+      // Group items by element
+      const byElement = new Map<string, { startTime: number }[]>();
+      for (const item of items) {
+        if (!byElement.has(item.elementId)) byElement.set(item.elementId, []);
+        byElement.get(item.elementId)!.push(item);
+      }
 
-      // Update: remove old, add at new time (preserve all properties)
-      const filtered = el.keyframes.filter((k) => k.time !== kf.time);
-      const updated = [...filtered, { ...kf, time: newTime }].sort((a, b) => a.time - b.time);
-      updateElementSilent(elementId, { keyframes: updated });
-      kfDragRef.current.startTime = newTime;
+      const state = useProjectStore.getState();
+      for (const [elId, elItems] of byElement) {
+        const el = state.project.elements.find((e) => e.id === elId);
+        if (!el || !el.keyframes) continue;
+
+        const movingTimes = new Set(elItems.map((i) => i.startTime));
+        const updated = el.keyframes.map((kf) => {
+          if (movingTimes.has(kf.time)) {
+            return { ...kf, time: kf.time + snappedDx };
+          }
+          return kf;
+        }).sort((a, b) => a.time - b.time);
+
+        updateElementSilent(elId, { keyframes: updated });
+      }
+
+      // Update startTimes and mouse position
+      for (const item of items) {
+        item.startTime += snappedDx;
+      }
       kfDragRef.current.startMouseX = e.clientX;
+
+      // Update selectedKeyframes to match new times
+      const newSelection = new Set(items.map((i) => kfKey(i.elementId, i.startTime)));
+      setSelectedKeyframes(newSelection);
     };
 
     const handleMouseUp = () => {
@@ -696,8 +780,17 @@ export const Timeline: React.FC = () => {
           {/* Timeline Zoom controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 8 }}>
             <button
-              onClick={() => setTimelineZoom((z) => Math.max(0.2, z / 1.4))}
-              title="Timeline verkleinern"
+              onClick={() => {
+                const container = tracksRef.current;
+                if (!container) { setTimelineZoom((z) => Math.max(0.2, z / 1.4)); return; }
+                const centerX = container.scrollLeft + container.clientWidth / 2;
+                const centerTime = centerX / pxPerMs;
+                const newZoom = Math.max(0.2, timelineZoom / 1.4);
+                const newPxPerMs = Math.max(0.02, basePxPerMs * newZoom);
+                setTimelineZoom(newZoom);
+                requestAnimationFrame(() => { container.scrollLeft = centerTime * newPxPerMs - container.clientWidth / 2; });
+              }}
+              title="Timeline verkleinern (Alt+Scroll)"
               style={{
                 padding: '2px 6px',
                 backgroundColor: 'transparent',
@@ -719,8 +812,17 @@ export const Timeline: React.FC = () => {
               {Math.round(timelineZoom * 100)}%
             </span>
             <button
-              onClick={() => setTimelineZoom((z) => Math.min(20, z * 1.4))}
-              title="Timeline vergrößern"
+              onClick={() => {
+                const container = tracksRef.current;
+                if (!container) { setTimelineZoom((z) => Math.min(30, z * 1.4)); return; }
+                const centerX = container.scrollLeft + container.clientWidth / 2;
+                const centerTime = centerX / pxPerMs;
+                const newZoom = Math.min(30, timelineZoom * 1.4);
+                const newPxPerMs = Math.max(0.02, basePxPerMs * newZoom);
+                setTimelineZoom(newZoom);
+                requestAnimationFrame(() => { container.scrollLeft = centerTime * newPxPerMs - container.clientWidth / 2; });
+              }}
+              title="Timeline vergrößern (Alt+Scroll)"
               style={{
                 padding: '2px 6px',
                 backgroundColor: 'transparent',
@@ -1233,30 +1335,34 @@ export const Timeline: React.FC = () => {
                 })()}
 
                 {/* Keyframe diamonds */}
-                {el.keyframes && el.keyframes.map((kf) => (
-                  <div
-                    key={`kf-${kf.time}`}
-                    onMouseDown={(e) => handleKfMouseDown(e, el.id, kf.time)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setKfContextMenu({ x: e.clientX, y: e.clientY, elementId: el.id, time: kf.time });
-                    }}
-                    title={`Keyframe ${kf.time}ms (${Math.round(kf.x)}, ${Math.round(kf.y)})`}
-                    style={{
-                      position: 'absolute',
-                      left: kf.time * pxPerMs - 5,
-                      top: 9,
-                      width: 10,
-                      height: 10,
-                      backgroundColor: 'var(--ae-notice-strong)',
-                      border: '1px solid var(--ae-notice)',
-                      transform: 'rotate(45deg)',
-                      cursor: 'ew-resize',
-                      zIndex: 5,
-                    }}
-                  />
-                ))}
+                {el.keyframes && el.keyframes.map((kf) => {
+                  const isKfSelected = selectedKeyframes.has(kfKey(el.id, kf.time));
+                  return (
+                    <div
+                      key={`kf-${kf.time}`}
+                      onMouseDown={(e) => handleKfMouseDown(e, el.id, kf.time)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setKfContextMenu({ x: e.clientX, y: e.clientY, elementId: el.id, time: kf.time });
+                      }}
+                      title={`Keyframe ${kf.time}ms (${Math.round(kf.x)}, ${Math.round(kf.y)})`}
+                      style={{
+                        position: 'absolute',
+                        left: kf.time * pxPerMs - 5,
+                        top: 9,
+                        width: 10,
+                        height: 10,
+                        backgroundColor: isKfSelected ? '#fff' : 'var(--ae-notice-strong)',
+                        border: isKfSelected ? '2px solid var(--ae-accent)' : '1px solid var(--ae-notice)',
+                        transform: 'rotate(45deg)',
+                        cursor: 'ew-resize',
+                        zIndex: isKfSelected ? 6 : 5,
+                        boxShadow: isKfSelected ? '0 0 6px var(--ae-accent)' : 'none',
+                      }}
+                    />
+                  );
+                })}
               </div>
             );
           })}
@@ -1315,41 +1421,43 @@ export const Timeline: React.FC = () => {
             );
           })}
 
-          {/* Hold options */}
-          <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />
-          {[1000, 2000, 3000].map((offset) => {
-            const label = `${offset / 1000}s`;
-            return (
-              <div
-                key={`hold-${offset}`}
-                onClick={() => {
+          {/* Custom time duplicate */}
+          <div style={{ padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: 'var(--ae-text-secondary)', fontSize: 12, whiteSpace: 'nowrap' }}>Eigene Zeit:</span>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              defaultValue="1.5"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const secs = parseFloat((e.target as HTMLInputElement).value) || 0;
+                  const ms = Math.max(0, secs) * 1000;
                   const el = useProjectStore.getState().project.elements.find(
-                    (e) => e.id === kfContextMenu.elementId
+                    (elem) => elem.id === kfContextMenu.elementId
                   );
                   const kf = el?.keyframes?.find((k) => k.time === kfContextMenu.time);
                   if (kf) {
-                    addKeyframe(kfContextMenu.elementId, { ...kf, time: kf.time + offset });
+                    addKeyframe(kfContextMenu.elementId, { ...kf, time: kf.time + ms });
                   }
                   setKfContextMenu(null);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  color: 'var(--ae-text-primary)',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
-                }}
-              >
-                Halten {label}
-              </div>
-            );
-          })}
+                }
+                e.stopPropagation();
+              }}
+              style={{
+                width: 60,
+                padding: '4px 6px',
+                backgroundColor: 'var(--ae-bg-panel-muted)',
+                border: '1px solid var(--ae-border)',
+                borderRadius: 4,
+                color: 'var(--ae-text-primary)',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            />
+            <span style={{ color: 'var(--ae-text-muted)', fontSize: 11 }}>s + Enter</span>
+          </div>
 
           {/* Delete */}
           <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />
@@ -1428,39 +1536,41 @@ export const Timeline: React.FC = () => {
             );
           })}
 
-          {/* Hold options */}
-          <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />
-          {[1000, 2000, 3000].map((offset) => {
-            const label = `${offset / 1000}s`;
-            return (
-              <div
-                key={`hold-${offset}`}
-                onClick={() => {
+          {/* Custom time duplicate */}
+          <div style={{ padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: 'var(--ae-text-secondary)', fontSize: 12, whiteSpace: 'nowrap' }}>Eigene Zeit:</span>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              defaultValue="1.5"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const secs = parseFloat((e.target as HTMLInputElement).value) || 0;
+                  const ms = Math.max(0, secs) * 1000;
                   const cameraKfs = useProjectStore.getState().project.cameraKeyframes || [];
                   const kf = cameraKfs.find((k) => k.time === camKfContextMenu.time);
                   if (kf) {
-                    addCameraKeyframe({ ...kf, time: kf.time + offset });
+                    addCameraKeyframe({ ...kf, time: kf.time + ms });
                   }
                   setCamKfContextMenu(null);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  color: 'var(--ae-text-primary)',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
-                }}
-              >
-                Halten {label}
-              </div>
-            );
-          })}
+                }
+                e.stopPropagation();
+              }}
+              style={{
+                width: 60,
+                padding: '4px 6px',
+                backgroundColor: 'var(--ae-bg-panel-muted)',
+                border: '1px solid var(--ae-border)',
+                borderRadius: 4,
+                color: 'var(--ae-text-primary)',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            />
+            <span style={{ color: 'var(--ae-text-muted)', fontSize: 11 }}>s + Enter</span>
+          </div>
 
           {/* Delete */}
           <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />

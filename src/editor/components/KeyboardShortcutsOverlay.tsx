@@ -24,6 +24,12 @@ const shortcuts: Shortcut[] = [
   { keys: 'Arrow Keys', description: 'Move element by 1px', category: 'Navigation' },
   { keys: 'Shift + Arrow Keys', description: 'Move element by 10px', category: 'Navigation' },
 
+  // Layers
+  { keys: 'Ctrl + ]', description: 'Eine Ebene nach vorne', category: 'Layers' },
+  { keys: 'Ctrl + [', description: 'Eine Ebene nach hinten', category: 'Layers' },
+  { keys: 'Ctrl + Shift + ]', description: 'Ganz nach vorne', category: 'Layers' },
+  { keys: 'Ctrl + Shift + [', description: 'Ganz nach hinten', category: 'Layers' },
+
   // View
   { keys: 'Ctrl/Cmd + +', description: 'Zoom in', category: 'View' },
   { keys: 'Ctrl/Cmd + -', description: 'Zoom out', category: 'View' },

@@ -7,6 +7,9 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { KeyboardShortcutsOverlay } from './components/KeyboardShortcutsOverlay';
 import { Timeline } from './components/Timeline';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+const LazyScriptPanel = lazy(() =>
+  import('./components/ScriptPanel').then((m) => ({ default: m.ScriptPanel })),
+);
 import {
   createImageInsert,
   createShapeInsert,
@@ -51,9 +54,10 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [timelineHeight, setTimelineHeight] = useState(320);
   const [isResizingTimeline, setIsResizingTimeline] = useState(false);
-  const [activeRibbonTab, setActiveRibbonTab] = useState<'start' | 'insert' | 'animation' | 'view'>('insert');
+  const [activeRibbonTab, setActiveRibbonTab] = useState<'start' | 'insert' | 'animation' | 'view' | 'script'>('insert');
   const [assetLibraryView, setAssetLibraryView] = useState<'logos' | 'widgets' | null>(null);
   const [showShapeGallery, setShowShapeGallery] = useState(false);
+  const [showScriptPanel, setShowScriptPanel] = useState(false);
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const shapeGalleryButtonRef = useRef<HTMLButtonElement>(null);
@@ -154,7 +158,11 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
     resetProject();
   };
 
-  const handleRibbonTabChange = (tab: 'start' | 'insert' | 'animation' | 'view') => {
+  const handleRibbonTabChange = (tab: 'start' | 'insert' | 'animation' | 'view' | 'script') => {
+    if (tab === 'script') {
+      setShowScriptPanel((v) => !v);
+      return;
+    }
     setActiveRibbonTab(tab);
     setShowShapeGallery(false);
     setAssetLibraryView(null);
@@ -332,6 +340,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             <StaticHeaderTab label="Übergänge" />
             <RibbonTab label="Animationen" active={activeRibbonTab === 'animation'} onClick={() => handleRibbonTabChange('animation')} />
             <RibbonTab label="Ansicht" active={activeRibbonTab === 'view'} onClick={() => handleRibbonTabChange('view')} />
+            <RibbonTab label="Skript" active={showScriptPanel} onClick={() => handleRibbonTabChange('script')} />
             <StaticHeaderTab label="Hilfe" />
           </div>
 
@@ -405,6 +414,15 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
 
         {/* Canvas Area (Center) */}
         <Canvas />
+
+        {/* Script Panel (Right side, toggleable) */}
+        {showScriptPanel && (
+          <Suspense fallback={null}>
+            <div style={{ width: 480, flexShrink: 0, overflow: 'hidden' }}>
+              <LazyScriptPanel />
+            </div>
+          </Suspense>
+        )}
       </div>
 
       {/* Timeline */}

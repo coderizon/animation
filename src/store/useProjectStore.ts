@@ -54,6 +54,7 @@ interface ProjectStore {
 
   // Element Actions
   addElement: (element: PartialCanvasElement) => void;
+  duplicateElement: (id: string, timeOffsetMs: number) => void;
   updateElement: (id: string, updates: Partial<CanvasElement>) => void;
   deleteElement: (id: string) => void;
 
@@ -87,6 +88,10 @@ interface ProjectStore {
 
   // Layer operations
   reorderElements: (fromIndex: number, toIndex: number) => void;
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
+  bringForward: (id: string) => void;
+  sendBackward: (id: string) => void;
   renameElement: (id: string, name: string) => void;
   toggleElementVisibility: (id: string) => void;
   toggleElementLock: (id: string) => void;
@@ -180,6 +185,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       ...element,
       id: generateId(),
       name: element.name || autoName,
+      keyframes: element.keyframes || [
+        { time: 0, x: element.position.x, y: element.position.y },
+      ],
     };
 
     set((state) => ({
@@ -193,6 +201,48 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         },
       },
       selectedElementIds: [newElement.id],
+    }));
+  },
+
+  duplicateElement: (id, timeOffsetMs) => {
+    const state = get();
+    const source = state.project.elements.find((el) => el.id === id);
+    if (!source) return;
+
+    const newId = generateId();
+    const typeCount = state.project.elements.filter((el) => el.type === source.type).length;
+    const autoName = `${source.type.charAt(0).toUpperCase() + source.type.slice(1)} ${typeCount + 1}`;
+
+    const offsetAnimations = (anims: AnimationConfig[] | undefined): AnimationConfig[] | undefined => {
+      if (!anims || anims.length === 0) return anims;
+      return anims.map((a) => ({ ...a, delay: (a.delay || 0) + timeOffsetMs }));
+    };
+
+    const offsetKeyframes = (kfs: Keyframe[] | undefined): Keyframe[] | undefined => {
+      if (!kfs || kfs.length === 0) return kfs;
+      return kfs.map((kf) => ({ ...kf, time: kf.time + timeOffsetMs }));
+    };
+
+    const duplicate: CanvasElement = {
+      ...JSON.parse(JSON.stringify(source)),
+      id: newId,
+      name: autoName,
+      position: { x: source.position.x + 30, y: source.position.y + 30 },
+      animation: source.animation
+        ? { ...source.animation, delay: (source.animation.delay || 0) + timeOffsetMs }
+        : undefined,
+      animations: offsetAnimations(source.animations),
+      keyframes: offsetKeyframes(source.keyframes),
+    };
+
+    set((state) => ({
+      ...pushHistory(state),
+      project: {
+        ...state.project,
+        elements: [...state.project.elements, duplicate],
+        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+      },
+      selectedElementIds: [newId],
     }));
   },
 
@@ -456,6 +506,80 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const [moved] = elements.splice(fromIndex, 1);
       elements.splice(toIndex, 0, moved);
       // Re-assign zIndex based on array position
+      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
+      return {
+        ...pushHistory(state),
+        project: {
+          ...state.project,
+          elements: reindexed,
+          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  bringToFront: (id) => {
+    set((state) => {
+      const elements = [...state.project.elements];
+      const idx = elements.findIndex((el) => el.id === id);
+      if (idx === -1 || idx === elements.length - 1) return state;
+      const [moved] = elements.splice(idx, 1);
+      elements.push(moved);
+      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
+      return {
+        ...pushHistory(state),
+        project: {
+          ...state.project,
+          elements: reindexed,
+          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  sendToBack: (id) => {
+    set((state) => {
+      const elements = [...state.project.elements];
+      const idx = elements.findIndex((el) => el.id === id);
+      if (idx === -1 || idx === 0) return state;
+      const [moved] = elements.splice(idx, 1);
+      elements.unshift(moved);
+      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
+      return {
+        ...pushHistory(state),
+        project: {
+          ...state.project,
+          elements: reindexed,
+          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  bringForward: (id) => {
+    set((state) => {
+      const elements = [...state.project.elements];
+      const idx = elements.findIndex((el) => el.id === id);
+      if (idx === -1 || idx === elements.length - 1) return state;
+      [elements[idx], elements[idx + 1]] = [elements[idx + 1], elements[idx]];
+      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
+      return {
+        ...pushHistory(state),
+        project: {
+          ...state.project,
+          elements: reindexed,
+          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  sendBackward: (id) => {
+    set((state) => {
+      const elements = [...state.project.elements];
+      const idx = elements.findIndex((el) => el.id === id);
+      if (idx === -1 || idx === 0) return state;
+      [elements[idx], elements[idx - 1]] = [elements[idx - 1], elements[idx]];
       const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
       return {
         ...pushHistory(state),

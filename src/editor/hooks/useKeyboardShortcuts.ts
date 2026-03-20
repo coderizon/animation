@@ -60,8 +60,16 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
-      const { selectedElementIds, getSelectedElements, deleteElement, updateElement } = useProjectStore.getState();
+      const { selectedElementIds, getSelectedElements, deleteElement, updateElement, bringToFront, sendToBack, bringForward, sendBackward } = useProjectStore.getState();
       if (selectedElementIds.length === 0) return;
+
+      // Layer ordering: Ctrl+] / Ctrl+[ (one step), Ctrl+Shift+] / Ctrl+Shift+[ (all the way)
+      if ((e.ctrlKey || e.metaKey) && selectedElementIds.length === 1) {
+        if (e.key === ']' && e.shiftKey) { e.preventDefault(); bringToFront(selectedElementIds[0]); return; }
+        if (e.key === ']') { e.preventDefault(); bringForward(selectedElementIds[0]); return; }
+        if (e.key === '[' && e.shiftKey) { e.preventDefault(); sendToBack(selectedElementIds[0]); return; }
+        if (e.key === '[') { e.preventDefault(); sendBackward(selectedElementIds[0]); return; }
+      }
 
       const step = e.shiftKey ? 10 : 1;
 
