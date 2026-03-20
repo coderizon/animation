@@ -12,8 +12,17 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
-      // Space is reserved for canvas pan — don't handle here
-      if (e.code === 'Space') return;
+      // Space: toggle play/pause
+      if (e.code === 'Space') {
+        e.preventDefault();
+        const { playbackState, playAllAnimations, pauseAllAnimations } = useProjectStore.getState();
+        if (playbackState === 'playing') {
+          pauseAllAnimations();
+        } else {
+          playAllAnimations();
+        }
+        return;
+      }
 
       // Undo: Ctrl+Z / Cmd+Z
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {

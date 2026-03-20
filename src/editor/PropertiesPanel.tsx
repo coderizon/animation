@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { ImageContent, ShapeContent, TextContent, WidgetContent, Keyframe, CameraKeyframe, Effect, EffectType, EFFECT_DEFINITIONS } from '../types/project';
 import { AnimationPicker } from './components/AnimationPicker';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCamera } from '@fortawesome/free-solid-svg-icons';
 
 const AE_ACCENT = 'var(--ae-accent)';
 const PANEL_BORDER = 'var(--ae-border)';
@@ -90,13 +92,10 @@ export const PropertiesPanel: React.FC = () => {
           border: `1px solid ${PANEL_BORDER}`,
           borderRadius: 12,
         }}>
-          <div style={{ fontSize: 14, lineHeight: 1.5 }}>
-            Wähle ein Element aus<br />um Eigenschaften zu bearbeiten
           </div>
-        </div>
 
         {/* Camera Keyframes Section */}
-        <PropertySection title="🎥 Kamera-Keyframes">
+        <PropertySection title="Kamera-Keyframes">
           <button
             onClick={() => {
               const snappedTime = Math.round(currentTime / 50) * 50;
@@ -119,7 +118,7 @@ export const PropertiesPanel: React.FC = () => {
               cursor: 'pointer',
             }}
           >
-            📷 Kamera-KF bei {Math.round(currentTime)}ms
+            <FontAwesomeIcon icon={faCamera} style={{ marginRight: 6 }} />Kamera-KF bei {Math.round(currentTime)}ms
           </button>
           {cameraKfs.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -135,11 +134,6 @@ export const PropertiesPanel: React.FC = () => {
                   onRemove={() => removeCameraKeyframe(kf.time)}
                 />
               ))}
-            </div>
-          )}
-          {cameraKfs.length === 0 && (
-            <div style={{ fontSize: 11, color: MUTED_TEXT, lineHeight: 1.4 }}>
-              Noch keine Kamera-Keyframes. Füge einen hinzu, um Zoom-/Pan-Animationen zu erstellen.
             </div>
           )}
         </PropertySection>
@@ -332,6 +326,73 @@ export const PropertiesPanel: React.FC = () => {
           </div>
         )}
       </PropertySection>
+
+      {/* Widget Properties */}
+      {selectedElement.type === 'widget' && (() => {
+        const content = selectedElement.content as WidgetContent;
+        const handleWidgetUpdate = (updates: Partial<WidgetContent>) => {
+          updateElement(selectedElement.id, {
+            content: { ...content, ...updates },
+          });
+        };
+        const handlePropsUpdate = (propUpdates: Record<string, unknown>) => {
+          handleWidgetUpdate({ props: { ...content.props, ...propUpdates } });
+        };
+        return (
+          <>
+          <PropertySection title="Widget">
+            <div style={{
+              padding: '5px 8px',
+              backgroundColor: PANEL_BG,
+              border: `1px solid ${PANEL_BORDER}`,
+              borderRadius: 8,
+              fontSize: 13,
+              color: 'var(--ae-text-primary)',
+              fontWeight: 500,
+            }}>
+              {content.widgetName}
+            </div>
+            <PropertyInput
+              label="FPS"
+              value={content.fps}
+              onChange={(val) => handleWidgetUpdate({ fps: Math.max(1, Math.min(60, val)) })}
+              min={1}
+              max={60}
+            />
+            <PropertyInput
+              label="Frames"
+              value={content.durationInFrames}
+              onChange={(val) => handleWidgetUpdate({ durationInFrames: Math.max(1, val) })}
+              min={1}
+            />
+          </PropertySection>
+          {content.widgetName === 'logoCarousel' && (
+            <LogoCarouselSettings
+              props={content.props || {}}
+              onUpdate={handlePropsUpdate}
+            />
+          )}
+          {content.widgetName === 'logoOrbit' && (
+            <LogoOrbitSettings
+              props={content.props || {}}
+              onUpdate={handlePropsUpdate}
+            />
+          )}
+          {content.widgetName === 'logoGridReveal' && (
+            <LogoGridRevealSettings
+              props={content.props || {}}
+              onUpdate={handlePropsUpdate}
+            />
+          )}
+          {content.widgetName === 'logoMorphChain' && (
+            <LogoMorphChainSettings
+              props={content.props || {}}
+              onUpdate={handlePropsUpdate}
+            />
+          )}
+          </>
+        );
+      })()}
 
       {/* Size */}
       <PropertySection title="Größe">
@@ -552,81 +613,7 @@ export const PropertiesPanel: React.FC = () => {
               onChange={(val) => handleImageUpdate({ alt: val })}
               placeholder="Image description"
             />
-            <div style={{ fontSize: 11, color: MUTED_TEXT, lineHeight: 1.4 }}>
-              Verwende eine Datei unter <code>/public/assets</code> als Pfad wie <code>/assets/name.png</code>
-              oder eine vollstaendige URL.
-            </div>
           </PropertySection>
-        );
-      })()}
-
-      {/* Widget Properties */}
-      {selectedElement.type === 'widget' && (() => {
-        const content = selectedElement.content as WidgetContent;
-        const handleWidgetUpdate = (updates: Partial<WidgetContent>) => {
-          updateElement(selectedElement.id, {
-            content: { ...content, ...updates },
-          });
-        };
-        const handlePropsUpdate = (propUpdates: Record<string, unknown>) => {
-          handleWidgetUpdate({ props: { ...content.props, ...propUpdates } });
-        };
-        return (
-          <>
-          <PropertySection title="Widget">
-            <div style={{
-              padding: '5px 8px',
-              backgroundColor: PANEL_BG,
-              border: `1px solid ${PANEL_BORDER}`,
-              borderRadius: 8,
-              fontSize: 13,
-              color: 'var(--ae-text-primary)',
-              fontWeight: 500,
-            }}>
-              {content.widgetName}
-            </div>
-            <PropertyInput
-              label="FPS"
-              value={content.fps}
-              onChange={(val) => handleWidgetUpdate({ fps: Math.max(1, Math.min(60, val)) })}
-              min={1}
-              max={60}
-            />
-            <PropertyInput
-              label="Frames"
-              value={content.durationInFrames}
-              onChange={(val) => handleWidgetUpdate({ durationInFrames: Math.max(1, val) })}
-              min={1}
-            />
-            <div style={{ fontSize: 12, color: MUTED_TEXT }}>
-              Dauer: {(content.durationInFrames / content.fps).toFixed(1)}s
-            </div>
-          </PropertySection>
-          {content.widgetName === 'logoCarousel' && (
-            <LogoCarouselSettings
-              props={content.props || {}}
-              onUpdate={handlePropsUpdate}
-            />
-          )}
-          {content.widgetName === 'logoOrbit' && (
-            <LogoOrbitSettings
-              props={content.props || {}}
-              onUpdate={handlePropsUpdate}
-            />
-          )}
-          {content.widgetName === 'logoGridReveal' && (
-            <LogoGridRevealSettings
-              props={content.props || {}}
-              onUpdate={handlePropsUpdate}
-            />
-          )}
-          {content.widgetName === 'logoMorphChain' && (
-            <LogoMorphChainSettings
-              props={content.props || {}}
-              onUpdate={handlePropsUpdate}
-            />
-          )}
-          </>
         );
       })()}
 
@@ -993,7 +980,7 @@ const EffectSlot: React.FC<EffectSlotProps> = ({ effect, onUpdate, onRemove }) =
       opacity: effect.enabled ? 1 : 0.5,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 14 }}>{def.icon}</span>
+        <span style={{ fontSize: 13 }}><FontAwesomeIcon icon={def.icon} /></span>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ae-text-primary)', flex: 1 }}>
           {def.displayName}
         </span>
@@ -1126,7 +1113,7 @@ const EffectAddButton: React.FC<EffectAddButtonProps> = ({ existingTypes, onAdd 
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--ae-accent)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = PANEL_BORDER; }}
               >
-                <span style={{ fontSize: 16 }}>{def.icon}</span>
+                <span style={{ fontSize: 14 }}><FontAwesomeIcon icon={def.icon} /></span>
                 <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--ae-text-primary)' }}>
                   {def.displayName}
                 </span>
@@ -1287,13 +1274,9 @@ const LogoCarouselSettings: React.FC<WidgetSettingsProps> = ({ props, onUpdate }
         <SettingsSlider label="Anzeigedauer" value={(props.displayDuration as number) || 2} min={0.5} max={10} step={0.5} unit="s" onChange={(v) => onUpdate({ displayDuration: v })} />
         <SettingsSlider label="Übergang" value={(props.transitionDuration as number) || 0.5} min={0.2} max={2} step={0.1} unit="s" onChange={(v) => onUpdate({ transitionDuration: v })} />
         <SettingsSlider label="Schwebeweg" value={(props.floatDistance as number) || 30} min={0} max={100} step={5} unit="px" onChange={(v) => onUpdate({ floatDistance: v })} />
+        <SettingsSlider label="Logo-Größe" value={(props.logoScale as number) || 0.9} min={0.2} max={1.5} step={0.05} onChange={(v) => onUpdate({ logoScale: v })} />
       </div>
       <LogoListEditor logos={logos} onChange={(l) => onUpdate({ logos: l })} />
-      {logos.length > 0 && (
-        <div style={{ fontSize: 11, color: MUTED_TEXT, marginTop: 6 }}>
-          Gesamtdauer: {(logos.length * ((props.displayDuration as number || 2) + (props.transitionDuration as number || 0.5) * 2)).toFixed(1)}s pro Durchlauf
-        </div>
-      )}
     </PropertySection>
   );
 };
@@ -1310,7 +1293,7 @@ const LogoOrbitSettings: React.FC<WidgetSettingsProps> = ({ props, onUpdate }) =
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <SettingsSlider label="Geschwindigkeit" value={(props.orbitSpeed as number) || 0.3} min={0.05} max={1} step={0.05} unit="x" onChange={(v) => onUpdate({ orbitSpeed: v })} />
         <SettingsSlider label="Neigung" value={(props.tiltAngle as number) || 60} min={0} max={80} step={5} unit="°" onChange={(v) => onUpdate({ tiltAngle: v })} />
-        <SettingsSlider label="Logo-Größe" value={(props.logoSize as number) || 0.2} min={0.1} max={0.5} step={0.05} onChange={(v) => onUpdate({ logoSize: v })} />
+        <SettingsSlider label="Logo-Größe" value={(props.logoScale as number) || 0.2} min={0.1} max={0.5} step={0.05} onChange={(v) => onUpdate({ logoScale: v })} />
       </div>
 
       {/* Center logo */}
@@ -1375,6 +1358,7 @@ const LogoGridRevealSettings: React.FC<WidgetSettingsProps> = ({ props, onUpdate
         <SettingsSlider label="Verzögerung" value={(props.staggerDelay as number) || 0.2} min={0.05} max={1} step={0.05} unit="s" onChange={(v) => onUpdate({ staggerDelay: v })} />
         <SettingsSlider label="Haltezeit" value={(props.holdDuration as number) || 2} min={0.5} max={10} step={0.5} unit="s" onChange={(v) => onUpdate({ holdDuration: v })} />
         <SettingsSlider label="Exit-Dauer" value={(props.exitDuration as number) || 0.5} min={0.2} max={2} step={0.1} unit="s" onChange={(v) => onUpdate({ exitDuration: v })} />
+        <SettingsSlider label="Logo-Größe" value={(props.logoScale as number) || 0.8} min={0.2} max={1.5} step={0.05} onChange={(v) => onUpdate({ logoScale: v })} />
       </div>
 
       {/* Reveal order */}
@@ -1424,6 +1408,7 @@ const LogoMorphChainSettings: React.FC<WidgetSettingsProps> = ({ props, onUpdate
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <SettingsSlider label="Anzeigedauer" value={(props.displayDuration as number) || 2} min={0.5} max={10} step={0.5} unit="s" onChange={(v) => onUpdate({ displayDuration: v })} />
         <SettingsSlider label="Übergang" value={(props.transitionDuration as number) || 0.6} min={0.2} max={2} step={0.1} unit="s" onChange={(v) => onUpdate({ transitionDuration: v })} />
+        <SettingsSlider label="Logo-Größe" value={(props.logoScale as number) || 0.65} min={0.2} max={1.5} step={0.05} onChange={(v) => onUpdate({ logoScale: v })} />
       </div>
 
       {/* Transition mode */}

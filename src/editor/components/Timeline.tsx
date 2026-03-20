@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useProjectStore } from '../../store/useProjectStore';
-import { ShapeContent, TextContent, WidgetContent, Keyframe } from '../../types/project';
+import { ShapeContent, TextContent, WidgetContent, Keyframe, CameraKeyframe, getAnimations } from '../../types/project';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCamera, faVideo } from '@fortawesome/free-solid-svg-icons';
 
 const TL_BORDER = 'var(--ae-border)';
 const TL_ROW_BORDER = 'rgba(255, 255, 255, 0.05)';
@@ -32,6 +35,21 @@ export const Timeline: React.FC = () => {
   const updateElementSilent = useProjectStore((state) => state.updateElementSilent);
   const pushSnapshot = useProjectStore((state) => state.pushSnapshot);
   const addKeyframe = useProjectStore((state) => state.addKeyframe);
+  const removeKeyframe = useProjectStore((state) => state.removeKeyframe);
+  const addCameraKeyframe = useProjectStore((state) => state.addCameraKeyframe);
+  const removeCameraKeyframe = useProjectStore((state) => state.removeCameraKeyframe);
+
+  // Keyframe context menu state
+  const [kfContextMenu, setKfContextMenu] = useState<{
+    x: number; y: number; elementId: string; time: number;
+  } | null>(null);
+  const kfMenuRef = useRef<HTMLDivElement>(null);
+
+  // Layer context menu state
+  const [layerContextMenu, setLayerContextMenu] = useState<{
+    x: number; y: number; elementId: string;
+  } | null>(null);
+  const layerMenuRef = useRef<HTMLDivElement>(null);
 
   // Inline rename state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -50,6 +68,7 @@ export const Timeline: React.FC = () => {
   const barDragRef = useRef<{
     type: 'move' | 'resize-left' | 'resize-right';
     elementId: string;
+    animIndex: number;
     startMouseX: number;
     startDelay: number;
     startDuration: number;
@@ -66,31 +85,51 @@ export const Timeline: React.FC = () => {
   } | null>(null);
   const [kfDragActive, setKfDragActive] = useState(false);
 
+  // Camera keyframe context menu state
+  const [camKfContextMenu, setCamKfContextMenu] = useState<{
+    x: number; y: number; time: number;
+  } | null>(null);
+  const camKfMenuRef = useRef<HTMLDivElement>(null);
+
+  // Camera keyframe diamond drag state
+  const camKfDragRef = useRef<{
+    startMouseX: number;
+    startTime: number;
+    originalTime: number; // preserved for Alt+Drag duplicate
+    isAltDuplicate: boolean;
+    snapshot: typeof project;
+  } | null>(null);
+  const [camKfDragActive, setCamKfDragActive] = useState(false);
+
   // Reverse order: highest layer first
   const elements = [...project.elements].reverse();
 
   // Timeline calculations
-  const animatedElements = project.elements.filter((el) => el.animation && el.animation.preset !== 'none');
+  const animatedElements = project.elements.filter((el) => getAnimations(el).length > 0);
   const maxKeyframeTime = project.elements.reduce((max, el) => {
     if (!el.keyframes || el.keyframes.length === 0) return max;
     return Math.max(max, ...el.keyframes.map((kf) => kf.time));
   }, 0);
-  const maxTime = Math.max(
-    3000,
+  const maxCameraKeyframeTime = (project.cameraKeyframes || []).reduce(
+    (max, kf) => Math.max(max, kf.time), 0
+  );
+  const contentMaxTime = Math.max(
     maxKeyframeTime + 500,
+    maxCameraKeyframeTime + 500,
     ...project.elements.map((el) => {
-      let t = 0;
-      const delay = el.animation?.delay || 0;
-      if (el.animation && el.animation.preset !== 'none') {
-        t = delay + (el.animation.duration || 600);
-      }
+      const anims = getAnimations(el);
+      let t = anims.reduce((m, a) => Math.max(m, (a.delay || 0) + (a.duration || 600)), 0);
       if (el.content.type === 'widget') {
-        const wDur = (el.content.durationInFrames / el.content.fps) * 1000;
-        t = Math.max(t, delay + wDur);
+        const wc = el.content as WidgetContent;
+        const wDur = (wc.durationInFrames / wc.fps) * 1000;
+        const firstDelay = anims.length > 0 ? Math.min(...anims.map(a => a.delay || 0)) : 0;
+        t = Math.max(t, firstDelay + wDur);
       }
       return t;
     })
   );
+  const maxTime = Math.max(10000, contentMaxTime);
+
   // Measure tracks container width for dynamic scaling
   const [tracksWidth, setTracksWidth] = useState(600);
   useEffect(() => {
@@ -104,13 +143,30 @@ export const Timeline: React.FC = () => {
     return () => obs.disconnect();
   }, []);
 
-  // Use a fixed px/ms scale that makes bars readable, and let the timeline scroll
-  const minPxPerMs = 0.15;  // minimum scale
-  const pxPerMs = Math.max(minPxPerMs, tracksWidth / maxTime);
+  // Timeline zoom: user-controlled horizontal scale
+  const [timelineZoom, setTimelineZoom] = useState(1.0);
+
+  const basePxPerMs = tracksWidth / maxTime;
+  const pxPerMs = Math.max(0.02, basePxPerMs * timelineZoom);
   const timelineWidth = Math.max(tracksWidth, maxTime * pxPerMs);
 
-  // Time markers
-  const markerInterval = maxTime <= 3000 ? 500 : maxTime <= 6000 ? 1000 : 2000;
+  // Wheel handler for timeline zoom (Ctrl+Scroll or Shift+Scroll)
+  const handleTimelineWheel = useCallback((e: React.WheelEvent) => {
+    if (e.ctrlKey || e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = -e.deltaY * 0.002;
+      setTimelineZoom((prev) => Math.max(0.2, Math.min(20, prev + prev * delta)));
+    }
+  }, []);
+
+  // Time markers - adaptive intervals based on visible pixel density
+  const msPerPx = 1 / pxPerMs;
+  const targetMarkerSpacing = 80; // pixels between markers
+  const rawInterval = msPerPx * targetMarkerSpacing;
+  // Snap to nice intervals: 100, 200, 500, 1000, 2000, 5000, 10000, ...
+  const niceIntervals = [100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000, 60000];
+  const markerInterval = niceIntervals.find((n) => n >= rawInterval) || 60000;
   const markers: number[] = [];
   for (let t = 0; t <= maxTime; t += markerInterval) {
     markers.push(t);
@@ -202,6 +258,7 @@ export const Timeline: React.FC = () => {
     type: 'move' | 'resize-left' | 'resize-right',
     delay: number,
     duration: number,
+    animIndex: number = 0,
   ) => {
     e.stopPropagation();
     e.preventDefault();
@@ -209,29 +266,34 @@ export const Timeline: React.FC = () => {
     barDragRef.current = {
       type,
       elementId,
+      animIndex,
       startMouseX: e.clientX,
       startDelay: delay,
       startDuration: duration,
       snapshot,
     };
     setBarDragActive(true);
-    selectElement(elementId);
-  }, [project, selectElement]);
+    // If element is already in selection, keep multi-select; otherwise select only this one
+    if (!selectedElementIds.includes(elementId)) {
+      selectElement(elementId);
+    }
+  }, [project, selectElement, selectedElementIds]);
 
   useEffect(() => {
     if (!barDragActive) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!barDragRef.current) return;
-      const { type, elementId, startMouseX, startDelay, startDuration } = barDragRef.current;
+      const { type, elementId, animIndex, startMouseX, startDelay, startDuration } = barDragRef.current;
       const dxPx = e.clientX - startMouseX;
       const dxMs = dxPx / pxPerMs;
 
-      const el = useProjectStore.getState().project.elements.find((el) => el.id === elementId);
+      const state = useProjectStore.getState();
+      const el = state.project.elements.find((el) => el.id === elementId);
       if (!el) return;
 
-      // Create animation config if it doesn't exist (e.g. widget bars) - use 'none' so only timing is controlled
-      const anim = el.animation || { preset: 'none' as const, delay: startDelay, duration: startDuration, easing: 'easeOut' as const };
+      const anims = [...(el.animations || [])];
+      const anim = anims[animIndex] || { preset: 'none' as const, delay: startDelay, duration: startDuration, easing: 'easeOut' as const };
 
       let newDelay = startDelay;
       let newDuration = startDuration;
@@ -239,7 +301,6 @@ export const Timeline: React.FC = () => {
       if (type === 'move') {
         newDelay = Math.max(0, Math.round(startDelay + dxMs));
       } else if (type === 'resize-left') {
-        // Moving left edge: changes both delay and duration
         const shift = Math.round(dxMs);
         newDelay = Math.max(0, startDelay + shift);
         const actualShift = newDelay - startDelay;
@@ -252,9 +313,26 @@ export const Timeline: React.FC = () => {
       newDelay = Math.round(newDelay / 50) * 50;
       newDuration = Math.max(100, Math.round(newDuration / 50) * 50);
 
-      updateElementSilent(elementId, {
-        animation: { ...anim, delay: newDelay, duration: newDuration },
-      });
+      anims[animIndex] = { ...anim, delay: newDelay, duration: newDuration };
+      updateElementSilent(elementId, { animations: anims });
+
+      // Multi-select: apply same delta to all other selected elements (move only)
+      if (type === 'move' && state.selectedElementIds.length > 1) {
+        const delayDelta = newDelay - startDelay;
+        const snap = barDragRef.current.snapshot as typeof project;
+        for (const selId of state.selectedElementIds) {
+          if (selId === elementId) continue;
+          const snapEl = snap.elements.find((e) => e.id === selId);
+          if (!snapEl) continue;
+          const origAnims = snapEl.animations || [];
+          if (origAnims.length === 0) continue;
+          const updated = origAnims.map((a) => ({
+            ...a,
+            delay: Math.max(0, Math.round(((a.delay || 0) + delayDelta) / 50) * 50),
+          }));
+          updateElementSilent(selId, { animations: updated });
+        }
+      }
     };
 
     const handleMouseUp = () => {
@@ -279,6 +357,7 @@ export const Timeline: React.FC = () => {
     elementId: string,
     time: number,
   ) => {
+    if (e.button !== 0) return; // Only left-click initiates drag
     e.stopPropagation();
     e.preventDefault();
     const snapshot = JSON.parse(JSON.stringify(project));
@@ -329,35 +408,180 @@ export const Timeline: React.FC = () => {
     };
   }, [kfDragActive, pxPerMs, updateElementSilent, pushSnapshot]);
 
-  // Add keyframe at current playhead time for selected element (captures ALL properties)
-  const handleAddKeyframe = useCallback(() => {
-    if (selectedElementIds.length !== 1) return;
-    const el = project.elements.find((e) => e.id === selectedElementIds[0]);
-    if (!el) return;
+  // Camera keyframe diamond drag handlers
+  const handleCamKfMouseDown = useCallback((
+    e: React.MouseEvent,
+    time: number,
+  ) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const isAlt = e.altKey;
+    const snapshot = JSON.parse(JSON.stringify(project));
 
-    const kf: Keyframe = {
-      time: Math.round(currentTime / 50) * 50, // snap to 50ms
-      x: el.position.x,
-      y: el.position.y,
-      width: el.size.width,
-      height: el.size.height,
-      rotation: el.rotation,
+    if (isAlt) {
+      // Alt+Drag: create a duplicate at same position, then drag the copy
+      const cameraKfs = useProjectStore.getState().project.cameraKeyframes || [];
+      const original = cameraKfs.find((k) => k.time === time);
+      if (!original) return;
+      // Insert duplicate at +50ms (will be moved by drag)
+      const dupeTime = time + 50;
+      const updated = [...cameraKfs, { ...original, time: dupeTime }].sort((a, b) => a.time - b.time);
+      useProjectStore.setState((state) => ({
+        project: { ...state.project, cameraKeyframes: updated },
+      }));
+      camKfDragRef.current = { startMouseX: e.clientX, startTime: dupeTime, originalTime: time, isAltDuplicate: true, snapshot };
+    } else {
+      camKfDragRef.current = { startMouseX: e.clientX, startTime: time, originalTime: time, isAltDuplicate: false, snapshot };
+    }
+    setCamKfDragActive(true);
+  }, [project]);
+
+  useEffect(() => {
+    if (!camKfDragActive) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!camKfDragRef.current) return;
+      const { startMouseX, startTime } = camKfDragRef.current;
+      const dxPx = e.clientX - startMouseX;
+      const dxMs = dxPx / pxPerMs;
+      let newTime = Math.max(0, Math.round(startTime + dxMs));
+      newTime = Math.round(newTime / 50) * 50;
+
+      const cameraKfs = useProjectStore.getState().project.cameraKeyframes || [];
+      const kf = cameraKfs.find((k) => k.time === startTime) ||
+                 cameraKfs.find((k) => Math.abs(k.time - startTime) < 50);
+      if (!kf) return;
+
+      const filtered = cameraKfs.filter((k) => k.time !== kf.time);
+      const updated = [...filtered, { ...kf, time: newTime }].sort((a, b) => a.time - b.time);
+      // Silent update via direct set (no history)
+      useProjectStore.setState((state) => ({
+        project: { ...state.project, cameraKeyframes: updated },
+      }));
+      camKfDragRef.current.startTime = newTime;
+      camKfDragRef.current.startMouseX = e.clientX;
     };
 
-    // Capture content-specific properties
-    if (el.type === 'shape') {
-      const c = el.content as ShapeContent;
-      kf.fill = c.fill;
-      kf.stroke = c.stroke;
-      kf.strokeWidth = c.strokeWidth;
-    } else if (el.type === 'text') {
-      const c = el.content as TextContent;
-      kf.color = c.color;
-      kf.fontSize = c.fontSize;
-    }
+    const handleMouseUp = () => {
+      if (camKfDragRef.current) {
+        pushSnapshot(camKfDragRef.current.snapshot);
+      }
+      camKfDragRef.current = null;
+      setCamKfDragActive(false);
+    };
 
-    addKeyframe(el.id, kf);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [camKfDragActive, pxPerMs, pushSnapshot]);
+
+  // Close camera keyframe context menu on click-outside or Escape
+  useEffect(() => {
+    if (!camKfContextMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (camKfMenuRef.current && !camKfMenuRef.current.contains(e.target as Node)) {
+        setCamKfContextMenu(null);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCamKfContextMenu(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [camKfContextMenu]);
+
+  // Close keyframe context menu on click-outside or Escape
+  useEffect(() => {
+    if (!kfContextMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (kfMenuRef.current && !kfMenuRef.current.contains(e.target as Node)) {
+        setKfContextMenu(null);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setKfContextMenu(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [kfContextMenu]);
+
+  // Close layer context menu on click-outside or Escape
+  useEffect(() => {
+    if (!layerContextMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (layerMenuRef.current && !layerMenuRef.current.contains(e.target as Node)) {
+        setLayerContextMenu(null);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLayerContextMenu(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [layerContextMenu]);
+
+  // Add keyframe at current playhead time for all selected elements
+  const handleAddKeyframe = useCallback(() => {
+    if (selectedElementIds.length === 0) return;
+    const snappedTime = Math.round(currentTime / 50) * 50;
+
+    for (const selId of selectedElementIds) {
+      const el = project.elements.find((e) => e.id === selId);
+      if (!el) continue;
+
+      const kf: Keyframe = {
+        time: snappedTime,
+        x: el.position.x,
+        y: el.position.y,
+        width: el.size.width,
+        height: el.size.height,
+        rotation: el.rotation,
+      };
+
+      // Capture content-specific properties
+      if (el.type === 'shape') {
+        const c = el.content as ShapeContent;
+        kf.fill = c.fill;
+        kf.stroke = c.stroke;
+        kf.strokeWidth = c.strokeWidth;
+        kf.borderRadius = c.borderRadius;
+      } else if (el.type === 'text') {
+        const c = el.content as TextContent;
+        kf.color = c.color;
+        kf.fontSize = c.fontSize;
+      }
+
+      addKeyframe(el.id, kf);
+    }
   }, [selectedElementIds, project.elements, currentTime, addKeyframe]);
+
+  // Add camera keyframe at current playhead time
+  const handleAddCameraKeyframe = useCallback(() => {
+    const snappedTime = Math.round(currentTime / 50) * 50;
+    const camKf: CameraKeyframe = {
+      time: snappedTime,
+      x: project.canvas.width / 2,
+      y: project.canvas.height / 2,
+      zoom: 1.0,
+    };
+    addCameraKeyframe(camKf);
+  }, [currentTime, project.canvas.width, project.canvas.height, addCameraKeyframe]);
 
   // Format time as MM:SS.ms
   const formatTime = (ms: number) => {
@@ -405,20 +629,36 @@ export const Timeline: React.FC = () => {
           </span>
           <button
             onClick={handleAddKeyframe}
-            disabled={selectedElementIds.length !== 1}
+            disabled={selectedElementIds.length === 0}
             title="Keyframe an aktueller Position hinzufügen"
             style={{
               padding: '4px 10px',
-              backgroundColor: selectedElementIds.length === 1 ? 'var(--ae-notice)' : 'transparent',
-              color: selectedElementIds.length === 1 ? 'var(--ae-gray-900)' : TL_TEXT_DISABLED,
+              backgroundColor: selectedElementIds.length > 0 ? 'var(--ae-notice)' : 'transparent',
+              color: selectedElementIds.length > 0 ? 'var(--ae-gray-900)' : TL_TEXT_DISABLED,
               border: `1px solid ${TL_BORDER}`,
               borderRadius: 4,
               fontSize: 11,
               fontWeight: 600,
-              cursor: selectedElementIds.length === 1 ? 'pointer' : 'not-allowed',
+              cursor: selectedElementIds.length > 0 ? 'pointer' : 'not-allowed',
             }}
           >
             ◆ Keyframe bei {formatTime(currentTime)}
+          </button>
+          <button
+            onClick={handleAddCameraKeyframe}
+            title="Kamera-Keyframe an aktueller Position hinzufügen"
+            style={{
+              padding: '4px 10px',
+              backgroundColor: '#00bcd4',
+              color: '#000',
+              border: `1px solid ${TL_BORDER}`,
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <FontAwesomeIcon icon={faCamera} style={{ marginRight: 4 }} />Kamera-KF
           </button>
           {/* Play / Pause / Stop controls */}
           <button
@@ -453,6 +693,48 @@ export const Timeline: React.FC = () => {
               ⏹ Stop
             </button>
           )}
+          {/* Timeline Zoom controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 8 }}>
+            <button
+              onClick={() => setTimelineZoom((z) => Math.max(0.2, z / 1.4))}
+              title="Timeline verkleinern"
+              style={{
+                padding: '2px 6px',
+                backgroundColor: 'transparent',
+                color: TL_TEXT_SECONDARY,
+                border: `1px solid ${TL_BORDER}`,
+                borderRadius: 3,
+                fontSize: 13,
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
+            >
+              -
+            </button>
+            <span
+              onClick={() => setTimelineZoom(1.0)}
+              title="Timeline-Zoom zurücksetzen"
+              style={{ fontSize: 10, color: TL_TEXT_MUTED, minWidth: 36, textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
+            >
+              {Math.round(timelineZoom * 100)}%
+            </span>
+            <button
+              onClick={() => setTimelineZoom((z) => Math.min(20, z * 1.4))}
+              title="Timeline vergrößern"
+              style={{
+                padding: '2px 6px',
+                backgroundColor: 'transparent',
+                color: TL_TEXT_SECONDARY,
+                border: `1px solid ${TL_BORDER}`,
+                borderRadius: 3,
+                fontSize: 13,
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
 
@@ -488,6 +770,35 @@ export const Timeline: React.FC = () => {
             Layers
           </div>
 
+          {/* Camera layer row */}
+          {(project.cameraKeyframes && project.cameraKeyframes.length > 0) && (
+            <div
+              style={{
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '0 4px',
+                fontSize: 11,
+                backgroundColor: 'rgba(0, 188, 212, 0.08)',
+                borderBottom: `1px solid ${TL_ROW_BORDER}`,
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ width: 16 }} />
+              <span style={{ width: 20, textAlign: 'center', fontSize: 11 }}><FontAwesomeIcon icon={faVideo} /></span>
+              <span style={{ width: 20 }} />
+              <span style={{
+                flex: 1,
+                fontSize: 11,
+                fontWeight: 600,
+                color: '#00bcd4',
+              }}>
+                Kamera
+              </span>
+            </div>
+          )}
+
           {/* Layer rows */}
           {elements.map((el, reversedIndex) => {
             const isSelected = selectedElementIds.includes(el.id);
@@ -501,6 +812,12 @@ export const Timeline: React.FC = () => {
                 onDrop={() => handleDrop(reversedIndex)}
                 onDragEnd={() => { dragSourceIndex.current = null; setDragOverIndex(null); }}
                 onClick={(e) => handleRowClick(el.id, e)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  selectElement(el.id);
+                  setLayerContextMenu({ x: e.clientX, y: e.clientY, elementId: el.id });
+                }}
                 style={{
                   height: 28,
                   display: 'flex',
@@ -606,6 +923,19 @@ export const Timeline: React.FC = () => {
                     {getElementDisplayName(el)}
                   </span>
                 )}
+                {el.effects && el.effects.filter(e => e.enabled).length > 0 && (
+                  <span
+                    title={`${el.effects.filter(e => e.enabled).length} Effekt(e) aktiv`}
+                    style={{
+                      fontSize: 10,
+                      color: TL_ACCENT,
+                      flexShrink: 0,
+                      marginLeft: 2,
+                    }}
+                  >
+                    FX
+                  </span>
+                )}
               </div>
             );
           })}
@@ -620,6 +950,7 @@ export const Timeline: React.FC = () => {
         {/* Timeline Tracks (Right) */}
         <div
           ref={tracksRef}
+          onWheel={handleTimelineWheel}
           style={{
             flex: 1,
             overflow: 'auto',
@@ -698,9 +1029,63 @@ export const Timeline: React.FC = () => {
             ))}
           </div>
 
+          {/* Camera track */}
+          {(project.cameraKeyframes && project.cameraKeyframes.length > 0) && (
+            <div
+              style={{
+                height: 28,
+                position: 'relative',
+                minWidth: timelineWidth,
+                borderBottom: `1px solid ${TL_ROW_BORDER}`,
+                cursor: 'crosshair',
+                backgroundColor: 'rgba(0, 188, 212, 0.04)',
+                flexShrink: 0,
+              }}
+            >
+              {/* Camera keyframe diamonds (larger hit area wrapper) */}
+              {project.cameraKeyframes.map((kf) => (
+                <div
+                  key={`cam-kf-${kf.time}`}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleCamKfMouseDown(e, kf.time);
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCamKfContextMenu({ x: e.clientX, y: e.clientY, time: kf.time });
+                  }}
+                  title={`Kamera ${kf.time}ms (x:${Math.round(kf.x)}, y:${Math.round(kf.y)}, zoom:${kf.zoom.toFixed(1)})`}
+                  style={{
+                    position: 'absolute',
+                    left: kf.time * pxPerMs - 9,
+                    top: 5,
+                    width: 18,
+                    height: 18,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'ew-resize',
+                    zIndex: 5,
+                  }}
+                >
+                  <div style={{
+                    width: 10,
+                    height: 10,
+                    backgroundColor: '#00bcd4',
+                    border: '1px solid #00e5ff',
+                    transform: 'rotate(45deg)',
+                    pointerEvents: 'none',
+                  }} />
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Tracks - one per element (reversed order to match layer panel) */}
           {elements.map((el) => {
-            const hasAnimation = el.animation && el.animation.preset !== 'none';
+            const anims = getAnimations(el);
+            const hasAnimation = anims.length > 0;
             const isSelected = selectedElementIds.includes(el.id);
 
             return (
@@ -717,22 +1102,31 @@ export const Timeline: React.FC = () => {
                   flexShrink: 0,
                 }}
               >
-                {hasAnimation && (() => {
-                  const delay = el.animation!.delay || 0;
-                  const duration = el.animation!.duration || 600;
+                {/* Animation bars (one per animation) */}
+                {anims.map((anim, animIdx) => {
+                  const delay = anim.delay || 0;
+                  const duration = anim.duration || 600;
                   const barWidth = Math.max(duration * pxPerMs, 20);
+                  const barHue = 220 + animIdx * 40;
+                  const barColor = animIdx === 0
+                    ? (isSelected ? TL_ACCENT : 'rgba(86, 129, 255, 0.3)')
+                    : (isSelected ? `hsl(${barHue}, 70%, 60%)` : `hsla(${barHue}, 70%, 60%, 0.3)`);
+                  const borderColor = animIdx === 0
+                    ? (isSelected ? TL_ACCENT_STRONG : 'rgba(86, 129, 255, 0.4)')
+                    : (isSelected ? `hsl(${barHue}, 70%, 70%)` : `hsla(${barHue}, 70%, 60%, 0.4)`);
                   return (
                     <div
-                      onMouseDown={(e) => handleBarMouseDown(e, el.id, 'move', delay, duration)}
+                      key={`anim-${animIdx}`}
+                      onMouseDown={(e) => handleBarMouseDown(e, el.id, 'move', delay, duration, animIdx)}
                       style={{
                         position: 'absolute',
                         left: delay * pxPerMs,
                         width: barWidth,
                         top: 5,
                         height: 18,
-                        backgroundColor: isSelected ? TL_ACCENT : 'rgba(86, 129, 255, 0.3)',
+                        backgroundColor: barColor,
                         borderRadius: 3,
-                        border: isSelected ? `1px solid ${TL_ACCENT_STRONG}` : '1px solid rgba(86, 129, 255, 0.4)',
+                        border: `1px solid ${borderColor}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -741,18 +1135,9 @@ export const Timeline: React.FC = () => {
                         userSelect: 'none',
                       }}
                     >
-                      {/* Left resize handle */}
                       <div
-                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-left', delay, duration)}
-                        style={{
-                          position: 'absolute',
-                          left: 0,
-                          top: 0,
-                          width: 6,
-                          height: '100%',
-                          cursor: 'ew-resize',
-                          borderRadius: '3px 0 0 3px',
-                        }}
+                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-left', delay, duration, animIdx)}
+                        style={{ position: 'absolute', left: 0, top: 0, width: 6, height: '100%', cursor: 'ew-resize', borderRadius: '3px 0 0 3px' }}
                       />
                       <span style={{
                         fontSize: 9,
@@ -761,24 +1146,15 @@ export const Timeline: React.FC = () => {
                         padding: '0 8px',
                         pointerEvents: 'none',
                       }}>
-                        {el.animation!.preset}
+                        {anim.preset}
                       </span>
-                      {/* Right resize handle */}
                       <div
-                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-right', delay, duration)}
-                        style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: 0,
-                          width: 6,
-                          height: '100%',
-                          cursor: 'ew-resize',
-                          borderRadius: '0 3px 3px 0',
-                        }}
+                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-right', delay, duration, animIdx)}
+                        style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'ew-resize', borderRadius: '0 3px 3px 0' }}
                       />
                     </div>
                   );
-                })()}
+                })}
 
                 {/* Default element bar (if no animation bar) - shows element presence */}
                 {!hasAnimation && el.content.type !== 'widget' && (
@@ -813,11 +1189,11 @@ export const Timeline: React.FC = () => {
                 {!hasAnimation && el.content.type === 'widget' && (() => {
                   const wc = el.content as WidgetContent;
                   const wDuration = (wc.durationInFrames / wc.fps) * 1000;
-                  const wDelay = el.animation?.delay || 0;
+                  const wDelay = 0;
                   const wBarWidth = Math.max(wDuration * pxPerMs, 20);
                   return (
                     <div
-                      onMouseDown={(e) => handleBarMouseDown(e, el.id, 'move', wDelay, wDuration)}
+                      onMouseDown={(e) => handleBarMouseDown(e, el.id, 'move', wDelay, wDuration, 0)}
                       style={{
                         position: 'absolute',
                         left: wDelay * pxPerMs,
@@ -835,18 +1211,9 @@ export const Timeline: React.FC = () => {
                         userSelect: 'none',
                       }}
                     >
-                      {/* Left resize handle */}
                       <div
-                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-left', wDelay, wDuration)}
-                        style={{
-                          position: 'absolute',
-                          left: 0,
-                          top: 0,
-                          width: 6,
-                          height: '100%',
-                          cursor: 'ew-resize',
-                          borderRadius: '3px 0 0 3px',
-                        }}
+                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-left', wDelay, wDuration, 0)}
+                        style={{ position: 'absolute', left: 0, top: 0, width: 6, height: '100%', cursor: 'ew-resize', borderRadius: '3px 0 0 3px' }}
                       />
                       <span style={{
                         fontSize: 9,
@@ -857,18 +1224,9 @@ export const Timeline: React.FC = () => {
                       }}>
                         {wc.widgetName}
                       </span>
-                      {/* Right resize handle */}
                       <div
-                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-right', wDelay, wDuration)}
-                        style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: 0,
-                          width: 6,
-                          height: '100%',
-                          cursor: 'ew-resize',
-                          borderRadius: '0 3px 3px 0',
-                        }}
+                        onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-right', wDelay, wDuration, 0)}
+                        style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'ew-resize', borderRadius: '0 3px 3px 0' }}
                       />
                     </div>
                   );
@@ -879,6 +1237,11 @@ export const Timeline: React.FC = () => {
                   <div
                     key={`kf-${kf.time}`}
                     onMouseDown={(e) => handleKfMouseDown(e, el.id, kf.time)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setKfContextMenu({ x: e.clientX, y: e.clientY, elementId: el.id, time: kf.time });
+                    }}
                     title={`Keyframe ${kf.time}ms (${Math.round(kf.x)}, ${Math.round(kf.y)})`}
                     style={{
                       position: 'absolute',
@@ -899,6 +1262,291 @@ export const Timeline: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Keyframe context menu */}
+      {kfContextMenu && ReactDOM.createPortal(
+        <div
+          ref={kfMenuRef}
+          style={{
+            position: 'fixed',
+            top: kfContextMenu.y,
+            left: kfContextMenu.x,
+            backgroundColor: 'var(--ae-bg-panel)',
+            border: '1px solid var(--ae-border)',
+            borderRadius: 6,
+            padding: '4px 0',
+            minWidth: 220,
+            zIndex: 100000,
+            boxShadow: 'var(--ae-shadow-floating)',
+          }}
+        >
+          {/* Duplicate options */}
+          {[500, 1000, 2000].map((offset) => {
+            const label = offset >= 1000 ? `${offset / 1000}s` : `${offset}ms`;
+            return (
+              <div
+                key={`dup-${offset}`}
+                onClick={() => {
+                  const el = useProjectStore.getState().project.elements.find(
+                    (e) => e.id === kfContextMenu.elementId
+                  );
+                  const kf = el?.keyframes?.find((k) => k.time === kfContextMenu.time);
+                  if (kf) {
+                    addKeyframe(kfContextMenu.elementId, { ...kf, time: kf.time + offset });
+                  }
+                  setKfContextMenu(null);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  color: 'var(--ae-notice-strong)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+                }}
+              >
+                Duplizieren +{label}
+              </div>
+            );
+          })}
+
+          {/* Hold options */}
+          <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />
+          {[1000, 2000, 3000].map((offset) => {
+            const label = `${offset / 1000}s`;
+            return (
+              <div
+                key={`hold-${offset}`}
+                onClick={() => {
+                  const el = useProjectStore.getState().project.elements.find(
+                    (e) => e.id === kfContextMenu.elementId
+                  );
+                  const kf = el?.keyframes?.find((k) => k.time === kfContextMenu.time);
+                  if (kf) {
+                    addKeyframe(kfContextMenu.elementId, { ...kf, time: kf.time + offset });
+                  }
+                  setKfContextMenu(null);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  color: 'var(--ae-text-primary)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+                }}
+              >
+                Halten {label}
+              </div>
+            );
+          })}
+
+          {/* Delete */}
+          <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />
+          <div
+            onClick={() => {
+              removeKeyframe(kfContextMenu.elementId, kfContextMenu.time);
+              setKfContextMenu(null);
+            }}
+            style={{
+              padding: '8px 16px',
+              color: 'var(--ae-danger)',
+              fontSize: 13,
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            Keyframe löschen
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Camera keyframe context menu */}
+      {camKfContextMenu && ReactDOM.createPortal(
+        <div
+          ref={camKfMenuRef}
+          style={{
+            position: 'fixed',
+            top: camKfContextMenu.y,
+            left: camKfContextMenu.x,
+            backgroundColor: 'var(--ae-bg-panel)',
+            border: '1px solid var(--ae-border)',
+            borderRadius: 6,
+            padding: '4px 0',
+            minWidth: 220,
+            zIndex: 100000,
+            boxShadow: 'var(--ae-shadow-floating)',
+          }}
+        >
+          {/* Duplicate options */}
+          {[500, 1000, 2000].map((offset) => {
+            const label = offset >= 1000 ? `${offset / 1000}s` : `${offset}ms`;
+            return (
+              <div
+                key={`dup-${offset}`}
+                onClick={() => {
+                  const cameraKfs = useProjectStore.getState().project.cameraKeyframes || [];
+                  const kf = cameraKfs.find((k) => k.time === camKfContextMenu.time);
+                  if (kf) {
+                    addCameraKeyframe({ ...kf, time: kf.time + offset });
+                  }
+                  setCamKfContextMenu(null);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  color: '#00bcd4',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+                }}
+              >
+                Duplizieren +{label}
+              </div>
+            );
+          })}
+
+          {/* Hold options */}
+          <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />
+          {[1000, 2000, 3000].map((offset) => {
+            const label = `${offset / 1000}s`;
+            return (
+              <div
+                key={`hold-${offset}`}
+                onClick={() => {
+                  const cameraKfs = useProjectStore.getState().project.cameraKeyframes || [];
+                  const kf = cameraKfs.find((k) => k.time === camKfContextMenu.time);
+                  if (kf) {
+                    addCameraKeyframe({ ...kf, time: kf.time + offset });
+                  }
+                  setCamKfContextMenu(null);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  color: 'var(--ae-text-primary)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+                }}
+              >
+                Halten {label}
+              </div>
+            );
+          })}
+
+          {/* Delete */}
+          <div style={{ height: 1, backgroundColor: 'var(--ae-border)', margin: '4px 0' }} />
+          <div
+            onClick={() => {
+              removeCameraKeyframe(camKfContextMenu.time);
+              setCamKfContextMenu(null);
+            }}
+            style={{
+              padding: '8px 16px',
+              color: 'var(--ae-danger)',
+              fontSize: 13,
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            Kamera-Keyframe löschen
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Layer context menu */}
+      {layerContextMenu && ReactDOM.createPortal(
+        <div
+          ref={layerMenuRef}
+          style={{
+            position: 'fixed',
+            top: layerContextMenu.y,
+            left: layerContextMenu.x,
+            backgroundColor: 'var(--ae-bg-panel)',
+            border: '1px solid var(--ae-border)',
+            borderRadius: 6,
+            padding: '4px 0',
+            minWidth: 180,
+            zIndex: 100000,
+            boxShadow: 'var(--ae-shadow-floating)',
+          }}
+        >
+          {(() => {
+            const realIndex = project.elements.findIndex((el) => el.id === layerContextMenu.elementId);
+            const lastIndex = project.elements.length - 1;
+            const items = [
+              { label: 'Ganz nach vorne', disabled: realIndex === lastIndex, action: () => reorderElements(realIndex, lastIndex) },
+              { label: 'Eine Ebene nach vorne', disabled: realIndex >= lastIndex, action: () => reorderElements(realIndex, realIndex + 1) },
+              { label: 'Eine Ebene nach hinten', disabled: realIndex <= 0, action: () => reorderElements(realIndex, realIndex - 1) },
+              { label: 'Ganz nach hinten', disabled: realIndex === 0, action: () => reorderElements(realIndex, 0) },
+            ];
+            return items.map((item) => (
+              <div
+                key={item.label}
+                onClick={() => {
+                  if (!item.disabled) {
+                    item.action();
+                    setLayerContextMenu(null);
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  color: item.disabled ? TL_TEXT_DISABLED : TL_TEXT,
+                  fontSize: 13,
+                  cursor: item.disabled ? 'default' : 'pointer',
+                  userSelect: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  if (!item.disabled) {
+                    (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ae-bg-panel-raised)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+                }}
+              >
+                {item.label}
+              </div>
+            ));
+          })()}
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

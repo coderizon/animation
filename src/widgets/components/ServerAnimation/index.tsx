@@ -1,5 +1,6 @@
 import React from 'react';
 import { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
+import { faServer } from '@fortawesome/free-solid-svg-icons';
 
 const ServerAnimation: React.FC<WidgetComponentProps> = ({ width, height }) => {
   return (
@@ -190,7 +191,7 @@ export const serverAnimationWidget: WidgetRegistryEntry = {
   name: 'serverAnimation',
   displayName: 'Server Animation',
   description: 'AI Server mit 2 Modulen, blinkenden LEDs und Connector',
-  icon: 'S',
+  icon: faServer,
   component: ServerAnimation,
   nativeWidth: 500,
   nativeHeight: 350,

@@ -12,8 +12,8 @@ import {
   createShapeInsert,
   createTextInsert,
   createWidgetInsert,
-  quickShapeIds,
 } from './insertPresets';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ShapeGalleryPopover } from './components/ShapeGalleryPopover';
 import { ShapeInsertDef } from './insertPresets';
 import { getAllWidgets } from '../widgets/registry';
@@ -49,12 +49,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const selectedElementIds = useProjectStore((state) => state.selectedElementIds);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
-  const [timelineHeight, setTimelineHeight] = useState(116);
+  const [timelineHeight, setTimelineHeight] = useState(320);
   const [isResizingTimeline, setIsResizingTimeline] = useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = useState<'start' | 'insert' | 'animation' | 'view'>('insert');
   const [assetLibraryView, setAssetLibraryView] = useState<'logos' | 'widgets' | null>(null);
   const [showShapeGallery, setShowShapeGallery] = useState(false);
-  const [recentShapeIds, setRecentShapeIds] = useState<string[]>(quickShapeIds);
+
   const timelineRef = useRef<HTMLDivElement>(null);
   const shapeGalleryButtonRef = useRef<HTMLButtonElement>(null);
   const logosButtonRef = useRef<HTMLButtonElement>(null);
@@ -165,10 +165,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
     setAssetLibraryView((current) => (current === view ? null : view));
   };
 
-  const rememberShape = (shapeId: string) => {
-    setRecentShapeIds((current) => [shapeId, ...current.filter((id) => id !== shapeId)].slice(0, 6));
-  };
-
   const handleInsertText = () => {
     addElement(createTextInsert(project));
   };
@@ -179,7 +175,6 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
 
   const handleInsertShape = (shape: ShapeInsertDef) => {
     addElement(createShapeInsert(project, shape));
-    rememberShape(shape.id);
     setShowShapeGallery(false);
   };
 
@@ -232,7 +227,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             {quickWidgets.map((widget) => (
               <RibbonButton
                 key={widget.name}
-                icon={widget.icon}
+                icon={<FontAwesomeIcon icon={widget.icon} />}
                 label={
                   widget.name === 'networkVisualization'
                     ? 'Network'
@@ -459,7 +454,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
         isOpen={showShapeGallery}
         onClose={() => setShowShapeGallery(false)}
         onSelectShape={handleInsertShape}
-        recentShapeIds={recentShapeIds}
+
       />
 
       <AssetLibrary

@@ -1,5 +1,18 @@
 import { AnimationPreset } from '../types/animation';
 import { AnimationPresetName } from '../types/project';
+import {
+  faMinus, faArrowTrendUp, faArrowTrendDown, faCloud,
+  faArrowLeft, faArrowRight, faArrowUp, faArrowDown,
+  faAnglesLeft, faAnglesRight,
+  faExpand, faCompress, faBurst, faMagnifyingGlassPlus, faMagnifyingGlassMinus, faVideo,
+  faRotate, faRotateRight, faArrowsSpin, faRepeat,
+  faArrowsUpDown, faMagnet, faSpinner, faCircleDot,
+  faWaveSquare, faPlay, faCaretDown, faBackward, faGripLines, faBullseye,
+  faPencil, faPuzzlePiece,
+  faBolt, faRainbow, faTv, faWandSparkles, faMoon,
+  faWind, faFilm, faMountain, faCube,
+  faStar, faStarHalfStroke, faBomb, faWater, faSmog, faCamera,
+} from '@fortawesome/free-solid-svg-icons';
 
 // Animation Preset Definitions
 
@@ -9,7 +22,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'none',
     displayName: 'No Animation',
     description: 'Element appears instantly',
-    icon: '—',
+    icon: faMinus,
     defaultDuration: 0,
     variants: {
       hidden: {},
@@ -22,7 +35,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'fadeIn',
     displayName: 'Fade In',
     description: 'Element fades in smoothly',
-    icon: '↗',
+    icon: faArrowTrendUp,
     defaultDuration: 600,
     variants: {
       hidden: { opacity: 0 },
@@ -34,7 +47,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'fadeOut',
     displayName: 'Fade Out',
     description: 'Element fades out',
-    icon: '↘',
+    icon: faArrowTrendDown,
     defaultDuration: 600,
     variants: {
       hidden: { opacity: 1 },
@@ -46,7 +59,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'softFadeOut',
     displayName: 'Weiches Ausfaden',
     description: 'Element fades out softly while pulling back',
-    icon: '🌫',
+    icon: faCloud,
     defaultDuration: 1000,
     variants: {
       hidden: { opacity: 1, scale: 1 },
@@ -63,7 +76,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'slideInLeft',
     displayName: 'Slide from Left',
     description: 'Element slides in from the left',
-    icon: '←',
+    icon: faArrowLeft,
     defaultDuration: 500,
     variants: {
       hidden: { opacity: 0, x: -100 },
@@ -75,7 +88,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'slideInRight',
     displayName: 'Slide from Right',
     description: 'Element slides in from the right',
-    icon: '→',
+    icon: faArrowRight,
     defaultDuration: 500,
     variants: {
       hidden: { opacity: 0, x: 100 },
@@ -87,7 +100,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'slideInTop',
     displayName: 'Slide from Top',
     description: 'Element slides in from above',
-    icon: '↑',
+    icon: faArrowUp,
     defaultDuration: 500,
     variants: {
       hidden: { opacity: 0, y: -100 },
@@ -99,7 +112,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'slideInBottom',
     displayName: 'Slide from Bottom',
     description: 'Element slides in from below',
-    icon: '↓',
+    icon: faArrowDown,
     defaultDuration: 500,
     variants: {
       hidden: { opacity: 0, y: 100 },
@@ -111,7 +124,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'slideOutLeft',
     displayName: 'Slide Out Left',
     description: 'Element slides out to the left',
-    icon: '⇐',
+    icon: faAnglesLeft,
     defaultDuration: 500,
     variants: {
       hidden: { opacity: 1, x: 0 },
@@ -123,7 +136,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'slideOutRight',
     displayName: 'Slide Out Right',
     description: 'Element slides out to the right',
-    icon: '⇒',
+    icon: faAnglesRight,
     defaultDuration: 500,
     variants: {
       hidden: { opacity: 1, x: 0 },
@@ -136,7 +149,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'scaleIn',
     displayName: 'Scale In',
     description: 'Element scales from small to normal',
-    icon: '+',
+    icon: faExpand,
     defaultDuration: 600,
     variants: {
       hidden: { opacity: 0, scale: 0.5 },
@@ -148,7 +161,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'scaleOut',
     displayName: 'Scale Out',
     description: 'Element scales from normal to large',
-    icon: '−',
+    icon: faCompress,
     defaultDuration: 600,
     variants: {
       hidden: { opacity: 1, scale: 1 },
@@ -160,7 +173,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'scalePop',
     displayName: 'Scale Pop',
     description: 'Element pops in with overshoot',
-    icon: '💥',
+    icon: faBurst,
     defaultDuration: 500,
     variants: {
       hidden: { opacity: 0, scale: 0 },
@@ -180,7 +193,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'zoomIn',
     displayName: 'Zoom In',
     description: 'Camera zooms into the element',
-    icon: '🔍',
+    icon: faMagnifyingGlassPlus,
     defaultDuration: 800,
     variants: {
       hidden: { opacity: 0, scale: 0.3 },
@@ -196,7 +209,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'zoomOut',
     displayName: 'Zoom Out',
     description: 'Camera zooms out from element',
-    icon: '🔎',
+    icon: faMagnifyingGlassMinus,
     defaultDuration: 800,
     variants: {
       hidden: { opacity: 0, scale: 2 },
@@ -212,7 +225,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'cameraPush',
     displayName: 'Camera Push',
     description: 'Slow camera push forward',
-    icon: '🎥',
+    icon: faVideo,
     defaultDuration: 2000,
     variants: {
       hidden: { scale: 1, opacity: 1 },
@@ -229,7 +242,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'rotate',
     displayName: 'Rotate',
     description: 'Element rotates while appearing',
-    icon: '↻',
+    icon: faRotate,
     defaultDuration: 800,
     variants: {
       hidden: { opacity: 0, rotate: -180 },
@@ -241,7 +254,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'rotationReveal',
     displayName: 'Rotation Reveal',
     description: 'Element spins in from zero with scale',
-    icon: '🔄',
+    icon: faRotateRight,
     defaultDuration: 800,
     variants: {
       hidden: { opacity: 0, rotate: -360, scale: 0 },
@@ -258,7 +271,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'flipIn',
     displayName: 'Flip In X',
     description: 'Element flips in horizontally',
-    icon: '⟳',
+    icon: faArrowsSpin,
     defaultDuration: 700,
     variants: {
       hidden: { opacity: 0, rotateY: 90 },
@@ -270,7 +283,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'flipInY',
     displayName: 'Flip In Y',
     description: 'Element flips in vertically',
-    icon: '🔃',
+    icon: faRepeat,
     defaultDuration: 700,
     variants: {
       hidden: { opacity: 0, rotateX: 90 },
@@ -283,7 +296,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'bounce',
     displayName: 'Bounce',
     description: 'Element bounces in',
-    icon: '↕',
+    icon: faArrowsUpDown,
     defaultDuration: 800,
     variants: {
       hidden: { opacity: 0, y: -50 },
@@ -302,7 +315,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'elasticIn',
     displayName: 'Elastic In',
     description: 'Element stretches in elastically',
-    icon: '🧲',
+    icon: faMagnet,
     defaultDuration: 1000,
     variants: {
       hidden: { opacity: 0, scaleX: 0.3, scaleY: 0.3 },
@@ -323,7 +336,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'elasticScale',
     displayName: 'Elastic Scale',
     description: 'Element scales with elastic bounce',
-    icon: '🪀',
+    icon: faSpinner,
     defaultDuration: 900,
     variants: {
       hidden: { opacity: 0, scale: 0 },
@@ -339,7 +352,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'pulse',
     displayName: 'Pulse',
     description: 'Element pulses in size',
-    icon: '◉',
+    icon: faCircleDot,
     defaultDuration: 600,
     variants: {
       hidden: { scale: 1, opacity: 1 },
@@ -355,7 +368,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'shake',
     displayName: 'Shake',
     description: 'Element shakes horizontally',
-    icon: '~',
+    icon: faWaveSquare,
     defaultDuration: 500,
     variants: {
       hidden: { x: 0, opacity: 1 },
@@ -372,7 +385,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'wipeRight',
     displayName: 'Wipe Right',
     description: 'Element reveals with a wipe from left to right',
-    icon: '▶',
+    icon: faPlay,
     defaultDuration: 800,
     variants: {
       hidden: { clipPath: 'inset(0 100% 0 0)', opacity: 1 },
@@ -388,7 +401,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'wipeDown',
     displayName: 'Wipe Down',
     description: 'Element reveals with a wipe from top to bottom',
-    icon: '🔽',
+    icon: faCaretDown,
     defaultDuration: 800,
     variants: {
       hidden: { clipPath: 'inset(0 0 100% 0)', opacity: 1 },
@@ -404,7 +417,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'wipeLeft',
     displayName: 'Wipe Left',
     description: 'Element reveals with a wipe from right to left',
-    icon: '◀',
+    icon: faBackward,
     defaultDuration: 800,
     variants: {
       hidden: { clipPath: 'inset(0 0 0 100%)', opacity: 1 },
@@ -420,7 +433,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'barReveal',
     displayName: 'Bar Reveal',
     description: 'Element appears behind a horizontal bar',
-    icon: '▬',
+    icon: faGripLines,
     defaultDuration: 800,
     variants: {
       hidden: { clipPath: 'inset(50% 0 50% 0)', opacity: 1 },
@@ -436,7 +449,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'maskCircle',
     displayName: 'Formmaske Kreis',
     description: 'Element reveals through a circular mask',
-    icon: '⭕',
+    icon: faBullseye,
     defaultDuration: 900,
     variants: {
       hidden: { clipPath: 'circle(0% at 50% 50%)', opacity: 1 },
@@ -453,7 +466,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'strokeDraw',
     displayName: 'Kontur nachzeichnen',
     description: 'Kontur wird progressiv gezeichnet, dann füllt sich das Element',
-    icon: '✏️',
+    icon: faPencil,
     defaultDuration: 1200,
     variants: {
       hidden: { opacity: 0 },
@@ -468,7 +481,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'shapeAssembly',
     displayName: 'Shape-Aufbau',
     description: 'Element assembles from scattered pieces',
-    icon: '🧩',
+    icon: faPuzzlePiece,
     defaultDuration: 1000,
     variants: {
       hidden: { opacity: 0, scale: 0.5, rotate: -45, y: 30 },
@@ -491,7 +504,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'glitch',
     displayName: 'Glitch',
     description: 'Digital glitch effect with rapid flickers',
-    icon: '⚡',
+    icon: faBolt,
     defaultDuration: 600,
     variants: {
       hidden: { opacity: 0, x: 0, skewX: 0 },
@@ -508,7 +521,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'rgbSplit',
     displayName: 'RGB Split',
     description: 'Chromatic aberration / RGB offset effect',
-    icon: '🌈',
+    icon: faRainbow,
     defaultDuration: 700,
     variants: {
       hidden: {
@@ -529,7 +542,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'scanlines',
     displayName: 'Scanlines',
     description: 'CRT scanline reveal effect',
-    icon: '📺',
+    icon: faTv,
     defaultDuration: 800,
     variants: {
       hidden: {
@@ -551,7 +564,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'lightSweep',
     displayName: 'Light Sweep',
     description: 'A light sweep passes over the element',
-    icon: '✨',
+    icon: faWandSparkles,
     defaultDuration: 1000,
     variants: {
       hidden: {
@@ -572,7 +585,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'lightShadow',
     displayName: 'Licht & Schatten',
     description: 'Element appears with dramatic light/shadow',
-    icon: '🌗',
+    icon: faMoon,
     defaultDuration: 1200,
     variants: {
       hidden: {
@@ -592,7 +605,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'motionBlur',
     displayName: 'Motion Blur',
     description: 'Fast move with blur effect',
-    icon: '💨',
+    icon: faWind,
     defaultDuration: 400,
     variants: {
       hidden: { opacity: 0, x: -80, filter: 'blur(10px)' },
@@ -609,7 +622,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'slowDrift',
     displayName: 'Langsame Drift',
     description: 'Slow cinematic camera drift',
-    icon: '🎬',
+    icon: faFilm,
     defaultDuration: 3000,
     variants: {
       hidden: { x: -30, y: -10, opacity: 0.8 },
@@ -626,7 +639,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'parallaxDepth',
     displayName: 'Parallax Depth',
     description: 'Element moves with depth/parallax feel',
-    icon: '🏔',
+    icon: faMountain,
     defaultDuration: 1200,
     variants: {
       hidden: { opacity: 0, y: 60, scale: 0.9 },
@@ -643,7 +656,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'subtle3D',
     displayName: 'Dezente 3D-Tiefe',
     description: 'Subtle 3D depth rotation on appear',
-    icon: '🧊',
+    icon: faCube,
     defaultDuration: 900,
     variants: {
       hidden: { opacity: 0, rotateX: 15, rotateY: -10, scale: 0.95 },
@@ -662,7 +675,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'particleBuild',
     displayName: 'Partikel-Aufbau',
     description: 'Element builds up from scattered particles',
-    icon: '🌟',
+    icon: faStar,
     defaultDuration: 1200,
     variants: {
       hidden: {
@@ -688,7 +701,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'particleDissolve',
     displayName: 'Partikel-Zerfall',
     description: 'Element dissolves into particles',
-    icon: '💫',
+    icon: faStarHalfStroke,
     defaultDuration: 1000,
     variants: {
       hidden: { opacity: 1, scale: 1, filter: 'blur(0px)' },
@@ -709,7 +722,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'explode',
     displayName: 'Explode',
     description: 'Element explodes outward and disappears',
-    icon: '💣',
+    icon: faBomb,
     defaultDuration: 800,
     variants: {
       hidden: { opacity: 1, scale: 1 },
@@ -726,7 +739,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'liquidReveal',
     displayName: 'Liquid Reveal',
     description: 'Fluid/liquid-like reveal with distortion',
-    icon: '🌊',
+    icon: faWater,
     defaultDuration: 1000,
     variants: {
       hidden: {
@@ -755,7 +768,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'smokeReveal',
     displayName: 'Smoke Reveal',
     description: 'Element emerges from smoke/fog',
-    icon: '🌫️',
+    icon: faSmog,
     defaultDuration: 1500,
     variants: {
       hidden: {
@@ -781,7 +794,7 @@ export const animationPresets: Record<AnimationPresetName, AnimationPreset> = {
     name: 'depthOfField',
     displayName: 'Tiefenschärfe',
     description: 'Element comes into focus like a camera lens',
-    icon: '📷',
+    icon: faCamera,
     defaultDuration: 1000,
     variants: {
       hidden: {

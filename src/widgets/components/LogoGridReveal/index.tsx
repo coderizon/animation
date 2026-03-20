@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import type { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
+import { faTableCellsLarge } from '@fortawesome/free-solid-svg-icons';
 
 /**
  * Attempt a smoothstep-style easeOut: t' = t*(2-t)
@@ -76,6 +77,7 @@ const LogoGridReveal: React.FC<WidgetComponentProps> = ({
   const staggerDelay = (props?.staggerDelay as number) || 0.2;
   const holdDuration = (props?.holdDuration as number) || 2;
   const exitDuration = (props?.exitDuration as number) || 0.5;
+  const logoScale = (props?.logoScale as number) || 0.8;
 
   const count = logos.length;
   const rows = Math.ceil(count / columns);
@@ -191,8 +193,8 @@ const LogoGridReveal: React.FC<WidgetComponentProps> = ({
               src={logoSrc}
               alt=""
               style={{
-                maxWidth: cellWidth - padding * 2,
-                maxHeight: cellHeight - padding * 2,
+                width: (cellWidth - padding * 2) * logoScale,
+                height: (cellHeight - padding * 2) * logoScale,
                 objectFit: 'contain',
                 transform: `scale(${scale})`,
                 opacity,
@@ -213,7 +215,7 @@ export const logoGridRevealWidget: WidgetRegistryEntry = {
   name: 'logoGridReveal',
   displayName: 'Logo-Grid',
   description: 'Logos erscheinen nacheinander in einem animierten Raster',
-  icon: '\u229e',
+  icon: faTableCellsLarge,
   component: LogoGridReveal,
   nativeWidth: 600,
   nativeHeight: 400,

@@ -1,4 +1,5 @@
 import { ComponentType } from 'react';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
 export interface WidgetComponentProps {
   frame: number;
@@ -14,7 +15,7 @@ export interface WidgetRegistryEntry {
   name: string;
   displayName: string;
   description: string;
-  icon: string;
+  icon: IconDefinition;
   component: ComponentType<WidgetComponentProps>;
   nativeWidth: number;
   nativeHeight: number;

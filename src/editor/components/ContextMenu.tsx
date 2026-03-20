@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { useProjectStore } from '../../store/useProjectStore';
 import { AnimationConfig, AnimationPresetName, Effect, EffectType, EFFECT_DEFINITIONS, getAnimations } from '../../types/project';
 import { animationPresets, presetCategories } from '../../animations/presets';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const menuItemStyle: React.CSSProperties = {
   padding: '8px 16px',
@@ -151,7 +152,7 @@ export const ContextMenu: React.FC = () => {
               onMouseLeave={hoverOut}
               style={{ ...menuItemStyle }}
             >
-              {def.icon} {def.displayName}
+              <FontAwesomeIcon icon={def.icon} style={{ width: 14, marginRight: 6 }} />{def.displayName}
               <span style={{ fontSize: 11, color: 'var(--ae-text-muted)', marginLeft: 8 }}>
                 {def.description}
               </span>

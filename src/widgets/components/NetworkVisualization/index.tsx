@@ -1,6 +1,7 @@
 import React from 'react';
 import { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
 import { interpolate } from '../../interpolate';
+import { faNetworkWired } from '@fortawesome/free-solid-svg-icons';
 import {
   networkConfig,
   TOTAL_USERS,
@@ -135,7 +136,7 @@ export const networkVisualizationWidget: WidgetRegistryEntry = {
   name: 'networkVisualization',
   displayName: 'Network Visualization',
   description: 'Netzwerk mit 20 tippenden Usern, Verbindungslinien und zentralem Server',
-  icon: 'N',
+  icon: faNetworkWired,
   component: NetworkVisualization,
   nativeWidth: 1920,
   nativeHeight: 1080,

@@ -1,3 +1,12 @@
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import {
+  faFeather, faCircleDot, faRotate, faArrowsSpin,
+  faArrowsUpDown, faWaveSquare, faHeartPulse,
+  faSun, faBolt, faWandSparkles, faRainbow, faEye,
+  faCube, faWater, faFire, faDiamond, faTableCells,
+  faCircleHalfStroke, faCircle, faTv, faGhost, faSlash,
+} from '@fortawesome/free-solid-svg-icons';
+
 // Core Project Data Structure
 
 export interface Project {
@@ -233,37 +242,37 @@ export interface Effect {
 
 export const EFFECT_DEFINITIONS: Record<EffectType, {
   displayName: string;
-  icon: string;
+  icon: IconDefinition;
   description: string;
 }> = {
   // Bewegung
-  float:     { displayName: 'Schweben',       icon: '~',  description: 'Sanfte Auf/Ab-Bewegung' },
-  pulse:     { displayName: 'Pulsieren',      icon: '*',  description: 'Subtile Skalierung' },
-  wobble:    { displayName: 'Wackeln',        icon: 'W',  description: 'Leichte Rotation' },
-  spin:      { displayName: 'Drehen',         icon: 'S',  description: 'Langsame Drehung' },
-  bounce:    { displayName: 'Hüpfen',         icon: '↕',  description: 'Rhythmisches Hüpfen' },
-  shake:     { displayName: 'Schütteln',      icon: '≈',  description: 'Schnelle Vibration' },
-  heartbeat: { displayName: 'Herzschlag',     icon: '♥',  description: 'Asymmetrisches Pulsieren' },
+  float:     { displayName: 'Schweben',       icon: faFeather,       description: 'Sanfte Auf/Ab-Bewegung' },
+  pulse:     { displayName: 'Pulsieren',      icon: faCircleDot,     description: 'Subtile Skalierung' },
+  wobble:    { displayName: 'Wackeln',        icon: faRotate,        description: 'Leichte Rotation' },
+  spin:      { displayName: 'Drehen',         icon: faArrowsSpin,    description: 'Langsame Drehung' },
+  bounce:    { displayName: 'Hüpfen',         icon: faArrowsUpDown,  description: 'Rhythmisches Hüpfen' },
+  shake:     { displayName: 'Schütteln',      icon: faWaveSquare,    description: 'Schnelle Vibration' },
+  heartbeat: { displayName: 'Herzschlag',     icon: faHeartPulse,    description: 'Asymmetrisches Pulsieren' },
   // Licht & Farbe
-  glow:        { displayName: 'Leuchten',       icon: 'G',  description: 'Pulsierende Kontur' },
-  neonFlicker: { displayName: 'Neon-Flackern',  icon: '⚡', description: 'Defekte Neonröhre' },
-  shine:       { displayName: 'Glanz',          icon: '✦',  description: 'Wandernder Lichtstreifen' },
-  rainbow:     { displayName: 'Regenbogen',     icon: '∿',  description: 'Farbverschiebung' },
-  blink:       { displayName: 'Blinken',        icon: '◉',  description: 'Ein/Aus-Flackern' },
+  glow:        { displayName: 'Leuchten',       icon: faSun,           description: 'Pulsierende Kontur' },
+  neonFlicker: { displayName: 'Neon-Flackern',  icon: faBolt,          description: 'Defekte Neonröhre' },
+  shine:       { displayName: 'Glanz',          icon: faWandSparkles,  description: 'Wandernder Lichtstreifen' },
+  rainbow:     { displayName: 'Regenbogen',     icon: faRainbow,       description: 'Farbverschiebung' },
+  blink:       { displayName: 'Blinken',        icon: faEye,           description: 'Ein/Aus-Flackern' },
   // Perspektive
-  tilt3d: { displayName: '3D-Kippen', icon: '◇', description: 'Perspektivisches Kippen' },
+  tilt3d: { displayName: '3D-Kippen', icon: faCube, description: 'Perspektivisches Kippen' },
   // Verzerrung (SVG-Filter)
-  ripple:      { displayName: 'Wellen',         icon: '≋',  description: 'Wellenförmige Verzerrung' },
-  heatShimmer: { displayName: 'Flimmern',       icon: '♨',  description: 'Hitze-Flimmern' },
-  emboss:      { displayName: 'Relief',         icon: '◆',  description: 'Wandernder Lichtglanz' },
-  pixelate:    { displayName: 'Verpixeln',      icon: '▦',  description: 'Pulsierender Pixel-Effekt' },
-  chromaSplit: { displayName: 'Farbspaltung',   icon: '◐',  description: 'RGB-Kanal-Versatz' },
-  morphBlur:   { displayName: 'Puls-Unschärfe', icon: '○',  description: 'Pulsierende Unschärfe' },
+  ripple:      { displayName: 'Wellen',         icon: faWater,             description: 'Wellenförmige Verzerrung' },
+  heatShimmer: { displayName: 'Flimmern',       icon: faFire,              description: 'Hitze-Flimmern' },
+  emboss:      { displayName: 'Relief',         icon: faDiamond,           description: 'Wandernder Lichtglanz' },
+  pixelate:    { displayName: 'Verpixeln',      icon: faTableCells,        description: 'Pulsierender Pixel-Effekt' },
+  chromaSplit: { displayName: 'Farbspaltung',   icon: faCircleHalfStroke,  description: 'RGB-Kanal-Versatz' },
+  morphBlur:   { displayName: 'Puls-Unschärfe', icon: faCircle,            description: 'Pulsierende Unschärfe' },
   // Kombi
-  hologram:    { displayName: 'Hologramm',      icon: '▤',  description: 'Scanlines + Cyan-Glow' },
-  electrified: { displayName: 'Elektrisiert',   icon: '⚡', description: 'Vibration + Glow + Flackern' },
+  hologram:    { displayName: 'Hologramm',      icon: faTv,    description: 'Scanlines + Cyan-Glow' },
+  electrified: { displayName: 'Elektrisiert',   icon: faGhost, description: 'Vibration + Glow + Flackern' },
   // Digital
-  glitch: { displayName: 'Glitch', icon: '≠', description: 'Digitale Störung' },
+  glitch: { displayName: 'Glitch', icon: faSlash, description: 'Digitale Störung' },
 };
 
 // Backwards compatibility alias

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Project, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent, Keyframe } from '../types/project';
+import { Project, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent, Keyframe, CameraKeyframe, Effect, getAnimations } from '../types/project';
 
 // Helper: Generate unique ID
 function generateId(): string {
@@ -91,9 +91,23 @@ interface ProjectStore {
   toggleElementVisibility: (id: string) => void;
   toggleElementLock: (id: string) => void;
 
+  // Animations (multi)
+  addAnimation: (id: string, animation: AnimationConfig) => void;
+  removeAnimation: (id: string, index: number) => void;
+  updateAnimationAtIndex: (id: string, index: number, animation: AnimationConfig) => void;
+
   // Keyframes
   addKeyframe: (elementId: string, keyframe: Keyframe) => void;
   removeKeyframe: (elementId: string, time: number) => void;
+
+  // Effects
+  addEffect: (elementId: string, effect: Effect) => void;
+  removeEffect: (elementId: string, index: number) => void;
+  updateEffect: (elementId: string, index: number, effect: Effect) => void;
+
+  // Camera Keyframes
+  addCameraKeyframe: (keyframe: CameraKeyframe) => void;
+  removeCameraKeyframe: (time: number) => void;
 
   // Crop
   setCroppingElement: (id: string | null) => void;
@@ -273,7 +287,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   updateElementAnimation: (id, animation) => {
-    get().updateElement(id, { animation });
+    if (animation === undefined) {
+      get().updateElement(id, { animations: undefined, animation: undefined });
+    } else {
+      const el = get().project.elements.find((e) => e.id === id);
+      const existing = el?.animations || [];
+      if (existing.length <= 1) {
+        get().updateElement(id, { animations: [animation], animation: undefined });
+      } else {
+        get().updateElement(id, { animations: [animation, ...existing.slice(1)], animation: undefined });
+      }
+    }
   },
 
   setCurrentTime: (time) => {
@@ -297,9 +321,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     // Calculate max duration
     const maxFramerDuration = project.elements.reduce((max, el) => {
-      if (!el.animation || el.type === 'widget') return max;
-      const totalTime = (el.animation.delay || 0) + (el.animation.duration || 600);
-      return Math.max(max, totalTime);
+      if (el.type === 'widget') return max;
+      const anims = getAnimations(el);
+      if (anims.length === 0) return max;
+      const maxAnimTime = anims.reduce((m, a) => Math.max(m, (a.delay || 0) + (a.duration || 600)), 0);
+      return Math.max(max, maxAnimTime);
     }, 0);
 
     const maxWidgetDuration = project.elements.reduce((max, el) => {
@@ -380,14 +406,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         throw new Error('Invalid project format');
       }
 
-      // Backfill missing name fields
+      // Backfill missing name fields + migrate animation → animations
       const typeCounts: Record<string, number> = {};
       project.elements = project.elements.map((el) => {
-        if (!el.name) {
-          typeCounts[el.type] = (typeCounts[el.type] || 0) + 1;
-          return { ...el, name: `${el.type.charAt(0).toUpperCase() + el.type.slice(1)} ${typeCounts[el.type]}` };
+        let updated = el;
+        if (!updated.name) {
+          typeCounts[updated.type] = (typeCounts[updated.type] || 0) + 1;
+          updated = { ...updated, name: `${updated.type.charAt(0).toUpperCase() + updated.type.slice(1)} ${typeCounts[updated.type]}` };
         }
-        return el;
+        // Migrate legacy animation field to animations array
+        if (updated.animation && !updated.animations) {
+          updated = { ...updated, animations: [updated.animation], animation: undefined };
+        }
+        return updated;
       });
 
       get().loadProject(project);
@@ -474,6 +505,54 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }));
   },
 
+  // Animations (multi)
+  addAnimation: (id, animation) => {
+    const el = get().project.elements.find((e) => e.id === id);
+    if (!el) return;
+    const existing = el.animations || [];
+    get().updateElement(id, { animations: [...existing, animation] });
+  },
+
+  removeAnimation: (id, index) => {
+    const el = get().project.elements.find((e) => e.id === id);
+    if (!el) return;
+    const existing = el.animations || [];
+    const updated = existing.filter((_, i) => i !== index);
+    get().updateElement(id, { animations: updated.length > 0 ? updated : undefined, animation: undefined });
+  },
+
+  updateAnimationAtIndex: (id, index, animation) => {
+    const el = get().project.elements.find((e) => e.id === id);
+    if (!el) return;
+    const existing = [...(el.animations || [])];
+    existing[index] = animation;
+    get().updateElement(id, { animations: existing });
+  },
+
+  // Effects
+  addEffect: (elementId, effect) => {
+    const el = get().project.elements.find((e) => e.id === elementId);
+    if (!el) return;
+    const existing = el.effects || [];
+    get().updateElement(elementId, { effects: [...existing, effect] });
+  },
+
+  removeEffect: (elementId, index) => {
+    const el = get().project.elements.find((e) => e.id === elementId);
+    if (!el) return;
+    const existing = el.effects || [];
+    const updated = existing.filter((_, i) => i !== index);
+    get().updateElement(elementId, { effects: updated.length > 0 ? updated : undefined });
+  },
+
+  updateEffect: (elementId, index, effect) => {
+    const el = get().project.elements.find((e) => e.id === elementId);
+    if (!el) return;
+    const existing = [...(el.effects || [])];
+    existing[index] = effect;
+    get().updateElement(elementId, { effects: existing });
+  },
+
   // Keyframes
   addKeyframe: (elementId, keyframe) => {
     set((state) => ({
@@ -506,6 +585,37 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
       },
     }));
+  },
+
+  // Camera Keyframes
+  addCameraKeyframe: (keyframe) => {
+    set((state) => {
+      const existing = state.project.cameraKeyframes || [];
+      const filtered = existing.filter((kf) => kf.time !== keyframe.time);
+      const updated = [...filtered, keyframe].sort((a, b) => a.time - b.time);
+      return {
+        ...pushHistory(state),
+        project: {
+          ...state.project,
+          cameraKeyframes: updated,
+          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
+  },
+
+  removeCameraKeyframe: (time) => {
+    set((state) => {
+      const updated = (state.project.cameraKeyframes || []).filter((kf) => kf.time !== time);
+      return {
+        ...pushHistory(state),
+        project: {
+          ...state.project,
+          cameraKeyframes: updated.length > 0 ? updated : undefined,
+          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+        },
+      };
+    });
   },
 
   // Crop

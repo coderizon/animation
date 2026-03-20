@@ -1,5 +1,6 @@
 import React from 'react';
 import type { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
+import { faAtom } from '@fortawesome/free-solid-svg-icons';
 
 const LogoOrbit: React.FC<WidgetComponentProps> = ({
   frame,
@@ -12,7 +13,7 @@ const LogoOrbit: React.FC<WidgetComponentProps> = ({
   const centerLogo: string | undefined = props?.centerLogo as string | undefined;
   const orbitSpeed = (props?.orbitSpeed as number) || 0.3;
   const tiltAngle = (props?.tiltAngle as number) || 60;
-  const logoSize = (props?.logoSize as number) || 0.2;
+  const logoScale = (props?.logoScale as number) || 0.2;
 
   if (logos.length === 0) {
     return (
@@ -36,7 +37,7 @@ const LogoOrbit: React.FC<WidgetComponentProps> = ({
   const radiusY = radiusX * Math.cos(tiltRad);
   const centerX = width / 2;
   const centerY = height / 2;
-  const itemSize = Math.min(width, height) * logoSize;
+  const itemSize = Math.min(width, height) * logoScale;
   const centerLogoSize = Math.min(width, height) * 0.3;
 
   // Time-based rotation offset (loops seamlessly)
@@ -116,7 +117,7 @@ export const logoOrbitWidget: WidgetRegistryEntry = {
   name: 'logoOrbit',
   displayName: 'Logo-Orbit',
   description: 'Logos kreisen auf einer 3D-Bahn um ein zentrales Element',
-  icon: '\u{1F310}',
+  icon: faAtom,
   component: LogoOrbit,
   nativeWidth: 500,
   nativeHeight: 500,

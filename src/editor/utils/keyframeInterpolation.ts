@@ -1,4 +1,4 @@
-import { Keyframe } from '../../types/project';
+import { Keyframe, CameraKeyframe } from '../../types/project';
 
 export interface InterpolatedProps {
   x: number;
@@ -9,6 +9,7 @@ export interface InterpolatedProps {
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
+  borderRadius?: number;
   color?: string;
   fontSize?: number;
 }
@@ -93,6 +94,7 @@ function propsFromKeyframe(kf: Keyframe): InterpolatedProps {
     fill: kf.fill,
     stroke: kf.stroke,
     strokeWidth: kf.strokeWidth,
+    borderRadius: kf.borderRadius,
     color: kf.color,
     fontSize: kf.fontSize,
   };
@@ -111,6 +113,7 @@ function interpolateBetween(a: Keyframe, b: Keyframe, t: number): InterpolatedPr
     fill: lerpColorOptional(a.fill, b.fill, t),
     stroke: lerpColorOptional(a.stroke, b.stroke, t),
     strokeWidth: lerpOptional(a.strokeWidth, b.strokeWidth, t),
+    borderRadius: lerpOptional(a.borderRadius, b.borderRadius, t),
     color: lerpColorOptional(a.color, b.color, t),
     fontSize: lerpOptional(a.fontSize, b.fontSize, t),
   };
@@ -164,4 +167,56 @@ export function getInterpolatedPosition(
   const props = getInterpolatedProperties(keyframes, time);
   if (!props) return null;
   return { x: props.x, y: props.y };
+}
+
+/**
+ * Interpolated camera values.
+ */
+export interface InterpolatedCamera {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+/**
+ * Interpolates camera keyframes at a given time.
+ * Returns null if no camera keyframes exist.
+ */
+export function getInterpolatedCamera(
+  keyframes: CameraKeyframe[] | undefined,
+  time: number,
+): InterpolatedCamera | null {
+  if (!keyframes || keyframes.length === 0) return null;
+
+  if (keyframes.length === 1) {
+    return { x: keyframes[0].x, y: keyframes[0].y, zoom: keyframes[0].zoom };
+  }
+
+  // Before first keyframe
+  if (time <= keyframes[0].time) {
+    const kf = keyframes[0];
+    return { x: kf.x, y: kf.y, zoom: kf.zoom };
+  }
+
+  // After last keyframe
+  const last = keyframes[keyframes.length - 1];
+  if (time >= last.time) {
+    return { x: last.x, y: last.y, zoom: last.zoom };
+  }
+
+  // Find surrounding keyframes and interpolate
+  for (let i = 0; i < keyframes.length - 1; i++) {
+    const a = keyframes[i];
+    const b = keyframes[i + 1];
+    if (time >= a.time && time <= b.time) {
+      const t = (time - a.time) / (b.time - a.time);
+      return {
+        x: lerp(a.x, b.x, t),
+        y: lerp(a.y, b.y, t),
+        zoom: lerp(a.zoom, b.zoom, t),
+      };
+    }
+  }
+
+  return null;
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
 import { NeuralNetworkSVG } from './NeuralNetworkSVG';
+import { faBrain } from '@fortawesome/free-solid-svg-icons';
 
 const NeuralNetAnimation: React.FC<WidgetComponentProps> = ({ frame, width, height }) => {
   // Neural network floats
@@ -33,7 +34,7 @@ export const neuralNetServerWidget: WidgetRegistryEntry = {
   name: 'neuralNetServer',
   displayName: 'Neural Network',
   description: 'Schwebendes Neural Network mit organisch bewegenden Knoten',
-  icon: 'N',
+  icon: faBrain,
   component: NeuralNetAnimation,
   nativeWidth: 500,
   nativeHeight: 500,

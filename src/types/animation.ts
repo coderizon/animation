@@ -1,5 +1,6 @@
 import { Variants } from 'framer-motion';
 import { AnimationPresetName } from './project';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 export type { AnimationPresetName, EasingName } from './project';
 
 // Animation Preset Definition
@@ -8,7 +9,7 @@ export interface AnimationPreset {
   name: AnimationPresetName;
   displayName: string;
   description: string;
-  icon: string;            // Emoji or icon name
+  icon: IconDefinition;
   defaultDuration: number; // ms
   variants: Variants;      // Framer Motion variants
 }
@@ -19,6 +20,7 @@ export interface DragItemAsset {
   type: 'ASSET';
   elementType: 'logo' | 'text' | 'shape' | 'image' | 'widget';
   content: any;
+  name?: string;
 }
 
 export interface DragItemElement {

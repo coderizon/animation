@@ -3,6 +3,7 @@ import { useDrag } from 'react-dnd';
 import { LogoAsset } from '../../types/animation';
 import { getAllWidgets } from '../../widgets/registry';
 import { WidgetRegistryEntry } from '../../widgets/types';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const svgModules = import.meta.glob('/public/assets/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
@@ -33,6 +34,7 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
     item: {
       type: 'ASSET',
       elementType: 'logo',
+      name: asset.name,
       content: {
         type: 'logo',
         src: asset.src,
@@ -102,6 +104,7 @@ const DraggableWidget: React.FC<{ entry: WidgetRegistryEntry }> = ({ entry }) =>
     item: {
       type: 'ASSET',
       elementType: 'widget' as const,
+      name: entry.displayName || entry.name,
       content: {
         type: 'widget',
         widgetName: entry.name,
@@ -156,7 +159,7 @@ const DraggableWidget: React.FC<{ entry: WidgetRegistryEntry }> = ({ entry }) =>
           fontSize: 18,
         }}
       >
-        {entry.icon}
+        <FontAwesomeIcon icon={entry.icon} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ae-text-primary)' }}>

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
+import { faGem } from '@fortawesome/free-solid-svg-icons';
 
 /** smoothstep easing: t * t * (3 - 2 * t) */
 function smoothstep(t: number): number {
@@ -21,6 +22,7 @@ const LogoMorphChain: React.FC<WidgetComponentProps> = ({
   const transitionDuration = (props?.transitionDuration as number) || 0.6;
   const showLabels = props?.showLabels !== undefined ? (props.showLabels as boolean) : true;
   const labelColor = (props?.labelColor as string) || '#ffffff';
+  const logoScale = (props?.logoScale as number) || 0.65;
 
   if (logos.length === 0) {
     return (
@@ -40,7 +42,7 @@ const LogoMorphChain: React.FC<WidgetComponentProps> = ({
 
   // Single logo — just show it statically
   if (logos.length === 1) {
-    const logoSize = Math.min(width, height) * 0.65;
+    const logoSize = Math.min(width, height) * logoScale;
     return (
       <div style={{
         width, height,
@@ -55,8 +57,8 @@ const LogoMorphChain: React.FC<WidgetComponentProps> = ({
           src={logos[0]}
           alt=""
           style={{
-            maxWidth: logoSize,
-            maxHeight: logoSize * 0.75,
+            width: logoSize,
+            height: logoSize * 0.75,
             objectFit: 'contain',
             pointerEvents: 'none',
             userSelect: 'none',
@@ -93,7 +95,7 @@ const LogoMorphChain: React.FC<WidgetComponentProps> = ({
     ? smoothstep((frameInSlot - framesPerDisplay) / framesPerTransition)
     : 0;
 
-  const logoSize = Math.min(width, height) * 0.65;
+  const logoSize = Math.min(width, height) * logoScale;
   const logoAreaStyle: React.CSSProperties = {
     position: 'absolute',
     top: 0,
@@ -107,8 +109,8 @@ const LogoMorphChain: React.FC<WidgetComponentProps> = ({
   };
 
   const imgStyle: React.CSSProperties = {
-    maxWidth: logoSize,
-    maxHeight: logoSize * 0.75,
+    width: logoSize,
+    height: logoSize * 0.75,
     objectFit: 'contain',
     pointerEvents: 'none',
     userSelect: 'none',
@@ -256,7 +258,7 @@ export const logoMorphChainWidget: WidgetRegistryEntry = {
   name: 'logoMorphChain',
   displayName: 'Logo-Showcase',
   description: 'Logos morphen mit Effekten ineinander über',
-  icon: '◈',
+  icon: faGem,
   component: LogoMorphChain,
   nativeWidth: 500,
   nativeHeight: 400,

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 
 const LogoCarousel: React.FC<WidgetComponentProps> = ({
   frame,
@@ -12,6 +13,7 @@ const LogoCarousel: React.FC<WidgetComponentProps> = ({
   const displayDuration = (props?.displayDuration as number) || 2;
   const transitionDuration = (props?.transitionDuration as number) || 0.5;
   const floatDistance = (props?.floatDistance as number) || 30;
+  const logoScale = (props?.logoScale as number) || 0.9;
 
   if (logos.length === 0) {
     return (
@@ -62,7 +64,7 @@ const LogoCarousel: React.FC<WidgetComponentProps> = ({
   }
 
   const logoSrc = logos[currentIndex];
-  const logoSize = Math.min(width, height) * 0.7;
+  const logoSize = Math.min(width, height) * logoScale;
 
   return (
     <div style={{
@@ -79,8 +81,8 @@ const LogoCarousel: React.FC<WidgetComponentProps> = ({
         src={logoSrc}
         alt=""
         style={{
-          maxWidth: logoSize,
-          maxHeight: logoSize,
+          width: logoSize,
+          height: logoSize,
           objectFit: 'contain',
           opacity,
           transform: `translateY(${translateY}px)`,
@@ -98,7 +100,7 @@ export const logoCarouselWidget: WidgetRegistryEntry = {
   name: 'logoCarousel',
   displayName: 'Logo-Karussell',
   description: 'Logos nacheinander einblenden mit Schwebe-Animation',
-  icon: '🔄',
+  icon: faArrowsRotate,
   component: LogoCarousel,
   nativeWidth: 400,
   nativeHeight: 400,

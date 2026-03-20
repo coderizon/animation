@@ -52,7 +52,7 @@ function textElement(
     rotation: 0,
     zIndex: 0,
     content: { type: 'text', text, ...content },
-    animation,
+    animations: animation ? [animation] : undefined,
     visible: true,
     locked: false,
   };
@@ -75,7 +75,7 @@ function logoElement(
     rotation: 0,
     zIndex: 0,
     content: { type: 'logo', src, alt: name },
-    animation,
+    animations: animation ? [animation] : undefined,
     visible: true,
     locked: false,
   };
@@ -98,7 +98,7 @@ function shapeElement(
     rotation: 0,
     zIndex: 0,
     content: { type: 'shape', ...content },
-    animation,
+    animations: animation ? [animation] : undefined,
     visible: true,
     locked: false,
   };

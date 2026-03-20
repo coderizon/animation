@@ -7,6 +7,10 @@ import { CanvasElement } from './components/CanvasElement';
 import { ZoomControls } from './components/ZoomControls';
 import { SnapGuides } from './components/SnapGuides';
 import { ContextMenu } from './components/ContextMenu';
+import { getInterpolatedCamera } from './utils/keyframeInterpolation';
+import { CameraKeyframe } from '../types/project';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faVideo } from '@fortawesome/free-solid-svg-icons';
 
 const ZOOM_SENSITIVITY = 0.001;
 
@@ -27,6 +31,7 @@ export const Canvas: React.FC = () => {
   const selectedElementIds = useProjectStore((state) => state.selectedElementIds);
   const setCroppingElement = useProjectStore((state) => state.setCroppingElement);
   const setContextMenu = useProjectStore((state) => state.setContextMenu);
+  const currentTime = useProjectStore((state) => state.currentTime);
 
   const zoom = useViewportStore((state) => state.zoom);
   const panOffset = useViewportStore((state) => state.panOffset);
@@ -36,7 +41,7 @@ export const Canvas: React.FC = () => {
 
   // Panning state (refs to avoid re-renders)
   const isPanning = useRef(false);
-  const isSpaceDown = useRef(false);
+
   const panStart = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 });
 
   // Marquee selection
@@ -89,41 +94,13 @@ export const Canvas: React.FC = () => {
     return () => container.removeEventListener('wheel', handleWheel);
   }, [zoomAtPoint, setPanOffset]);
 
-  // --- Space key tracking for pan mode ---
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat) {
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-        e.preventDefault();
-        isSpaceDown.current = true;
-        if (containerRef.current) {
-          containerRef.current.style.cursor = 'grab';
-        }
-      }
-    };
+  // Space is now used for play/pause (handled in useKeyboardShortcuts).
+  // Pan via middle mouse button only.
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        isSpaceDown.current = false;
-        if (containerRef.current && !isPanning.current) {
-          containerRef.current.style.cursor = 'default';
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
-  // --- Pan via Space+Drag or Middle Mouse ---
+  // --- Pan via Middle Mouse ---
   const handleContainerMouseDown = useCallback((e: React.MouseEvent) => {
-    // Middle mouse or space+left-click → pan
-    if (e.button === 1 || (e.button === 0 && isSpaceDown.current)) {
+    // Middle mouse → pan
+    if (e.button === 1) {
       e.preventDefault();
       isPanning.current = true;
       const { panOffset: p } = useViewportStore.getState();
@@ -135,12 +112,12 @@ export const Canvas: React.FC = () => {
     }
 
     // Left click on empty canvas area → start marquee
-    if (e.button === 0 && !isSpaceDown.current) {
+    if (e.button === 0) {
       // Check if clicking directly on the canvas background (not on an element)
       const target = e.target as HTMLElement;
       if (target === canvasRef.current || target === containerRef.current || target.closest('[data-viewport-transform]')) {
         // Only start marquee if we clicked on the canvas itself or the container background
-        if (!target.closest('[data-canvas-element]')) {
+        if (!target.closest('[data-canvas-element]') && !target.closest('[data-camera-frame]')) {
           const containerRect = containerRef.current!.getBoundingClientRect();
           const { zoom: z, panOffset: p } = useViewportStore.getState();
           const canvasX = (e.clientX - containerRect.left - p.x) / z;
@@ -184,7 +161,7 @@ export const Canvas: React.FC = () => {
       if (isPanning.current) {
         isPanning.current = false;
         if (containerRef.current) {
-          containerRef.current.style.cursor = isSpaceDown.current ? 'grab' : 'default';
+          containerRef.current.style.cursor = 'default';
         }
         return;
       }
@@ -251,6 +228,7 @@ export const Canvas: React.FC = () => {
 
       addElement({
         type: item.elementType,
+        name: item.name,
         position: isWidget ? { x: 0, y: 0 } : { x: Math.max(0, canvasX - w / 2), y: Math.max(0, canvasY - h / 2) },
         size: { width: w, height: h },
         rotation: 0,
@@ -309,7 +287,7 @@ export const Canvas: React.FC = () => {
           height: '100%',
           position: 'relative',
           overflow: 'hidden',
-          backgroundColor: 'var(--ae-bg-shell)',
+          backgroundColor: 'var(--ae-bg-panel-raised)',
           cursor: 'default',
         }}
       >
@@ -333,10 +311,10 @@ export const Canvas: React.FC = () => {
               width: project.canvas.width,
               height: project.canvas.height,
               backgroundColor: project.canvas.backgroundColor,
-              border: isOver ? '2px solid var(--ae-accent)' : '1px solid var(--ae-border)',
+              border: isOver ? '2px solid var(--ae-accent)' : '1px solid rgba(255, 255, 255, 0.25)',
               borderRadius: 0,
               position: 'relative',
-              boxShadow: isOver ? '0 0 0 3px rgba(86, 129, 255, 0.18), 0 18px 40px rgba(0, 0, 0, 0.45)' : '0 12px 30px rgba(0, 0, 0, 0.38)',
+              boxShadow: isOver ? '0 0 0 3px rgba(86, 129, 255, 0.18), 0 18px 40px rgba(0, 0, 0, 0.45)' : '0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 30px rgba(0, 0, 0, 0.38)',
             }}
           >
             {/* Canvas info overlay */}
@@ -372,6 +350,17 @@ export const Canvas: React.FC = () => {
                 zoom={zoom}
               />
             ))}
+
+            {/* Camera frame overlay (interactive) */}
+            {(project.cameraKeyframes && project.cameraKeyframes.length > 0) && (
+              <CameraFrameOverlay
+                cameraKeyframes={project.cameraKeyframes}
+                canvasWidth={project.canvas.width}
+                canvasHeight={project.canvas.height}
+                currentTime={currentTime}
+                editorZoom={zoom}
+              />
+            )}
           </div>
         </div>
 
@@ -380,6 +369,181 @@ export const Canvas: React.FC = () => {
       </div>
 
       <ContextMenu />
+    </div>
+  );
+};
+
+// --- Interactive Camera Frame Overlay ---
+
+interface CameraFrameOverlayProps {
+  cameraKeyframes: CameraKeyframe[];
+  canvasWidth: number;
+  canvasHeight: number;
+  currentTime: number;
+  editorZoom: number;
+}
+
+const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
+  cameraKeyframes,
+  canvasWidth,
+  canvasHeight,
+  currentTime,
+  editorZoom,
+}) => {
+  const pushSnapshot = useProjectStore((state) => state.pushSnapshot);
+
+  const dragRef = useRef<{
+    type: 'move' | 'resize';
+    startMouseX: number;
+    startMouseY: number;
+    startCamX: number;
+    startCamY: number;
+    startZoom: number;
+    snapshot: any;
+  } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const cam = getInterpolatedCamera(cameraKeyframes, currentTime);
+  if (!cam) return null;
+
+  const viewW = canvasWidth / cam.zoom;
+  const viewH = canvasHeight / cam.zoom;
+  const left = cam.x - viewW / 2;
+  const top = cam.y - viewH / 2;
+
+  // Find the keyframe at or closest before currentTime to update
+  const snappedTime = Math.round(currentTime / 50) * 50;
+
+  const silentUpdateCamera = (x: number, y: number, zoom: number) => {
+    const time = snappedTime;
+    useProjectStore.setState((state) => {
+      const existing = state.project.cameraKeyframes || [];
+      const filtered = existing.filter((kf) => kf.time !== time);
+      const updated = [...filtered, { time, x, y, zoom }].sort((a, b) => a.time - b.time);
+      return { project: { ...state.project, cameraKeyframes: updated } };
+    });
+  };
+
+  const handleMoveStart = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const snapshot = JSON.parse(JSON.stringify(useProjectStore.getState().project));
+    dragRef.current = {
+      type: 'move',
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startCamX: cam.x,
+      startCamY: cam.y,
+      startZoom: cam.zoom,
+      snapshot,
+    };
+    setIsDragging(true);
+  };
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const snapshot = JSON.parse(JSON.stringify(useProjectStore.getState().project));
+    dragRef.current = {
+      type: 'resize',
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startCamX: cam.x,
+      startCamY: cam.y,
+      startZoom: cam.zoom,
+      snapshot,
+    };
+    setIsDragging(true);
+  };
+
+  // Global mouse handlers for drag
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current) return;
+      const { type, startMouseX, startMouseY, startCamX, startCamY, startZoom } = dragRef.current;
+
+      if (type === 'move') {
+        const dx = (e.clientX - startMouseX) / editorZoom;
+        const dy = (e.clientY - startMouseY) / editorZoom;
+        silentUpdateCamera(startCamX + dx, startCamY + dy, startZoom);
+      } else {
+        // Resize: use horizontal delta to adjust zoom symmetrically
+        const dx = (e.clientX - startMouseX) / editorZoom;
+        const startFrameW = canvasWidth / startZoom;
+        // Dragging outward (positive dx) → frame gets bigger → zoom decreases
+        const newFrameW = Math.max(canvasWidth / 10, startFrameW + dx * 2);
+        const newZoom = Math.max(0.1, Math.min(10, canvasWidth / newFrameW));
+        silentUpdateCamera(startCamX, startCamY, newZoom);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (dragRef.current) {
+        pushSnapshot(dragRef.current.snapshot);
+      }
+      dragRef.current = null;
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, editorZoom, canvasWidth, pushSnapshot]);
+
+  const HANDLE_SIZE = 8;
+  const handleStyle = (cursor: string): React.CSSProperties => ({
+    position: 'absolute',
+    width: HANDLE_SIZE,
+    height: HANDLE_SIZE,
+    backgroundColor: '#00bcd4',
+    border: '1px solid #00e5ff',
+    cursor,
+    zIndex: 1,
+  });
+
+  return (
+    <div
+      onMouseDown={handleMoveStart}
+      data-camera-frame
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width: viewW,
+        height: viewH,
+        border: '2px dashed #00bcd4',
+        borderRadius: 2,
+        cursor: isDragging && dragRef.current?.type === 'move' ? 'grabbing' : 'move',
+        zIndex: 9998,
+        boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.3)',
+      }}
+    >
+      {/* Label */}
+      <div style={{
+        position: 'absolute',
+        top: -18,
+        left: 0,
+        fontSize: 10,
+        color: '#00bcd4',
+        fontFamily: 'monospace',
+        whiteSpace: 'nowrap',
+        pointerEvents: 'none',
+      }}>
+        <FontAwesomeIcon icon={faVideo} style={{ marginRight: 4 }} />{cam.zoom.toFixed(1)}×
+      </div>
+
+      {/* Corner resize handles */}
+      <div onMouseDown={handleResizeStart} style={{ ...handleStyle('nwse-resize'), top: -HANDLE_SIZE / 2, left: -HANDLE_SIZE / 2 }} />
+      <div onMouseDown={handleResizeStart} style={{ ...handleStyle('nesw-resize'), top: -HANDLE_SIZE / 2, right: -HANDLE_SIZE / 2 }} />
+      <div onMouseDown={handleResizeStart} style={{ ...handleStyle('nesw-resize'), bottom: -HANDLE_SIZE / 2, left: -HANDLE_SIZE / 2 }} />
+      <div onMouseDown={handleResizeStart} style={{ ...handleStyle('nwse-resize'), bottom: -HANDLE_SIZE / 2, right: -HANDLE_SIZE / 2 }} />
     </div>
   );
 };

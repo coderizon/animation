@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { allShapeDefs, filledShapeDefs, outlineShapeDefs, ShapeInsertDef } from '../insertPresets';
+import { useEffect, useRef } from 'react';
+import { filledShapeDefs, outlineShapeDefs, ShapeInsertDef } from '../insertPresets';
 
 interface ShapeGalleryPopoverProps {
   anchorRef: React.RefObject<HTMLElement | null>;
   isOpen: boolean;
   onClose: () => void;
   onSelectShape: (shape: ShapeInsertDef) => void;
-  recentShapeIds: string[];
 }
 
 export const ShapeGlyph: React.FC<{ shape: ShapeInsertDef; size?: number }> = ({ shape, size = 28 }) => {
@@ -17,7 +16,7 @@ export const ShapeGlyph: React.FC<{ shape: ShapeInsertDef; size?: number }> = ({
     case 'rectangle':
       return (
         <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden="true">
-          <rect x="4" y="7" width="20" height="14" rx="3" fill={shape.fill === 'transparent' ? 'none' : shape.fill} stroke={stroke} strokeWidth={strokeWidth} />
+          <rect x="4" y="7" width="20" height="14" rx={shape.borderRadius ? Math.min(shape.borderRadius, 7) : 0} fill={shape.fill === 'transparent' ? 'none' : shape.fill} stroke={stroke} strokeWidth={strokeWidth} />
         </svg>
       );
     case 'circle':
@@ -48,16 +47,8 @@ export const ShapeGalleryPopover: React.FC<ShapeGalleryPopoverProps> = ({
   isOpen,
   onClose,
   onSelectShape,
-  recentShapeIds,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
-
-  const recentShapes = useMemo(
-    () => recentShapeIds
-      .map((shapeId) => allShapeDefs.find((shape) => shape.id === shapeId))
-      .filter((shape): shape is ShapeInsertDef => Boolean(shape)),
-    [recentShapeIds],
-  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -157,29 +148,6 @@ export const ShapeGalleryPopover: React.FC<ShapeGalleryPopoverProps> = ({
         gap: 18,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ae-text-primary)' }}>Formen</div>
-          <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)' }}>Zuletzt verwendet zuerst, dann die Standardgruppen.</div>
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 999,
-            border: '1px solid var(--ae-border)',
-            backgroundColor: 'var(--ae-bg-panel-raised)',
-            color: 'var(--ae-text-secondary)',
-            fontSize: 16,
-            cursor: 'pointer',
-          }}
-        >
-          ×
-        </button>
-      </div>
-
-      {renderSection('Zuletzt verwendet', recentShapes)}
       {renderSection('Gefüllt', filledShapeDefs)}
       {renderSection('Kontur', outlineShapeDefs)}
     </div>

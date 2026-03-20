@@ -19,6 +19,7 @@ export interface ShapeInsertDef {
   fill: string;
   stroke?: string;
   strokeWidth?: number;
+  borderRadius?: number;
   defaultWidth: number;
   defaultHeight: number;
   group: 'filled' | 'outline';
@@ -26,15 +27,17 @@ export interface ShapeInsertDef {
 
 export const filledShapeDefs: ShapeInsertDef[] = [
   { id: 'rect', label: 'Rectangle', shape: 'rectangle', fill: '#2196F3', defaultWidth: 200, defaultHeight: 120, group: 'filled' },
+  { id: 'rounded-rect', label: 'Rounded Rect', shape: 'rectangle', fill: '#2196F3', borderRadius: 16, defaultWidth: 200, defaultHeight: 120, group: 'filled' },
   { id: 'circle', label: 'Circle', shape: 'circle', fill: '#4CAF50', defaultWidth: 120, defaultHeight: 120, group: 'filled' },
   { id: 'line', label: 'Line', shape: 'line', fill: '#FF9800', defaultWidth: 200, defaultHeight: 4, group: 'filled' },
   { id: 'triangle', label: 'Triangle', shape: 'triangle', fill: '#9C27B0', defaultWidth: 140, defaultHeight: 120, group: 'filled' },
 ];
 
 export const outlineShapeDefs: ShapeInsertDef[] = [
-  { id: 'rect-outline', label: 'Rect Outline', shape: 'rectangle', fill: 'transparent', stroke: '#2196F3', strokeWidth: 3, defaultWidth: 200, defaultHeight: 120, group: 'outline' },
-  { id: 'circle-outline', label: 'Circle Outline', shape: 'circle', fill: 'transparent', stroke: '#4CAF50', strokeWidth: 3, defaultWidth: 120, defaultHeight: 120, group: 'outline' },
-  { id: 'triangle-outline', label: 'Triangle Outline', shape: 'triangle', fill: 'transparent', stroke: '#9C27B0', strokeWidth: 3, defaultWidth: 140, defaultHeight: 120, group: 'outline' },
+  { id: 'rect-outline', label: 'Rect Outline', shape: 'rectangle', fill: 'transparent', stroke: '#FFFFFF', strokeWidth: 3, defaultWidth: 200, defaultHeight: 120, group: 'outline' },
+  { id: 'rounded-rect-outline', label: 'Rounded Outline', shape: 'rectangle', fill: 'transparent', stroke: '#FFFFFF', strokeWidth: 3, borderRadius: 16, defaultWidth: 200, defaultHeight: 120, group: 'outline' },
+  { id: 'circle-outline', label: 'Circle Outline', shape: 'circle', fill: 'transparent', stroke: '#FFFFFF', strokeWidth: 3, defaultWidth: 120, defaultHeight: 120, group: 'outline' },
+  { id: 'triangle-outline', label: 'Triangle Outline', shape: 'triangle', fill: 'transparent', stroke: '#FFFFFF', strokeWidth: 3, defaultWidth: 140, defaultHeight: 120, group: 'outline' },
 ];
 
 export const allShapeDefs = [...filledShapeDefs, ...outlineShapeDefs];
@@ -60,6 +63,7 @@ function getInsertPosition(
 export function createShapeInsert(project: Project, def: ShapeInsertDef): PartialCanvasElement {
   return {
     type: 'shape',
+    name: def.label,
     position: getInsertPosition(project, { width: def.defaultWidth, height: def.defaultHeight }),
     size: { width: def.defaultWidth, height: def.defaultHeight },
     rotation: 0,
@@ -70,6 +74,7 @@ export function createShapeInsert(project: Project, def: ShapeInsertDef): Partia
       fill: def.fill,
       stroke: def.stroke,
       strokeWidth: def.strokeWidth,
+      borderRadius: def.borderRadius,
     },
     visible: true,
     locked: false,
@@ -80,6 +85,7 @@ export function createTextInsert(project: Project): PartialCanvasElement {
   const size = { width: 420, height: 90 };
   return {
     type: 'text',
+    name: 'Text',
     position: getInsertPosition(project, size),
     size,
     rotation: 0,
@@ -101,6 +107,7 @@ export function createImageInsert(project: Project): PartialCanvasElement {
   const size = { width: 320, height: 180 };
   return {
     type: 'image',
+    name: 'Bild',
     position: getInsertPosition(project, size),
     size,
     rotation: 0,
@@ -123,6 +130,7 @@ export function createWidgetInsert(project: Project, entry: WidgetRegistryEntry)
 
   return {
     type: 'widget',
+    name: entry.displayName || entry.name,
     position: getInsertPosition(project, size),
     size,
     rotation: 0,
@@ -142,6 +150,7 @@ export function createLogoInsert(project: Project, asset: LogoAsset): PartialCan
   const size = { width: 180, height: 180 };
   return {
     type: 'logo',
+    name: asset.name,
     position: getInsertPosition(project, size),
     size,
     rotation: 0,

@@ -15,8 +15,12 @@ const shortcuts: Shortcut[] = [
   { keys: 'Ctrl/Cmd + Shift + Z', description: 'Redo', category: 'Edit' },
   { keys: 'Delete / Backspace', description: 'Delete selected element', category: 'Edit' },
 
+  // Playback
+  { keys: 'Space', description: 'Play / Pause umschalten', category: 'Playback' },
+
   // Navigation
   { keys: 'Esc', description: 'Deselect element', category: 'Navigation' },
+  { keys: 'Ctrl/Cmd + A', description: 'Alle Elemente auswählen', category: 'Navigation' },
   { keys: 'Arrow Keys', description: 'Move element by 1px', category: 'Navigation' },
   { keys: 'Shift + Arrow Keys', description: 'Move element by 10px', category: 'Navigation' },
 
