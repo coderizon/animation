@@ -14,7 +14,8 @@ export type SceneTransitionType =
   | 'cut' | 'fade' | 'morph'
   | 'slide' | 'push' | 'wipe' | 'iris'
   | 'zoom' | 'blur' | 'flash' | 'glitch'
-  | 'flip' | 'cube' | 'split' | 'blinds';
+  | 'flip' | 'cube' | 'split' | 'blinds'
+  | 'liquid' | 'lightLeak' | 'whipPan' | 'filmBurn' | 'halftone' | 'chromatic';
 
 export type TransitionDirection = 'left' | 'right' | 'up' | 'down';
 
