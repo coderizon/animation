@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ImageContent, LogoContent, Project, Scene, CanvasElement, ShapeContent, TextContent, WidgetContent, getAnimations } from '../types/project';
+import { ImageContent, LogoContent, Project, Scene, CanvasElement, ShapeContent, TextContent, WidgetContent, SceneTransitionType, TransitionDirection, getAnimations } from '../types/project';
 import { animationPresets } from '../animations/presets';
 import { WidgetRenderer } from '../editor/components/WidgetRenderer';
 import { useProjectStore } from '../store/useProjectStore';
@@ -8,6 +8,7 @@ import { getInterpolatedProperties, getInterpolatedCamera } from '../editor/util
 import { wrapWithEffects } from '../editor/utils/effectStyles';
 import { getTypewriterText } from '../utils/typewriter';
 import { buildTimeline } from './timeline';
+import { getTransitionStyles } from './transitions';
 
 interface PlayerControllerProps {
   project: Project;
@@ -449,9 +450,9 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
     ? Math.min(previewAreaSize.width / project.canvas.width, previewAreaSize.height / project.canvas.height, 1)
     : 1;
 
-  // Determine what to render: normal scene, fade transition, or morph transition
+  // Determine what to render
   type RenderItem =
-    | { type: 'scene'; scene: Scene; localTime: number; opacity: number; key: string }
+    | { type: 'scene'; scene: Scene; localTime: number; opacity: number; style?: React.CSSProperties; key: string }
     | {
       type: 'morph';
       fromScene: Scene;
@@ -460,36 +461,66 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
       fromLocalTime: number;
       toLocalTime: number;
       key: string;
+    }
+    | {
+      type: 'transition';
+      fromScene: Scene;
+      toScene: Scene;
+      fromLocalTime: number;
+      toLocalTime: number;
+      transitionType: SceneTransitionType;
+      progress: number;
+      direction: TransitionDirection;
+      key: string;
     };
 
   const renderItems: RenderItem[] = [];
 
-  // Find active morph transition
-  let morphActive = false;
+  // Find active transition (morph or styled)
+  let transitionActive = false;
   for (let i = 1; i < slots.length; i++) {
     const slot = slots[i];
     const prevSlot = slots[i - 1];
     const localTime = currentTime - slot.globalStart;
 
-    if (slot.scene.transition?.type === 'morph' && slot.transitionDuration > 0 &&
-        localTime >= 0 && localTime < slot.transitionDuration) {
-      // We're in a morph transition
-      const progress = localTime / slot.transitionDuration;
-      renderItems.push({
-        type: 'morph',
-        fromScene: prevSlot.scene,
-        toScene: slot.scene,
-        progress,
-        fromLocalTime: currentTime - prevSlot.globalStart,
-        toLocalTime: localTime,
-        key: `morph-${prevSlot.scene.id}-${slot.scene.id}`,
-      });
-      morphActive = true;
-      break;
+    if (slot.transitionDuration > 0 && localTime >= 0 && localTime < slot.transitionDuration) {
+      const transType = slot.scene.transition?.type || 'cut';
+
+      if (transType === 'morph') {
+        const progress = localTime / slot.transitionDuration;
+        renderItems.push({
+          type: 'morph',
+          fromScene: prevSlot.scene,
+          toScene: slot.scene,
+          progress,
+          fromLocalTime: currentTime - prevSlot.globalStart,
+          toLocalTime: localTime,
+          key: `morph-${prevSlot.scene.id}-${slot.scene.id}`,
+        });
+        transitionActive = true;
+        break;
+      }
+
+      if (transType !== 'cut' && transType !== 'fade') {
+        const progress = localTime / slot.transitionDuration;
+        renderItems.push({
+          type: 'transition',
+          fromScene: prevSlot.scene,
+          toScene: slot.scene,
+          fromLocalTime: currentTime - prevSlot.globalStart,
+          toLocalTime: localTime,
+          transitionType: transType,
+          progress,
+          direction: slot.scene.transition?.direction || 'left',
+          key: `trans-${prevSlot.scene.id}-${slot.scene.id}`,
+        });
+        transitionActive = true;
+        break;
+      }
     }
   }
 
-  if (!morphActive) {
+  if (!transitionActive) {
     // Normal rendering: scenes with fade opacity
     for (let i = 0; i < slots.length; i++) {
       const slot = slots[i];
@@ -513,14 +544,13 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
         if (nextLocalTime >= 0 && nextSlot.transitionDuration > 0) {
           const transType = nextSlot.scene.transition?.type || 'cut';
           if (nextLocalTime < nextSlot.transitionDuration) {
-            // During transition: fade out for fade, hide for morph (MorphRenderer handles it)
             if (transType === 'fade') {
               opacity = 1 - (nextLocalTime / nextSlot.transitionDuration);
-            } else if (transType === 'morph') {
+            } else if (transType !== 'cut') {
+              // Other transitions handle both scenes themselves
               opacity = 0;
             }
           } else {
-            // Transition complete — previous scene must stop rendering
             continue;
           }
         }
@@ -615,6 +645,38 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
                     canvasWidth={project.canvas.width}
                     canvasHeight={project.canvas.height}
                   />
+                );
+              }
+              if (item.type === 'transition') {
+                const styles = getTransitionStyles(
+                  item.transitionType,
+                  item.progress,
+                  item.direction,
+                  project.canvas.width,
+                  project.canvas.height,
+                );
+                return (
+                  <div key={item.key} style={{ position: 'absolute', top: 0, left: 0, width: project.canvas.width, height: project.canvas.height, overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', ...styles.from }}>
+                      <SceneRenderer
+                        scene={item.fromScene}
+                        localTime={item.fromLocalTime}
+                        canvasWidth={project.canvas.width}
+                        canvasHeight={project.canvas.height}
+                        opacity={1}
+                      />
+                    </div>
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', ...styles.to }}>
+                      <SceneRenderer
+                        scene={item.toScene}
+                        localTime={item.toLocalTime}
+                        canvasWidth={project.canvas.width}
+                        canvasHeight={project.canvas.height}
+                        opacity={1}
+                      />
+                    </div>
+                    {styles.overlay && <div style={styles.overlay} />}
+                  </div>
                 );
               }
               return (

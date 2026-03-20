@@ -10,11 +10,18 @@ import {
 // Core Project Data Structure
 
 // Scene transition types
-export type SceneTransitionType = 'cut' | 'fade' | 'morph';
+export type SceneTransitionType =
+  | 'cut' | 'fade' | 'morph'
+  | 'slide' | 'push' | 'wipe' | 'iris'
+  | 'zoom' | 'blur' | 'flash' | 'glitch'
+  | 'flip' | 'cube' | 'split' | 'blinds';
+
+export type TransitionDirection = 'left' | 'right' | 'up' | 'down';
 
 export interface SceneTransition {
   type: SceneTransitionType;
   duration: number; // ms
+  direction?: TransitionDirection; // for directional transitions (slide, push, wipe, etc.)
 }
 
 export interface Scene {
