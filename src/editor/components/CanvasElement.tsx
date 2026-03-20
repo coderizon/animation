@@ -587,6 +587,15 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   // Hide element before its first animation's delay — only while actively playing, not when paused
   const hiddenBeforeDelay = isPlayingAll && !isPreviewing && firstDelay > 0 && currentTime < firstDelay;
 
+  // Hide widget after its duration has elapsed
+  const hiddenAfterWidgetEnd = (() => {
+    if (!isPlayback || element.type !== 'widget') return false;
+    const wc = element.content as import('../../types/project').WidgetContent;
+    const widgetDurationMs = (wc.durationInFrames / wc.fps) * 1000;
+    const startTime = firstDelay;
+    return currentTime > startTime + widgetDurationMs;
+  })();
+
   // Full keyframe interpolation during playback, paused, or when scrubbed (currentTime > 0)
   // Disable during drag so the user can freely move the element
   const showInterpolated = !isDragging && !isResizing && (isPlayback || currentTime > 0);
@@ -618,7 +627,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
         border: isSelected ? '2px solid var(--ae-accent)' : '1px solid transparent',
         boxShadow: isSelected ? '0 0 0 1px var(--ae-accent)' : 'none',
         pointerEvents: element.locked ? 'none' : 'auto',
-        display: element.visible && !hiddenBeforeDelay ? 'flex' : 'none',
+        display: element.visible && !hiddenBeforeDelay && !hiddenAfterWidgetEnd ? 'flex' : 'none',
         alignItems: 'center',
         justifyContent: 'center',
         userSelect: 'none',

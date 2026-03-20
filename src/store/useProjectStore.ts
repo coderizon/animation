@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Project, Scene, SceneTransition, CanvasElement, PartialCanvasElement, AnimationConfig, WidgetContent, Keyframe, CameraKeyframe, Effect, getAnimations } from '../types/project';
+import { Project, Scene, SceneTransition, CanvasElement, PartialCanvasElement, AnimationConfig, Keyframe, CameraKeyframe, Effect } from '../types/project';
+import { buildTimeline } from '../player/timeline';
 
 // Helper: Generate unique ID
 function generateId(): string {
@@ -66,7 +67,7 @@ function ensureScenes(project: Project): Project {
 }
 
 // Helper: Update active scene's elements/cameraKeyframes from project.elements
-function syncToActiveScene(project: Project): Project {
+export function syncProjectToActiveScene(project: Project): Project {
   const scenes = project.scenes.map(s =>
     s.id === project.activeSceneId
       ? { ...s, elements: project.elements, cameraKeyframes: project.cameraKeyframes }
@@ -93,6 +94,7 @@ interface ProjectStore {
   croppingElementId: string | null;
   contextMenu: { x: number; y: number; elementId: string } | null;
   lastDragStartPosition: { elementId: string; x: number; y: number } | null;
+  clipboard: CanvasElement | null;
 
   // History (Undo/Redo)
   history: Project[];
@@ -176,6 +178,10 @@ interface ProjectStore {
   addCameraKeyframe: (keyframe: CameraKeyframe) => void;
   removeCameraKeyframe: (time: number) => void;
 
+  // Clipboard
+  copyElementClean: (id: string) => void;
+  pasteElement: () => void;
+
   // Crop
   setCroppingElement: (id: string | null) => void;
   setContextMenu: (menu: { x: number; y: number; elementId: string } | null) => void;
@@ -189,7 +195,7 @@ interface ProjectStore {
 // Helper to push current project to history
 function pushHistory(state: ProjectStore): { history: Project[]; future: Project[] } {
   // Sync active scene before snapshotting
-  const synced = syncToActiveScene(state.project);
+  const synced = syncProjectToActiveScene(state.project);
   const snapshot = JSON.parse(JSON.stringify(synced));
   const history = [...state.history, snapshot];
   if (history.length > MAX_HISTORY) history.shift();
@@ -208,6 +214,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   croppingElementId: null,
   contextMenu: null,
   lastDragStartPosition: null,
+  clipboard: null,
   history: [],
   future: [],
 
@@ -432,32 +439,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
 
     const { project, playbackState, currentTime: resumeTime } = get();
+    const { totalDuration } = buildTimeline(syncProjectToActiveScene(project));
+    const maxDuration = Math.max(totalDuration, 3000);
 
-    // Calculate max duration
-    const maxFramerDuration = project.elements.reduce((max, el) => {
-      if (el.type === 'widget') return max;
-      const anims = getAnimations(el);
-      if (anims.length === 0) return max;
-      const maxAnimTime = anims.reduce((m, a) => Math.max(m, (a.delay || 0) + (a.duration || 600)), 0);
-      return Math.max(max, maxAnimTime);
-    }, 0);
-
-    const maxWidgetDuration = project.elements.reduce((max, el) => {
-      if (el.type !== 'widget') return max;
-      const wc = el.content as WidgetContent;
-      const totalMs = (wc.durationInFrames / wc.fps) * 1000;
-      return Math.max(max, totalMs);
-    }, 0);
-
-    const maxKeyframeDuration = project.elements.reduce((max, el) => {
-      if (!el.keyframes || el.keyframes.length === 0) return max;
-      return Math.max(max, ...el.keyframes.map((kf) => kf.time));
-    }, 0);
-
-    const maxDuration = Math.max(maxFramerDuration, maxWidgetDuration, maxKeyframeDuration + 500, 3000);
-
-    // Resume from paused position, or start from 0
-    const startFrom = playbackState === 'paused' ? resumeTime : 0;
+    // Resume from current position (stopAllAnimations resets to 0, seek updates it)
+    const startFrom = resumeTime;
 
     set({ playbackState: 'playing', isPlayingAll: true, selectedElementIds: [], currentTime: startFrom });
     playStartTimestamp = null;
@@ -510,7 +496,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   exportProject: () => {
-    const synced = syncToActiveScene(get().project);
+    const synced = syncProjectToActiveScene(get().project);
     return JSON.stringify(synced, null, 2);
   },
 
@@ -568,7 +554,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Scene Management
   addScene: (name) => {
     set((state) => {
-      const synced = syncToActiveScene(state.project);
+      const synced = syncProjectToActiveScene(state.project);
       const count = synced.scenes.length + 1;
       const scene = createBlankScene(name || `Szene ${count}`);
       const scenes = [...synced.scenes, scene];
@@ -589,7 +575,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   duplicateScene: (sceneId) => {
     set((state) => {
-      const synced = syncToActiveScene(state.project);
+      const synced = syncProjectToActiveScene(state.project);
       const source = synced.scenes.find(s => s.id === sceneId);
       if (!source) return state;
       const newScene: Scene = {
@@ -617,7 +603,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   deleteScene: (sceneId) => {
     set((state) => {
-      const synced = syncToActiveScene(state.project);
+      const synced = syncProjectToActiveScene(state.project);
       if (synced.scenes.length <= 1) return state; // can't delete last scene
       const scenes = synced.scenes.filter(s => s.id !== sceneId);
       const newActive = sceneId === synced.activeSceneId
@@ -642,7 +628,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set((state) => {
       if (sceneId === state.project.activeSceneId) return state;
       // Save current scene's elements before switching
-      const synced = syncToActiveScene(state.project);
+      const synced = syncProjectToActiveScene(state.project);
       const target = synced.scenes.find(s => s.id === sceneId);
       if (!target) return state;
       return {
@@ -671,7 +657,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   reorderScenes: (fromIndex, toIndex) => {
     set((state) => {
-      const synced = syncToActiveScene(state.project);
+      const synced = syncProjectToActiveScene(state.project);
       const scenes = [...synced.scenes];
       const [moved] = scenes.splice(fromIndex, 1);
       scenes.splice(toIndex, 0, moved);
@@ -705,12 +691,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   getActiveScene: () => {
-    const state = get();
-    return state.project.scenes.find(s => s.id === state.project.activeSceneId) || state.project.scenes[0];
+    const syncedProject = syncProjectToActiveScene(get().project);
+    return syncedProject.scenes.find(s => s.id === syncedProject.activeSceneId) || syncedProject.scenes[0];
   },
 
   getScenes: () => {
-    return get().project.scenes;
+    return syncProjectToActiveScene(get().project).scenes;
   },
 
   // Layer operations
@@ -954,6 +940,41 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         },
       };
     });
+  },
+
+  // Clipboard
+  copyElementClean: (id) => {
+    const el = get().project.elements.find((e) => e.id === id);
+    if (!el) return;
+    // Deep clone, strip animations/keyframes/effects
+    const clean: CanvasElement = {
+      ...JSON.parse(JSON.stringify(el)),
+      animation: undefined,
+      animations: undefined,
+      keyframes: undefined,
+      effects: undefined,
+    };
+    set({ clipboard: clean });
+  },
+
+  pasteElement: () => {
+    const { clipboard } = get();
+    if (!clipboard) return;
+    const newEl: CanvasElement = {
+      ...JSON.parse(JSON.stringify(clipboard)),
+      id: generateId(),
+      position: { x: clipboard.position.x + 30, y: clipboard.position.y + 30 },
+      keyframes: [{ time: 0, x: clipboard.position.x + 30, y: clipboard.position.y + 30 }],
+    };
+    set((state) => ({
+      ...pushHistory(state),
+      project: {
+        ...state.project,
+        elements: [...state.project.elements, newEl],
+        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+      },
+      selectedElementIds: [newEl.id],
+    }));
   },
 
   // Crop

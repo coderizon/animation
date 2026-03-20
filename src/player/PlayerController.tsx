@@ -7,67 +7,11 @@ import { useProjectStore } from '../store/useProjectStore';
 import { getInterpolatedProperties, getInterpolatedCamera } from '../editor/utils/keyframeInterpolation';
 import { wrapWithEffects } from '../editor/utils/effectStyles';
 import { getTypewriterText } from '../utils/typewriter';
+import { buildTimeline } from './timeline';
 
 interface PlayerControllerProps {
   project: Project;
   onExit: () => void;
-}
-
-function getSceneDuration(scene: Scene): number {
-  // Manual duration takes priority
-  if (scene.duration && scene.duration > 0) return scene.duration;
-
-  // Auto-calculate from content
-  const els = scene.elements;
-  const maxAnim = els.reduce((max, el) => {
-    if (el.type === 'widget') return max;
-    const anims = getAnimations(el);
-    if (anims.length === 0) return max;
-    return Math.max(max, anims.reduce((m, a) => Math.max(m, (a.delay || 0) + (a.duration || 600)), 0));
-  }, 0);
-
-  const maxWidget = els.reduce((max, el) => {
-    if (el.type !== 'widget') return max;
-    const wc = el.content as WidgetContent;
-    return Math.max(max, (wc.durationInFrames / wc.fps) * 1000);
-  }, 0);
-
-  const maxKf = els.reduce((max, el) => {
-    if (!el.keyframes || el.keyframes.length === 0) return max;
-    return Math.max(max, ...el.keyframes.map((kf) => kf.time));
-  }, 0);
-
-  const maxCam = (scene.cameraKeyframes || []).reduce((max, kf) => Math.max(max, kf.time), 0);
-
-  return Math.max(maxAnim, maxWidget, maxKf + 500, maxCam + 500, 2000);
-}
-
-interface SceneSlot {
-  scene: Scene;
-  globalStart: number; // ms from total start
-  duration: number;
-  transitionDuration: number; // overlap with previous scene
-}
-
-function buildTimeline(project: Project): { slots: SceneSlot[]; totalDuration: number } {
-  const scenes = project.scenes || [];
-  if (scenes.length === 0) return { slots: [], totalDuration: 0 };
-
-  const slots: SceneSlot[] = [];
-  let time = 0;
-
-  for (let i = 0; i < scenes.length; i++) {
-    const scene = scenes[i];
-    const dur = getSceneDuration(scene);
-    const transDur = i > 0 && scene.transition ? scene.transition.duration : 0;
-
-    // Overlap: the transition starts transDur before the previous scene ends
-    const start = i === 0 ? 0 : time - transDur;
-    slots.push({ scene, globalStart: Math.max(0, start), duration: dur, transitionDuration: transDur });
-    time = Math.max(0, start) + dur;
-  }
-
-  return { slots, totalDuration: time };
 }
 
 function formatTime(ms: number): string {
@@ -166,6 +110,14 @@ function ElementRenderer({ element, currentTime, skipAnimation }: { element: Can
   const firstDelay = anims.length > 0 ? Math.min(...anims.map(a => a.delay || 0)) : 0;
   const hiddenBeforeDelay = firstDelay > 0 && currentTime < firstDelay;
 
+  // Hide widget after its duration has elapsed
+  const hiddenAfterWidgetEnd = (() => {
+    if (element.type !== 'widget') return false;
+    const wc = element.content as WidgetContent;
+    const widgetDurationMs = (wc.durationInFrames / wc.fps) * 1000;
+    return currentTime > firstDelay + widgetDurationMs;
+  })();
+
   const interp = getInterpolatedProperties(element.keyframes, currentTime);
   const posX = interp ? interp.x : element.position.x;
   const posY = interp ? interp.y : element.position.y;
@@ -237,7 +189,7 @@ function ElementRenderer({ element, currentTime, skipAnimation }: { element: Can
         width: w, height: h,
         transform: `rotate(${rot}deg)`,
         zIndex: element.zIndex,
-        display: hiddenBeforeDelay ? 'none' : undefined,
+        display: (hiddenBeforeDelay || hiddenAfterWidgetEnd) ? 'none' : undefined,
       }}
     >
       {wrapWithEffects(element.effects, (
@@ -294,31 +246,97 @@ function ElementRenderer({ element, currentTime, skipAnimation }: { element: Can
   );
 }
 
+function resolveElementForMorph(element: CanvasElement, time: number): CanvasElement {
+  const interpolated = getInterpolatedProperties(element.keyframes, time);
+  const content = (() => {
+    switch (element.type) {
+      case 'text': {
+        const textContent = element.content as TextContent;
+        return {
+          ...textContent,
+          color: interpolated?.color ?? textContent.color,
+          fontSize: interpolated?.fontSize ?? textContent.fontSize,
+        };
+      }
+      case 'shape': {
+        const shapeContent = element.content as ShapeContent;
+        return {
+          ...shapeContent,
+          fill: interpolated?.fill ?? shapeContent.fill,
+          stroke: interpolated?.stroke ?? shapeContent.stroke,
+          strokeWidth: interpolated?.strokeWidth ?? shapeContent.strokeWidth,
+          borderRadius: interpolated?.borderRadius ?? shapeContent.borderRadius,
+        };
+      }
+      default:
+        return element.content;
+    }
+  })();
+
+  return {
+    ...element,
+    position: {
+      x: interpolated?.x ?? element.position.x,
+      y: interpolated?.y ?? element.position.y,
+    },
+    size: {
+      width: interpolated?.width ?? element.size.width,
+      height: interpolated?.height ?? element.size.height,
+    },
+    rotation: interpolated?.rotation ?? element.rotation,
+    content,
+    keyframes: undefined,
+  };
+}
+
+// Check if an element should be visible at a given local time
+function isElementVisibleAtTime(element: CanvasElement, localTime: number): boolean {
+  const anims = getAnimations(element);
+  const firstDelay = anims.length > 0 ? Math.min(...anims.map(a => a.delay || 0)) : 0;
+
+  // Hidden before first animation delay
+  if (firstDelay > 0 && localTime < firstDelay) return false;
+
+  // Widget: hidden after duration elapsed
+  if (element.type === 'widget') {
+    const wc = element.content as WidgetContent;
+    const widgetDurationMs = (wc.durationInFrames / wc.fps) * 1000;
+    if (localTime > firstDelay + widgetDurationMs) return false;
+  }
+
+  return true;
+}
+
 // Morph transition: renders matched elements interpolated, unmatched fade in/out
 function MorphRenderer({
   fromScene,
   toScene,
   progress, // 0 = fully fromScene, 1 = fully toScene
+  fromLocalTime,
+  toLocalTime,
   canvasWidth,
   canvasHeight,
 }: {
   fromScene: Scene;
   toScene: Scene;
   progress: number;
+  fromLocalTime: number;
+  toLocalTime: number;
   canvasWidth: number;
   canvasHeight: number;
 }) {
-  const fromEls = fromScene.elements.filter(el => el.visible);
-  const toEls = toScene.elements.filter(el => el.visible);
+  const fromEls = fromScene.elements.filter(el => el.visible && isElementVisibleAtTime(el, fromLocalTime));
+  const toEls = toScene.elements.filter(el => el.visible && isElementVisibleAtTime(el, toLocalTime));
 
-  // Match by name
+  // Match by stable element id first, then by name as a fallback.
   const matched: { from: CanvasElement; to: CanvasElement }[] = [];
   const unmatchedFrom: CanvasElement[] = [];
   const unmatchedTo: CanvasElement[] = [];
   const toUsed = new Set<string>();
 
   for (const from of fromEls) {
-    const to = toEls.find(el => el.name && el.name === from.name && !toUsed.has(el.id));
+    const to = toEls.find((el) => el.id === from.id && !toUsed.has(el.id))
+      || toEls.find(el => el.name && from.name && el.name === from.name && !toUsed.has(el.id));
     if (to) {
       matched.push({ from, to });
       toUsed.add(to.id);
@@ -341,13 +359,15 @@ function MorphRenderer({
     <div style={{ position: 'absolute', top: 0, left: 0, width: canvasWidth, height: canvasHeight }}>
       {/* Matched elements: interpolate position, size, rotation */}
       {matched.map(({ from, to }) => {
-        const x = lerp(from.position.x, to.position.x);
-        const y = lerp(from.position.y, to.position.y);
-        const w = lerp(from.size.width, to.size.width);
-        const h = lerp(from.size.height, to.size.height);
-        const rot = lerp(from.rotation, to.rotation);
+        const resolvedFrom = resolveElementForMorph(from, fromLocalTime);
+        const resolvedTo = resolveElementForMorph(to, toLocalTime);
+        const x = lerp(resolvedFrom.position.x, resolvedTo.position.x);
+        const y = lerp(resolvedFrom.position.y, resolvedTo.position.y);
+        const w = lerp(resolvedFrom.size.width, resolvedTo.size.width);
+        const h = lerp(resolvedFrom.size.height, resolvedTo.size.height);
+        const rot = lerp(resolvedFrom.rotation, resolvedTo.rotation);
         // Use the "to" element for content (it's the target state)
-        const displayEl = t < 0.5 ? from : to;
+        const displayEl = t < 0.5 ? resolvedFrom : resolvedTo;
         return (
           <div key={`morph-${from.id}-${to.id}`} style={{
             position: 'absolute',
@@ -361,32 +381,38 @@ function MorphRenderer({
       })}
 
       {/* Unmatched from: fade out */}
-      {unmatchedFrom.map((el) => (
-        <div key={`morph-out-${el.id}`} style={{
-          position: 'absolute',
-          left: el.position.x, top: el.position.y,
-          width: el.size.width, height: el.size.height,
-          transform: `rotate(${el.rotation}deg)`,
-          zIndex: el.zIndex,
-          opacity: 1 - t,
-        }}>
-          <ElementRenderer element={el} currentTime={0} skipAnimation />
-        </div>
-      ))}
+      {unmatchedFrom.map((el) => {
+        const resolved = resolveElementForMorph(el, fromLocalTime);
+        return (
+          <div key={`morph-out-${el.id}`} style={{
+            position: 'absolute',
+            left: resolved.position.x, top: resolved.position.y,
+            width: resolved.size.width, height: resolved.size.height,
+            transform: `rotate(${resolved.rotation}deg)`,
+            zIndex: resolved.zIndex,
+            opacity: 1 - t,
+          }}>
+            <ElementRenderer element={{ ...resolved, position: { x: 0, y: 0 }, rotation: 0 }} currentTime={0} skipAnimation />
+          </div>
+        );
+      })}
 
       {/* Unmatched to: fade in */}
-      {unmatchedTo.map((el) => (
-        <div key={`morph-in-${el.id}`} style={{
-          position: 'absolute',
-          left: el.position.x, top: el.position.y,
-          width: el.size.width, height: el.size.height,
-          transform: `rotate(${el.rotation}deg)`,
-          zIndex: el.zIndex,
-          opacity: t,
-        }}>
-          <ElementRenderer element={el} currentTime={0} skipAnimation />
-        </div>
-      ))}
+      {unmatchedTo.map((el) => {
+        const resolved = resolveElementForMorph(el, toLocalTime);
+        return (
+          <div key={`morph-in-${el.id}`} style={{
+            position: 'absolute',
+            left: resolved.position.x, top: resolved.position.y,
+            width: resolved.size.width, height: resolved.size.height,
+            transform: `rotate(${resolved.rotation}deg)`,
+            zIndex: resolved.zIndex,
+            opacity: t,
+          }}>
+            <ElementRenderer element={{ ...resolved, position: { x: 0, y: 0 }, rotation: 0 }} currentTime={0} skipAnimation />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -426,7 +452,15 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
   // Determine what to render: normal scene, fade transition, or morph transition
   type RenderItem =
     | { type: 'scene'; scene: Scene; localTime: number; opacity: number; key: string }
-    | { type: 'morph'; fromScene: Scene; toScene: Scene; progress: number; key: string };
+    | {
+      type: 'morph';
+      fromScene: Scene;
+      toScene: Scene;
+      progress: number;
+      fromLocalTime: number;
+      toLocalTime: number;
+      key: string;
+    };
 
   const renderItems: RenderItem[] = [];
 
@@ -446,6 +480,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
         fromScene: prevSlot.scene,
         toScene: slot.scene,
         progress,
+        fromLocalTime: currentTime - prevSlot.globalStart,
+        toLocalTime: localTime,
         key: `morph-${prevSlot.scene.id}-${slot.scene.id}`,
       });
       morphActive = true;
@@ -474,10 +510,18 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
       if (i + 1 < slots.length) {
         const nextSlot = slots[i + 1];
         const nextLocalTime = currentTime - nextSlot.globalStart;
-        if (nextLocalTime >= 0 && nextSlot.transitionDuration > 0 && nextLocalTime < nextSlot.transitionDuration) {
+        if (nextLocalTime >= 0 && nextSlot.transitionDuration > 0) {
           const transType = nextSlot.scene.transition?.type || 'cut';
-          if (transType === 'fade') {
-            opacity = 1 - (nextLocalTime / nextSlot.transitionDuration);
+          if (nextLocalTime < nextSlot.transitionDuration) {
+            // During transition: fade out for fade, hide for morph (MorphRenderer handles it)
+            if (transType === 'fade') {
+              opacity = 1 - (nextLocalTime / nextSlot.transitionDuration);
+            } else if (transType === 'morph') {
+              opacity = 0;
+            }
+          } else {
+            // Transition complete — previous scene must stop rendering
+            continue;
           }
         }
       }
@@ -566,6 +610,8 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
                     fromScene={item.fromScene}
                     toScene={item.toScene}
                     progress={item.progress}
+                    fromLocalTime={item.fromLocalTime}
+                    toLocalTime={item.toLocalTime}
                     canvasWidth={project.canvas.width}
                     canvasHeight={project.canvas.height}
                   />
@@ -605,8 +651,13 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
             value={Math.min(currentTime, totalDuration)}
             onChange={(e) => {
               const t = Number(e.target.value);
-              // If playing, pause first so user can scrub
-              if (playbackState === 'playing') pauseAllAnimations();
+              // Pause if playing, or set paused state so Play resumes from here
+              if (playbackState === 'playing') {
+                pauseAllAnimations();
+              } else if (playbackState === 'stopped') {
+                // Mark as paused so Play knows to resume from this position
+                useProjectStore.setState({ playbackState: 'paused' });
+              }
               setCurrentTime(t);
             }}
             style={{ width: '100%', accentColor: 'var(--ae-accent)' }}

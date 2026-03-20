@@ -38,6 +38,26 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
+      // Ctrl+C: Copy element (without animations)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && !e.shiftKey) {
+        const { selectedElementIds, copyElementClean } = useProjectStore.getState();
+        if (selectedElementIds.length === 1) {
+          e.preventDefault();
+          copyElementClean(selectedElementIds[0]);
+        }
+        return;
+      }
+
+      // Ctrl+V: Paste element
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && !e.shiftKey) {
+        const { clipboard, pasteElement } = useProjectStore.getState();
+        if (clipboard) {
+          e.preventDefault();
+          pasteElement();
+        }
+        return;
+      }
+
       // Ctrl+A: Select all
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         e.preventDefault();

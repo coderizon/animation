@@ -323,6 +323,9 @@ export const Timeline: React.FC = () => {
       const el = state.project.elements.find((el) => el.id === elementId);
       if (!el) return;
 
+      // Widget elements: resize changes durationInFrames, move changes animation delay
+      const isWidget = el.type === 'widget';
+
       const anims = [...(el.animations || [])];
       const anim = anims[animIndex] || { preset: 'none' as const, delay: startDelay, duration: startDuration, easing: 'easeOut' as const };
 
@@ -344,8 +347,26 @@ export const Timeline: React.FC = () => {
       newDelay = Math.round(newDelay / 50) * 50;
       newDuration = Math.max(100, Math.round(newDuration / 50) * 50);
 
-      anims[animIndex] = { ...anim, delay: newDelay, duration: newDuration };
-      updateElementSilent(elementId, { animations: anims });
+      if (isWidget && (type === 'resize-right' || type === 'resize-left')) {
+        // Update widget durationInFrames directly
+        const wc = el.content as WidgetContent;
+        const newFrames = Math.max(1, Math.round((newDuration / 1000) * wc.fps));
+        if (type === 'resize-left') {
+          // Resize-left also shifts the delay
+          anims[animIndex] = { ...anim, delay: newDelay, duration: newDuration };
+          updateElementSilent(elementId, {
+            content: { ...wc, durationInFrames: newFrames },
+            animations: anims,
+          });
+        } else {
+          updateElementSilent(elementId, {
+            content: { ...wc, durationInFrames: newFrames },
+          });
+        }
+      } else {
+        anims[animIndex] = { ...anim, delay: newDelay, duration: newDuration };
+        updateElementSilent(elementId, { animations: anims });
+      }
 
       // Multi-select: apply same delta to all other selected elements (move only)
       if (type === 'move' && state.selectedElementIds.length > 1) {
@@ -1212,8 +1233,10 @@ export const Timeline: React.FC = () => {
                   flexShrink: 0,
                 }}
               >
-                {/* Animation bars (one per animation) */}
+                {/* Animation bars (one per animation — skip 'none' for widgets, widget bar handles that) */}
                 {anims.map((anim, animIdx) => {
+                  // Widget 'none' animations are shown via the widget bar instead
+                  if (el.content.type === 'widget' && anim.preset === 'none') return null;
                   const delay = anim.delay || 0;
                   const duration = anim.duration || 600;
                   const barWidth = Math.max(duration * pxPerMs, 20);
@@ -1295,11 +1318,12 @@ export const Timeline: React.FC = () => {
                   </div>
                 )}
 
-                {/* Widget duration bar (if no visual animation bar) */}
-                {!hasAnimation && el.content.type === 'widget' && (() => {
+                {/* Widget duration bar — always visible for widgets */}
+                {el.content.type === 'widget' && (() => {
                   const wc = el.content as WidgetContent;
                   const wDuration = (wc.durationInFrames / wc.fps) * 1000;
-                  const wDelay = 0;
+                  const firstAnim = anims.length > 0 ? anims[0] : null;
+                  const wDelay = firstAnim ? (firstAnim.delay || 0) : 0;
                   const wBarWidth = Math.max(wDuration * pxPerMs, 20);
                   return (
                     <div
@@ -1319,6 +1343,7 @@ export const Timeline: React.FC = () => {
                         overflow: 'hidden',
                         cursor: 'grab',
                         userSelect: 'none',
+                        zIndex: 2,
                       }}
                     >
                       <div
@@ -1332,7 +1357,7 @@ export const Timeline: React.FC = () => {
                         padding: '0 8px',
                         pointerEvents: 'none',
                       }}>
-                        {wc.widgetName}
+                        {wc.widgetName} ({(wDuration / 1000).toFixed(1)}s)
                       </span>
                       <div
                         onMouseDown={(e) => handleBarMouseDown(e, el.id, 'resize-right', wDelay, wDuration, 0)}
