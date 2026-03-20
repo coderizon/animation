@@ -194,12 +194,74 @@ interface ProjectStore {
 
 // Helper to push current project to history
 function pushHistory(state: ProjectStore): { history: Project[]; future: Project[] } {
-  // Sync active scene before snapshotting
   const synced = syncProjectToActiveScene(state.project);
-  const snapshot = JSON.parse(JSON.stringify(synced));
+  const snapshot = structuredClone(synced);
   const history = [...state.history, snapshot];
   if (history.length > MAX_HISTORY) history.shift();
   return { history, future: [] };
+}
+
+// Helper: update a single element with history push and metadata update
+function updateElementWithHistory(state: ProjectStore, id: string, updater: (el: CanvasElement) => CanvasElement): Partial<ProjectStore> {
+  return {
+    ...pushHistory(state),
+    project: {
+      ...state.project,
+      elements: state.project.elements.map((el) => el.id === id ? updater(el) : el),
+      metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+    },
+  };
+}
+
+// Helper: update project-level fields with history push
+function updateProjectWithHistory(state: ProjectStore, projectUpdates: Partial<Project>): Partial<ProjectStore> {
+  return {
+    ...pushHistory(state),
+    project: {
+      ...state.project,
+      ...projectUpdates,
+      metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+    },
+  };
+}
+
+// Helper: create state update that modifies elements and pushes history
+function updateElementInProject(state: ProjectStore, id: string, updates: Partial<CanvasElement>): Partial<ProjectStore> {
+  return {
+    ...pushHistory(state),
+    project: {
+      ...state.project,
+      elements: state.project.elements.map((el) =>
+        el.id === id ? { ...el, ...updates } : el
+      ),
+      metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+    },
+  };
+}
+
+// Helper: create state update that modifies project-level data and pushes history
+function updateProjectField(state: ProjectStore, projectUpdates: Partial<Project>): Partial<ProjectStore> {
+  return {
+    ...pushHistory(state),
+    project: {
+      ...state.project,
+      ...projectUpdates,
+      metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+    },
+  };
+}
+
+// Helper: create state update with new elements array (reindexed) and history
+function updateElementsWithHistory(state: ProjectStore, elements: CanvasElement[]): Partial<ProjectStore> {
+  const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
+  return {
+    ...pushHistory(state),
+    project: {
+      ...state.project,
+      elements: reindexed,
+      metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
+    },
+  };
 }
 
 // Zustand Store
@@ -227,7 +289,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set({
       project: previous,
       history: newHistory,
-      future: [JSON.parse(JSON.stringify(project)), ...get().future],
+      future: [structuredClone(project), ...get().future],
     });
   },
 
@@ -239,7 +301,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set({
       project: next,
       future: newFuture,
-      history: [...get().history, JSON.parse(JSON.stringify(project))],
+      history: [...get().history, structuredClone(project)],
     });
   },
 
@@ -295,7 +357,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     };
 
     const duplicate: CanvasElement = {
-      ...JSON.parse(JSON.stringify(source)),
+      ...structuredClone(source),
       id: newId,
       name: autoName,
       position: { x: source.position.x + 30, y: source.position.y + 30 },
@@ -318,19 +380,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   updateElement: (id, updates) => {
-    set((state) => ({
-      ...pushHistory(state),
-      project: {
-        ...state.project,
-        elements: state.project.elements.map((el) =>
-          el.id === id ? { ...el, ...updates } : el
-        ),
-        metadata: {
-          ...state.project.metadata,
-          updatedAt: new Date().toISOString(),
-        },
-      },
-    }));
+    set((state) => updateElementInProject(state, id, updates));
   },
 
   deleteElement: (id) => {
@@ -579,7 +629,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const source = synced.scenes.find(s => s.id === sceneId);
       if (!source) return state;
       const newScene: Scene = {
-        ...JSON.parse(JSON.stringify(source)),
+        ...structuredClone(source),
         id: generateId(),
         name: `${source.name} (Kopie)`,
       };
@@ -669,24 +719,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   setSceneTransition: (sceneId, transition) => {
-    set((state) => ({
-      ...pushHistory(state),
-      project: {
-        ...state.project,
-        scenes: state.project.scenes.map(s => s.id === sceneId ? { ...s, transition } : s),
-        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-      },
+    set((state) => updateProjectField(state, {
+      scenes: state.project.scenes.map(s => s.id === sceneId ? { ...s, transition } : s),
     }));
   },
 
   setSceneDuration: (sceneId, duration) => {
-    set((state) => ({
-      ...pushHistory(state),
-      project: {
-        ...state.project,
-        scenes: state.project.scenes.map(s => s.id === sceneId ? { ...s, duration } : s),
-        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-      },
+    set((state) => updateProjectField(state, {
+      scenes: state.project.scenes.map(s => s.id === sceneId ? { ...s, duration } : s),
     }));
   },
 
@@ -705,16 +745,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const elements = [...state.project.elements];
       const [moved] = elements.splice(fromIndex, 1);
       elements.splice(toIndex, 0, moved);
-      // Re-assign zIndex based on array position
-      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
-      return {
-        ...pushHistory(state),
-        project: {
-          ...state.project,
-          elements: reindexed,
-          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-        },
-      };
+      return updateElementsWithHistory(state, elements);
     });
   },
 
@@ -725,15 +756,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       if (idx === -1 || idx === elements.length - 1) return state;
       const [moved] = elements.splice(idx, 1);
       elements.push(moved);
-      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
-      return {
-        ...pushHistory(state),
-        project: {
-          ...state.project,
-          elements: reindexed,
-          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-        },
-      };
+      return updateElementsWithHistory(state, elements);
     });
   },
 
@@ -744,15 +767,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       if (idx === -1 || idx === 0) return state;
       const [moved] = elements.splice(idx, 1);
       elements.unshift(moved);
-      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
-      return {
-        ...pushHistory(state),
-        project: {
-          ...state.project,
-          elements: reindexed,
-          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-        },
-      };
+      return updateElementsWithHistory(state, elements);
     });
   },
 
@@ -762,15 +777,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const idx = elements.findIndex((el) => el.id === id);
       if (idx === -1 || idx === elements.length - 1) return state;
       [elements[idx], elements[idx + 1]] = [elements[idx + 1], elements[idx]];
-      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
-      return {
-        ...pushHistory(state),
-        project: {
-          ...state.project,
-          elements: reindexed,
-          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-        },
-      };
+      return updateElementsWithHistory(state, elements);
     });
   },
 
@@ -780,15 +787,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const idx = elements.findIndex((el) => el.id === id);
       if (idx === -1 || idx === 0) return state;
       [elements[idx], elements[idx - 1]] = [elements[idx - 1], elements[idx]];
-      const reindexed = elements.map((el, i) => ({ ...el, zIndex: i }));
-      return {
-        ...pushHistory(state),
-        project: {
-          ...state.project,
-          elements: reindexed,
-          metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-        },
-      };
+      return updateElementsWithHistory(state, elements);
     });
   },
 
@@ -804,29 +803,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   toggleElementVisibility: (id) => {
-    set((state) => ({
-      ...pushHistory(state),
-      project: {
-        ...state.project,
-        elements: state.project.elements.map((el) =>
-          el.id === id ? { ...el, visible: !el.visible } : el
-        ),
-        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-      },
-    }));
+    const el = get().project.elements.find((e) => e.id === id);
+    if (!el) return;
+    set((state) => updateElementInProject(state, id, { visible: !el.visible }));
   },
 
   toggleElementLock: (id) => {
-    set((state) => ({
-      ...pushHistory(state),
-      project: {
-        ...state.project,
-        elements: state.project.elements.map((el) =>
-          el.id === id ? { ...el, locked: !el.locked } : el
-        ),
-        metadata: { ...state.project.metadata, updatedAt: new Date().toISOString() },
-      },
-    }));
+    const el = get().project.elements.find((e) => e.id === id);
+    if (!el) return;
+    set((state) => updateElementInProject(state, id, { locked: !el.locked }));
   },
 
   // Animations (multi)
@@ -948,7 +933,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     if (!el) return;
     // Deep clone, strip animations/keyframes/effects
     const clean: CanvasElement = {
-      ...JSON.parse(JSON.stringify(el)),
+      ...structuredClone(el),
       animation: undefined,
       animations: undefined,
       keyframes: undefined,
@@ -961,7 +946,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const { clipboard } = get();
     if (!clipboard) return;
     const newEl: CanvasElement = {
-      ...JSON.parse(JSON.stringify(clipboard)),
+      ...structuredClone(clipboard),
       id: generateId(),
       position: { x: clipboard.position.x + 30, y: clipboard.position.y + 30 },
       keyframes: [{ time: 0, x: clipboard.position.x + 30, y: clipboard.position.y + 30 }],

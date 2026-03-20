@@ -428,7 +428,7 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
     if (e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
-    const snapshot = JSON.parse(JSON.stringify(useProjectStore.getState().project));
+    const snapshot = structuredClone(useProjectStore.getState().project);
     dragRef.current = {
       type: 'move',
       startMouseX: e.clientX,
@@ -445,7 +445,7 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
     if (e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
-    const snapshot = JSON.parse(JSON.stringify(useProjectStore.getState().project));
+    const snapshot = structuredClone(useProjectStore.getState().project);
     dragRef.current = {
       type: 'resize',
       startMouseX: e.clientX,

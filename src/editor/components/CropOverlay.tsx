@@ -39,7 +39,7 @@ export const CropOverlay: React.FC<CropOverlayProps> = ({ element }) => {
     e.stopPropagation();
     e.preventDefault();
 
-    const snapshot = JSON.parse(JSON.stringify(project));
+    const snapshot = structuredClone(project);
     dragRef.current = {
       handle,
       startMouseX: e.clientX,

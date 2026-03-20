@@ -8,6 +8,7 @@ import { KeyboardShortcutsOverlay } from './components/KeyboardShortcutsOverlay'
 import { Timeline } from './components/Timeline';
 import { SceneBar } from './components/SceneBar';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { ErrorBoundary } from './components/ErrorBoundary';
 const LazyScriptPanel = lazy(() =>
   import('./components/ScriptPanel').then((m) => ({ default: m.ScriptPanel })),
 );
@@ -409,12 +410,16 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
           padding={0}
         >
           <div style={{ padding: 8 }}>
-            <PropertiesPanel />
+            <ErrorBoundary fallbackLabel="Properties">
+              <PropertiesPanel />
+            </ErrorBoundary>
           </div>
         </ResizablePanel>
 
         {/* Canvas Area (Center) */}
-        <Canvas />
+        <ErrorBoundary fallbackLabel="Canvas">
+          <Canvas />
+        </ErrorBoundary>
 
         {/* Script Panel (Right side, toggleable) */}
         {showScriptPanel && (
@@ -458,7 +463,9 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
             opacity: isResizingTimeline ? 1 : 0.5,
           }} />
         </div>
-        <Timeline />
+        <ErrorBoundary fallbackLabel="Timeline">
+          <Timeline />
+        </ErrorBoundary>
       </div>
 
       {/* Template Selector Modal */}

@@ -140,7 +140,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     }
 
     // Save snapshot for undo before any changes
-    snapshotRef.current = JSON.parse(JSON.stringify(project));
+    snapshotRef.current = structuredClone(project);
 
     // Save pre-drag position for "Bewegung hierher" context menu
     setLastDragStartPosition({ elementId: element.id, x: element.position.x, y: element.position.y });
@@ -227,7 +227,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     e.stopPropagation();
     e.preventDefault();
 
-    snapshotRef.current = JSON.parse(JSON.stringify(project));
+    snapshotRef.current = structuredClone(project);
 
     resizeStart.current = {
       mouseX: e.clientX,
@@ -375,7 +375,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const handleRadiusStart = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    snapshotRef.current = JSON.parse(JSON.stringify(project));
+    snapshotRef.current = structuredClone(project);
     const content = element.content as ShapeContent;
     radiusStart.current = { mouseX: e.clientX, startRadius: content.borderRadius || 0 };
     setIsRadiusDragging(true);

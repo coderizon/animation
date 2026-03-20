@@ -240,7 +240,7 @@ export function createScriptApi() {
      * Get all elements (read-only snapshot).
      */
     getElements() {
-      return JSON.parse(JSON.stringify(store().project.elements));
+      return structuredClone(store().project.elements);
     },
 
     /**
@@ -248,7 +248,7 @@ export function createScriptApi() {
      */
     getElement(id: string) {
       const el = store().project.elements.find((e) => e.id === id);
-      return el ? JSON.parse(JSON.stringify(el)) : null;
+      return el ? structuredClone(el) : null;
     },
 
     /**

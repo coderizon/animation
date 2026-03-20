@@ -373,7 +373,7 @@ export function loadTemplate(templateId: string): Project {
     throw new Error(`Template "${templateId}" not found`);
   }
 
-  return JSON.parse(JSON.stringify(template.data));
+  return structuredClone(template.data);
 }
 
 export function getTemplateList(): TemplateInfo[] {
