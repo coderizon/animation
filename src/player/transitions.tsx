@@ -18,6 +18,13 @@ export function getTransitionStyles(
   const dir = direction;
 
   switch (type) {
+    case 'fade': {
+      return {
+        from: { opacity: 1 - t },
+        to: { opacity: t },
+      };
+    }
+
     case 'slide': {
       // New scene slides in over the old scene
       const dx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;

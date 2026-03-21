@@ -2,7 +2,7 @@ import { Suspense, lazy, useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { EditorLayout } from './editor/EditorLayout';
-import { useProjectStore } from './store/useProjectStore';
+import { useProjectStore, syncProjectToActiveScene } from './store/useProjectStore';
 
 const LazyPlayerController = lazy(() =>
   import('./player/PlayerController').then((module) => ({
@@ -28,7 +28,7 @@ function App() {
   if (mode === 'player') {
     return (
       <Suspense fallback={<div style={{ width: '100vw', height: '100vh', backgroundColor: 'var(--ae-bg-base)' }} />}>
-        <LazyPlayerController project={project} onExit={handleExitPlayer} />
+        <LazyPlayerController project={syncProjectToActiveScene(project)} onExit={handleExitPlayer} />
       </Suspense>
     );
   }

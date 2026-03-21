@@ -315,68 +315,11 @@ const ollamaText = api.addElement({
 });
 api.addAnimation(ollamaText, { preset: 'fadeIn', delay: expandTime + 1600, duration: 500, easing: 'easeOut' });
 
-api.log('Szene 1 erstellt!');
-
-// =============================================
-// SZENE 2 erstellen + Morph-Übergang
-// =============================================
-
-api.addScene('Szene 2');
-// Jetzt sind wir automatisch in Szene 2
-
+// Szene-Duration setzen (alle Animationen enden bei ~10s)
 const scenes = api.getScenes();
-const scene2Id = scenes[scenes.length - 1].id;
-api.setSceneTransition(scene2Id, 'morph', 1000);
+api.setSceneDuration(scenes[0].id, 11000);
 
-const s2LogoSize = 140;
-const s2CenterY = 480;
-const s2Spacing = 420;
-const s2StartX = 960 - s2Spacing;
-
-// VLLM (links) — gleicher Name wie Szene 1!
-api.addElement({
-  type: 'logo', src: '/assets/vllm-color.svg',
-  x: s2StartX - s2LogoSize / 2, y: s2CenterY - s2LogoSize / 2,
-  width: s2LogoSize, height: s2LogoSize, name: 'VLLM',
-});
-api.addEffect(api.getElementIds().at(-1), 'float', 0.3, 0.6);
-
-api.addElement({
-  type: 'text', text: 'vLLM',
-  x: s2StartX - 60, y: s2CenterY + s2LogoSize / 2 + 16,
-  width: 120, height: 40, fontSize: 24, color: '#ffffff', name: 'vLLM Label',
-});
-
-// Ollama (Mitte)
-api.addElement({
-  type: 'logo', src: '/assets/ollama.svg', filter: 'brightness(0) invert(1)',
-  x: 960 - s2LogoSize / 2, y: s2CenterY - s2LogoSize / 2,
-  width: s2LogoSize, height: s2LogoSize, name: 'Ollama',
-});
-api.addEffect(api.getElementIds().at(-1), 'float', 0.3, 0.6);
-
-api.addElement({
-  type: 'text', text: 'Ollama',
-  x: 960 - 60, y: s2CenterY + s2LogoSize / 2 + 16,
-  width: 120, height: 40, fontSize: 24, color: '#ffffff', name: 'Ollama Label',
-});
-
-// Nvidia (rechts)
-api.addElement({
-  type: 'logo', src: '/assets/nvidia-color.svg',
-  x: s2StartX + 2 * s2Spacing - s2LogoSize / 2, y: s2CenterY - s2LogoSize / 2,
-  width: s2LogoSize, height: s2LogoSize, name: 'Nvidia',
-});
-api.addEffect(api.getElementIds().at(-1), 'float', 0.3, 0.6);
-
-api.addElement({
-  type: 'text', text: 'TensorRT-LLM',
-  x: s2StartX + 2 * s2Spacing - 90, y: s2CenterY + s2LogoSize / 2 + 16,
-  width: 180, height: 40, fontSize: 24, color: '#76b900', name: 'TensorRT Label',
-});
-
-api.log('Szene 2 + Morph-Übergang erstellt!');
-api.log('Klicke "Vorschau" um die gesamte Animation zu sehen.');
+api.log('Szene 1 erstellt! Erstelle Szene 2 manuell über die UI.');
 `;
 
 export const ScriptPanel: React.FC = () => {

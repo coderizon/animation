@@ -29,12 +29,14 @@ function SceneRenderer({
   canvasWidth,
   canvasHeight,
   opacity,
+  skipAnimation,
 }: {
   scene: Scene;
   localTime: number;
   canvasWidth: number;
   canvasHeight: number;
   opacity: number;
+  skipAnimation?: boolean;
 }) {
   const cam = getInterpolatedCamera(scene.cameraKeyframes, localTime);
   const cameraStyle: React.CSSProperties = cam ? {
@@ -66,6 +68,7 @@ function SceneRenderer({
               key={element.id}
               element={element}
               currentTime={localTime}
+              skipAnimation={skipAnimation}
             />
           ))}
       </div>
@@ -461,67 +464,64 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
       fromLocalTime: number;
       toLocalTime: number;
       key: string;
-    }
-    | {
-      type: 'transition';
-      fromScene: Scene;
-      toScene: Scene;
-      fromLocalTime: number;
-      toLocalTime: number;
-      transitionType: SceneTransitionType;
-      progress: number;
-      direction: TransitionDirection;
-      key: string;
     };
 
   const renderItems: RenderItem[] = [];
 
-  // Find active transition (morph or styled)
-  let transitionActive = false;
+  // Detect active transition
+  let activeTransition: {
+    slotIndex: number;
+    prevSlotIndex: number;
+    progress: number;
+    transType: SceneTransitionType;
+    direction: TransitionDirection;
+  } | null = null;
+
   for (let i = 1; i < slots.length; i++) {
     const slot = slots[i];
-    const prevSlot = slots[i - 1];
     const localTime = currentTime - slot.globalStart;
 
     if (slot.transitionDuration > 0 && localTime >= 0 && localTime < slot.transitionDuration) {
       const transType = slot.scene.transition?.type || 'cut';
+      if (transType === 'cut') continue;
 
-      if (transType === 'morph') {
-        const progress = localTime / slot.transitionDuration;
-        renderItems.push({
-          type: 'morph',
-          fromScene: prevSlot.scene,
-          toScene: slot.scene,
-          progress,
-          fromLocalTime: currentTime - prevSlot.globalStart,
-          toLocalTime: localTime,
-          key: `morph-${prevSlot.scene.id}-${slot.scene.id}`,
-        });
-        transitionActive = true;
-        break;
-      }
-
-      if (transType !== 'cut' && transType !== 'fade') {
-        const progress = localTime / slot.transitionDuration;
-        renderItems.push({
-          type: 'transition',
-          fromScene: prevSlot.scene,
-          toScene: slot.scene,
-          fromLocalTime: currentTime - prevSlot.globalStart,
-          toLocalTime: localTime,
-          transitionType: transType,
-          progress,
-          direction: slot.scene.transition?.direction || 'left',
-          key: `trans-${prevSlot.scene.id}-${slot.scene.id}`,
-        });
-        transitionActive = true;
-        break;
-      }
+      activeTransition = {
+        slotIndex: i,
+        prevSlotIndex: i - 1,
+        progress: localTime / slot.transitionDuration,
+        transType,
+        direction: slot.scene.transition?.direction || 'left',
+      };
+      break;
     }
   }
 
-  if (!transitionActive) {
-    // Normal rendering: scenes with fade opacity
+  // Morph transitions use their own dedicated renderer
+  if (activeTransition && activeTransition.transType === 'morph') {
+    const prevSlot = slots[activeTransition.prevSlotIndex];
+    const slot = slots[activeTransition.slotIndex];
+    renderItems.push({
+      type: 'morph',
+      fromScene: prevSlot.scene,
+      toScene: slot.scene,
+      progress: activeTransition.progress,
+      fromLocalTime: currentTime - prevSlot.globalStart,
+      toLocalTime: currentTime - slot.globalStart,
+      key: `morph-${prevSlot.scene.id}-${slot.scene.id}`,
+    });
+  } else {
+    // Render all visible scenes with STABLE keys (no remount = no animation replay).
+    // During a styled transition, apply CSS from/to styles as overlays.
+    const transStyles = activeTransition
+      ? getTransitionStyles(
+          activeTransition.transType,
+          activeTransition.progress,
+          activeTransition.direction,
+          project.canvas.width,
+          project.canvas.height,
+        )
+      : null;
+
     for (let i = 0; i < slots.length; i++) {
       const slot = slots[i];
       const localTime = currentTime - slot.globalStart;
@@ -529,34 +529,53 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
       if (localTime < 0) continue;
       if (localTime > slot.duration + 500) continue;
 
-      let opacity = 1;
-
-      if (slot.transitionDuration > 0 && localTime < slot.transitionDuration) {
-        const transType = slot.scene.transition?.type || 'cut';
-        if (transType === 'fade') {
-          opacity = localTime / slot.transitionDuration;
-        }
-      }
-
+      // Skip scene if the next scene's transition has completed
+      // (prevents FROM scene from briefly re-mounting after morph/transition ends)
       if (i + 1 < slots.length) {
         const nextSlot = slots[i + 1];
         const nextLocalTime = currentTime - nextSlot.globalStart;
-        if (nextLocalTime >= 0 && nextSlot.transitionDuration > 0) {
-          const transType = nextSlot.scene.transition?.type || 'cut';
-          if (nextLocalTime < nextSlot.transitionDuration) {
-            if (transType === 'fade') {
-              opacity = 1 - (nextLocalTime / nextSlot.transitionDuration);
-            } else if (transType !== 'cut') {
-              // Other transitions handle both scenes themselves
-              opacity = 0;
-            }
-          } else {
-            continue;
-          }
+        const nextTransType = nextSlot.scene.transition?.type || 'cut';
+        if (nextTransType !== 'cut' && nextSlot.transitionDuration > 0 && nextLocalTime >= nextSlot.transitionDuration) {
+          continue;
         }
       }
 
-      renderItems.push({ type: 'scene', scene: slot.scene, localTime: Math.max(0, localTime), opacity, key: slot.scene.id });
+      let opacity = 1;
+      let style: React.CSSProperties | undefined;
+
+      if (activeTransition) {
+        if (i === activeTransition.prevSlotIndex && transStyles) {
+          // FROM scene: apply transition's "from" style
+          style = transStyles.from;
+        } else if (i === activeTransition.slotIndex && transStyles) {
+          // TO scene: apply transition's "to" style
+          style = transStyles.to;
+        } else if (i !== activeTransition.prevSlotIndex && i !== activeTransition.slotIndex) {
+          // Other scenes not involved in the transition: hide
+          continue;
+        }
+      }
+
+      renderItems.push({
+        type: 'scene',
+        scene: slot.scene,
+        localTime: Math.max(0, localTime),
+        opacity,
+        style,
+        key: slot.scene.id, // Stable key = no React remount
+      });
+    }
+
+    // Render transition overlay (flash, light leak, film burn, etc.)
+    if (activeTransition && transStyles?.overlay) {
+      renderItems.push({
+        type: 'scene',
+        scene: slots[0].scene, // dummy, won't render elements
+        localTime: 0,
+        opacity: 1,
+        style: { ...transStyles.overlay, position: 'absolute' as const },
+        key: '__transition-overlay__',
+      });
     }
 
     if (renderItems.length === 0 && slots.length > 0) {
@@ -647,47 +666,25 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
                   />
                 );
               }
-              if (item.type === 'transition') {
-                const styles = getTransitionStyles(
-                  item.transitionType,
-                  item.progress,
-                  item.direction,
-                  project.canvas.width,
-                  project.canvas.height,
-                );
-                return (
-                  <div key={item.key} style={{ position: 'absolute', top: 0, left: 0, width: project.canvas.width, height: project.canvas.height, overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', ...styles.from }}>
-                      <SceneRenderer
-                        scene={item.fromScene}
-                        localTime={item.fromLocalTime}
-                        canvasWidth={project.canvas.width}
-                        canvasHeight={project.canvas.height}
-                        opacity={1}
-                      />
-                    </div>
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', ...styles.to }}>
-                      <SceneRenderer
-                        scene={item.toScene}
-                        localTime={item.toLocalTime}
-                        canvasWidth={project.canvas.width}
-                        canvasHeight={project.canvas.height}
-                        opacity={1}
-                      />
-                    </div>
-                    {styles.overlay && <div style={styles.overlay} />}
-                  </div>
-                );
+              // Scene rendering (normal + styled transitions).
+              // key={scene.id} stays stable, so React never remounts = no animation replay.
+              if (item.key === '__transition-overlay__') {
+                return <div key={item.key} style={item.style} />;
               }
               return (
-                <SceneRenderer
-                  key={item.key}
-                  scene={item.scene}
-                  localTime={item.localTime}
-                  canvasWidth={project.canvas.width}
-                  canvasHeight={project.canvas.height}
-                  opacity={item.opacity}
-                />
+                <div key={item.key} style={{
+                  position: 'absolute', top: 0, left: 0,
+                  width: project.canvas.width, height: project.canvas.height,
+                  ...item.style,
+                }}>
+                  <SceneRenderer
+                    scene={item.scene}
+                    localTime={item.localTime}
+                    canvasWidth={project.canvas.width}
+                    canvasHeight={project.canvas.height}
+                    opacity={item.opacity}
+                  />
+                </div>
               );
             })}
           </div>

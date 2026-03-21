@@ -489,7 +489,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
 
     const { project, playbackState, currentTime: resumeTime } = get();
-    const { totalDuration } = buildTimeline(syncProjectToActiveScene(project));
+    const synced = syncProjectToActiveScene(project);
+    const { totalDuration } = buildTimeline(synced);
     const maxDuration = Math.max(totalDuration, 3000);
 
     // Resume from current position (stopAllAnimations resets to 0, seek updates it)
