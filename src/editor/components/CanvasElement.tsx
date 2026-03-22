@@ -71,9 +71,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const isPreviewing = previewingElementId === element.id;
   const anims = getAnimations(element);
   const firstDelay = anims.length > 0 ? Math.min(...anims.map(a => a.delay || 0)) : 0;
-  const isPlayback = isPlayingAll || playbackState === 'paused';
+  const isScrubbing = !isPlayingAll && playbackState === 'stopped' && currentTime > 0;
+  const isPlayback = isPlayingAll || playbackState === 'paused' || isScrubbing;
   const pastDelay = isPreviewing || (isPlayback && currentTime >= firstDelay);
-  const shouldAnimate = isPreviewing || (isPlayingAll && pastDelay);
+  const shouldAnimate = isPreviewing || (isPlayback && pastDelay);
 
   // Refs for drag/resize to avoid stale closures
   const dragStart = useRef({ mouseX: 0, mouseY: 0, elX: 0, elY: 0 });
@@ -554,6 +555,11 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const motionProps = (() => {
     if (!animationConfig || !activeAnim) return {};
 
+    // When paused or scrubbing, show elements in their final visible state — no animation
+    if ((isScrubbing || playbackState === 'paused') && pastDelay) {
+      return { initial: false, animate: 'visible', variants: animationConfig.variants, transition: { duration: 0 } };
+    }
+
     // Clone variants and remove transition from visible to prevent override
     const cleanVariants = { ...animationConfig.variants };
     if (cleanVariants.visible && typeof cleanVariants.visible === 'object' && !Array.isArray(cleanVariants.visible)) {
@@ -584,8 +590,8 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const isStrokeDraw = activeAnim?.config.preset === 'strokeDraw' && shouldAnimate;
   const strokeDrawDuration = activeAnim ? (activeAnim.config.duration || 1200) / 1000 : 1.2;
 
-  // Hide element before its first animation's delay — only while actively playing, not when paused
-  const hiddenBeforeDelay = isPlayingAll && !isPreviewing && firstDelay > 0 && currentTime < firstDelay;
+  // Hide element before its first animation's delay during any playback mode
+  const hiddenBeforeDelay = isPlayback && !isPreviewing && firstDelay > 0 && currentTime < firstDelay;
 
   // Hide widget after its duration has elapsed
   const hiddenAfterWidgetEnd = (() => {

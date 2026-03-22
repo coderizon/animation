@@ -283,7 +283,43 @@ api.addElement({
 });
 api.addAnimation(api.getElementIds().at(-1), { preset: 'fadeIn', delay: lineDelay + 400, duration: 600, easing: 'easeOut' });
 
-const expandTime = lineDelay + 1500;
+// ---- Neural Net + Logo Karussell über dem Server ----
+const nnStartDelay = lineDelay + 1200;
+const nnSize = 300;
+
+const neuralNet = api.addElement({
+  type: 'widget', widgetName: 'neuralNetServer',
+  x: 960 - nnSize / 2, y: 220 - nnSize / 2 + 30,
+  width: nnSize, height: nnSize,
+  fps: 30, durationInFrames: 300, name: 'Neural Net',
+});
+api.addAnimation(neuralNet, { preset: 'fadeIn', delay: nnStartDelay, duration: 600, easing: 'easeOut' });
+
+// Logo Karussell im Zentrum des Neuronalen Netzes
+const carouselSize = 100;
+const logoCarousel = api.addElement({
+  type: 'widget', widgetName: 'logoCarousel',
+  x: 960 - carouselSize / 2, y: 220 - carouselSize / 2 + 30,
+  width: carouselSize, height: carouselSize,
+  fps: 30, durationInFrames: 225,
+  props: {
+    logos: ['/assets/deepseek-color.svg', '/assets/mistral-color.svg', '/assets/claude-color.svg'],
+    displayDuration: 1.5,
+    transitionDuration: 0.5,
+    logoScale: 0.7,
+    floatDistance: 15,
+  },
+  name: 'Logo Karussell',
+});
+api.addAnimation(logoCarousel, { preset: 'fadeIn', delay: nnStartDelay + 400, duration: 400, easing: 'easeOut' });
+
+// Nach dem Karussell (3 Logos × 2.5s = 7.5s) alles ausblenden
+const nnEndDelay = nnStartDelay + 400 + 7500; // ~15500ms
+api.addAnimation(neuralNet, { preset: 'fadeOut', delay: nnEndDelay, duration: 500, easing: 'easeOut' });
+api.addAnimation(logoCarousel, { preset: 'fadeOut', delay: nnEndDelay, duration: 500, easing: 'easeOut' });
+
+// Rechteck expandiert NACH dem Neural Net verschwindet
+const expandTime = nnEndDelay + 800;
 const expandedRectW = 600;
 const expandedRectX = 960 - expandedRectW / 2;
 
@@ -316,10 +352,75 @@ const ollamaText = api.addElement({
 api.addAnimation(ollamaText, { preset: 'fadeIn', delay: expandTime + 1600, duration: 500, easing: 'easeOut' });
 
 // Szene-Duration setzen (alle Animationen enden bei ~10s)
-const scenes = api.getScenes();
-api.setSceneDuration(scenes[0].id, 11000);
+const scenes1 = api.getScenes();
+api.setSceneDuration(scenes1[0].id, 20000);
 
-api.log('Szene 1 erstellt! Erstelle Szene 2 manuell über die UI.');
+api.log('Szene 1 erstellt!');
+
+// =============================================
+// SZENE 2: KV Cache Visualisierung (Morph)
+// =============================================
+
+api.addScene('Szene 2');
+const scenes2 = api.getScenes();
+const scene2Id = scenes2[scenes2.length - 1].id;
+api.setSceneTransition(scene2Id, 'morph', 1000);
+
+// KV Cache Widget (dark) — zentriert
+const kvW = 900;
+const kvH = 560;
+const kvX = 960 - kvW / 2;
+const kvY = 260;
+const kvScale = kvW / 740; // native 740 → canvas 900
+
+api.addElement({
+  type: 'widget', widgetName: 'kvCacheDark',
+  x: kvX, y: kvY, width: kvW, height: kvH,
+  fps: 12, durationInFrames: 600, name: 'KV Cache Widget',
+});
+
+// Logos morphen exakt auf die Header-Positionen im Widget
+// Widget-intern: padding=22, title≈26px, columns start at y≈48
+// Left column header: native x=22, y=48
+// Right column header: native x=377, y=48
+const headerY = kvY + Math.round(48 * kvScale);
+const s2LogoSize = Math.round(24 * kvScale);
+
+// vLLM logo → links, vor dem "vLLM · PagedAttention" Text
+const s2VllmX = kvX + Math.round(22 * kvScale);
+api.addElement({
+  type: 'logo', src: '/assets/vllm-color.svg',
+  x: s2VllmX, y: headerY, width: s2LogoSize, height: s2LogoSize, name: 'VLLM',
+});
+
+// Nvidia logo → neben vLLM
+const s2NvidiaX = s2VllmX + s2LogoSize + 6;
+api.addElement({
+  type: 'logo', src: '/assets/nvidia-color.svg',
+  x: s2NvidiaX, y: headerY, width: s2LogoSize, height: s2LogoSize, name: 'Nvidia',
+});
+
+// Ollama logo → rechte Spalte, vor dem "Ollama · llama.cpp" Text
+const s2OllamaX = kvX + Math.round(377 * kvScale);
+api.addElement({
+  type: 'logo', src: '/assets/ollama.svg', filter: 'brightness(0) invert(1)',
+  x: s2OllamaX, y: headerY, width: s2LogoSize, height: s2LogoSize, name: 'Ollama',
+});
+
+// Text-Labels aus Szene 1 NICHT morphen (keine matching names in Szene 2)
+// → vLLM Label, TensorRT Label, Ollama Label faden automatisch aus
+
+// Titel
+api.addElement({
+  type: 'text', text: 'KV Cache · GPU Memory',
+  x: 960 - 200, y: 60, width: 400, height: 50,
+  fontSize: 28, color: '#ffffff', fontWeight: 700, name: 'KV Title',
+});
+api.addAnimation(api.getElementIds().at(-1), { preset: 'fadeIn', delay: 800, duration: 600, easing: 'easeOut' });
+
+api.setSceneDuration(scene2Id, 15000);
+
+api.log('Szene 2 (KV Cache) erstellt!');
 `;
 
 export const ScriptPanel: React.FC = () => {
