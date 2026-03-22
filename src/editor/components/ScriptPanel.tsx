@@ -373,11 +373,12 @@ const kvX = 960 - kvW / 2;
 const kvY = 260;
 const kvScale = kvW / 740; // native 740 → canvas 900
 
-api.addElement({
+const kvWidget = api.addElement({
   type: 'widget', widgetName: 'kvCacheDark',
   x: kvX, y: kvY, width: kvW, height: kvH,
   fps: 12, durationInFrames: 600, name: 'KV Cache Widget',
 });
+api.addAnimation(kvWidget, { preset: 'slideInTop', delay: 1000, duration: 800, easing: 'easeOut' });
 
 // Logos morphen exakt auf die Header-Positionen im Widget
 // Widget-intern: padding=22, title≈26px, columns start at y≈48

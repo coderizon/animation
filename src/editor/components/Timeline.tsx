@@ -258,13 +258,30 @@ export const Timeline: React.FC = () => {
       else if (type === 'resize-right') newDuration = Math.max(100, Math.round(startDuration + dxMs));
       newDelay = Math.round(newDelay / 50) * 50;
       newDuration = Math.max(100, Math.round(newDuration / 50) * 50);
-      if (el.type === 'widget' && (type === 'resize-right' || type === 'resize-left')) {
+      if (el.type === 'widget') {
         const wc = el.content as WidgetContent;
-        const newFrames = Math.max(1, Math.round((newDuration / 1000) * wc.fps));
-        if (type === 'resize-left') {
-          anims[animIndex] = { ...anim, delay: newDelay, duration: newDuration };
-          updateElementSilent(elementId, { content: { ...wc, durationInFrames: newFrames }, animations: anims });
-        } else updateElementSilent(elementId, { content: { ...wc, durationInFrames: newFrames } });
+        if (type === 'move') {
+          // Moving widget bar: only update delay of all animations, keep their durations
+          if (anims.length === 0) {
+            // No animations yet — create a placeholder so delay can be tracked
+            updateElementSilent(elementId, { animations: [{ ...anim, delay: newDelay }] });
+          } else {
+            const updatedAnims = anims.map((a, i) => {
+              const origDelay = (barDragRef.current?.snapshot.elements.find(e => e.id === elementId)?.animations || [])[i]?.delay || 0;
+              return { ...a, delay: Math.max(0, Math.round((origDelay + (newDelay - startDelay)) / 50) * 50) };
+            });
+            updateElementSilent(elementId, { animations: updatedAnims });
+          }
+        } else {
+          // Resizing widget bar: adjust widget frame count
+          const newFrames = Math.max(1, Math.round((newDuration / 1000) * wc.fps));
+          if (type === 'resize-left') {
+            anims[animIndex] = { ...anim, delay: newDelay, duration: newDuration };
+            updateElementSilent(elementId, { content: { ...wc, durationInFrames: newFrames }, animations: anims });
+          } else {
+            updateElementSilent(elementId, { content: { ...wc, durationInFrames: newFrames } });
+          }
+        }
       } else {
         anims[animIndex] = { ...anim, delay: newDelay, duration: newDuration };
         updateElementSilent(elementId, { animations: anims });

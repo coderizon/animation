@@ -59,7 +59,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const [activeRibbonTab, setActiveRibbonTab] = useState<'start' | 'insert' | 'animation' | 'view' | 'script'>('insert');
   const [assetLibraryView, setAssetLibraryView] = useState<'logos' | 'widgets' | null>(null);
   const [showShapeGallery, setShowShapeGallery] = useState(false);
-  const [showScriptPanel, setShowScriptPanel] = useState(false);
+  const [showScriptPanel, setShowScriptPanel] = useState(true);
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const shapeGalleryButtonRef = useRef<HTMLButtonElement>(null);

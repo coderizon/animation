@@ -87,21 +87,27 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
   const multiResizeStart = useRef<Map<string, { x: number; y: number; w: number; h: number }>>(new Map());
   const multiResizeBBox = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const prevPastDelay = useRef(false);
+  const wasPlayingRef = useRef(false);
 
-  // Trigger animation when crossing the delay threshold
+  // Increment animationKey on every fresh play start, so Framer Motion re-mounts with correct animation
   useEffect(() => {
-    if (pastDelay && !prevPastDelay.current) {
+    if (isPlayingAll && !wasPlayingRef.current) {
+      // Fresh play start — reset tracking
+      prevPastDelay.current = false;
       setAnimationKey((prev) => prev + 1);
     }
-    prevPastDelay.current = pastDelay;
-  }, [pastDelay]);
+    wasPlayingRef.current = isPlayingAll;
+  }, [isPlayingAll]);
 
-  // Reset when playback stops
+  // Trigger animation when crossing the delay threshold during active playback
   useEffect(() => {
-    if (playbackState === 'stopped') {
-      prevPastDelay.current = false;
+    if (isPlayingAll && pastDelay && !prevPastDelay.current) {
+      setAnimationKey((prev) => prev + 1);
     }
-  }, [playbackState]);
+    if (isPlayingAll) {
+      prevPastDelay.current = pastDelay;
+    }
+  }, [pastDelay, isPlayingAll]);
 
   useEffect(() => {
     if (!isPreviewing) {
