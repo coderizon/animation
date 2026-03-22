@@ -178,8 +178,11 @@ function ElementRenderer({ element, currentTime, skipAnimation }: { element: Can
         else if (c.borderRadius) shapeStyle.borderRadius = interp?.borderRadius ?? c.borderRadius;
         return <div style={shapeStyle} />;
       }
-      case 'widget':
-        return <WidgetRenderer content={element.content as WidgetContent} width={w} height={h} />;
+      case 'widget': {
+        const wAnims = getAnimations(element);
+        const wDelay = wAnims.length > 0 ? Math.min(...wAnims.map(a => a.delay || 0)) : 0;
+        return <WidgetRenderer content={element.content as WidgetContent} width={w} height={h} currentTimeOverride={currentTime} delayOverride={wDelay} />;
+      }
       default:
         return null;
     }

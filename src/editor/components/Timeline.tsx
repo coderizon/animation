@@ -398,17 +398,22 @@ export const Timeline: React.FC = () => {
   }, [camKfDragActive, pxPerMs, pushSnapshot]);
 
   // Close all context menus on click-outside or Escape (consolidated)
+  // Use setTimeout to avoid closing immediately from the same right-click that opened the menu
   useEffect(() => {
     if (!camKfContextMenu && !kfContextMenu && !layerContextMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (camKfContextMenu && camKfMenuRef.current && !camKfMenuRef.current.contains(e.target as Node)) setCamKfContextMenu(null);
-      if (kfContextMenu && kfMenuRef.current && !kfMenuRef.current.contains(e.target as Node)) setKfContextMenu(null);
-      if (layerContextMenu && layerMenuRef.current && !layerMenuRef.current.contains(e.target as Node)) setLayerContextMenu(null);
-    };
+    let active = true;
+    const timerId = setTimeout(() => {
+      if (!active) return;
+      const handleClickOutside = (e: MouseEvent) => {
+        if (camKfContextMenu && camKfMenuRef.current && !camKfMenuRef.current.contains(e.target as Node)) setCamKfContextMenu(null);
+        if (kfContextMenu && kfMenuRef.current && !kfMenuRef.current.contains(e.target as Node)) setKfContextMenu(null);
+        if (layerContextMenu && layerMenuRef.current && !layerMenuRef.current.contains(e.target as Node)) setLayerContextMenu(null);
+      };
+      document.addEventListener('mousedown', handleClickOutside, { once: true });
+    }, 0);
     const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') { setCamKfContextMenu(null); setKfContextMenu(null); setLayerContextMenu(null); } };
-    document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
-    return () => { document.removeEventListener('mousedown', handleClickOutside); document.removeEventListener('keydown', handleEscape); };
+    return () => { active = false; clearTimeout(timerId); document.removeEventListener('keydown', handleEscape); };
   }, [camKfContextMenu, kfContextMenu, layerContextMenu]);
 
   const handleAddKeyframe = useCallback(() => {

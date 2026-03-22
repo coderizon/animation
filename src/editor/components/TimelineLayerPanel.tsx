@@ -120,10 +120,8 @@ export const TimelineLayerPanel = React.memo<TimelineLayerPanelProps>(({
         return (
           <div
             key={el.id}
-            draggable
-            onDragStart={() => onDragStart(reversedIndex)}
-            onDragOver={(e) => onDragOver(e, reversedIndex)}
-            onDrop={() => onDrop(reversedIndex)}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onDragOver(e, reversedIndex); }}
+            onDrop={(e) => { e.preventDefault(); e.stopPropagation(); onDrop(reversedIndex); }}
             onDragEnd={onDragEnd}
             onClick={(e) => onRowClick(el.id, e)}
             onContextMenu={(e) => {
@@ -145,8 +143,15 @@ export const TimelineLayerPanel = React.memo<TimelineLayerPanelProps>(({
               flexShrink: 0,
             }}
           >
-            {/* Drag handle */}
-            <span style={{ cursor: 'grab', color: TL_TEXT_DISABLED, fontSize: 10, userSelect: 'none', width: 16, textAlign: 'center' }}>
+            {/* Drag handle — only this element is draggable */}
+            <span
+              draggable
+              onDragStart={(e) => {
+                e.stopPropagation();
+                onDragStart(reversedIndex);
+              }}
+              style={{ cursor: 'grab', color: TL_TEXT_DISABLED, fontSize: 10, userSelect: 'none', width: 16, textAlign: 'center', flexShrink: 0 }}
+            >
               ⋮⋮
             </span>
 

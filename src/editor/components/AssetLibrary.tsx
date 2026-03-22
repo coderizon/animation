@@ -6,6 +6,21 @@ import { WidgetRegistryEntry } from '../../widgets/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const svgModules = import.meta.glob('/public/assets/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const imageModules = import.meta.glob('/public/images/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+
+interface ImageAsset {
+  id: string;
+  name: string;
+  src: string;
+}
+
+const autoImages: ImageAsset[] = Object.entries(imageModules)
+  .map(([path, url]) => {
+    const filename = path.split('/').pop()!;
+    const name = filename.replace(/\.[^.]+$/, '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return { id: filename, name, src: url };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 const autoLogos: LogoAsset[] = Object.entries(svgModules)
   .map(([path, url]) => {
@@ -23,8 +38,8 @@ const autoLogos: LogoAsset[] = Object.entries(svgModules)
 interface AssetLibraryProps {
   anchorRef: React.RefObject<HTMLElement | null>;
   isOpen: boolean;
-  activeView: 'logos' | 'widgets';
-  onChangeView: (view: 'logos' | 'widgets') => void;
+  activeView: 'logos' | 'widgets' | 'images';
+  onChangeView: (view: 'logos' | 'widgets' | 'images') => void;
   onClose: () => void;
 }
 
@@ -92,6 +107,69 @@ const DraggableLogo: React.FC<{ asset: LogoAsset }> = ({ asset }) => {
           lineHeight: 1.25,
         }}
       >
+        {asset.name}
+      </span>
+    </div>
+  );
+};
+
+const DraggableImage: React.FC<{ asset: ImageAsset }> = ({ asset }) => {
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: 'ASSET',
+    item: {
+      type: 'ASSET',
+      elementType: 'image',
+      name: asset.name,
+      content: {
+        type: 'image',
+        src: asset.src,
+        alt: asset.name,
+      },
+    },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }));
+
+  return (
+    <div
+      ref={drag}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        cursor: 'move',
+        padding: 8,
+        backgroundColor: 'var(--ae-bg-input)',
+        border: '1px solid var(--ae-border)',
+        borderRadius: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 6,
+        transition: 'all 0.2s',
+        userSelect: 'none',
+        minHeight: 92,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = 'var(--ae-border-strong)';
+        e.currentTarget.style.backgroundColor = 'var(--ae-bg-panel-raised)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'var(--ae-border)';
+        e.currentTarget.style.backgroundColor = 'var(--ae-bg-input)';
+      }}
+    >
+      <img
+        src={asset.src}
+        alt={asset.name}
+        style={{
+          width: '100%',
+          height: 56,
+          objectFit: 'cover',
+          borderRadius: 6,
+          pointerEvents: 'none',
+        }}
+      />
+      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--ae-text-primary)', textAlign: 'center', lineHeight: 1.25 }}>
         {asset.name}
       </span>
     </div>
@@ -223,7 +301,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
   if (!isOpen || !anchorRef.current) return null;
 
-  const width = activeView === 'logos' ? 520 : 440;
+  const width = activeView === 'logos' ? 520 : activeView === 'images' ? 520 : 440;
   const rect = anchorRef.current.getBoundingClientRect();
   const left = Math.min(Math.max(rect.right - width, 12), window.innerWidth - width - 12);
   const top = rect.bottom + 10;
@@ -267,9 +345,10 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
 
           <div style={{ display: 'flex', gap: 8 }}>
             {([
-              { id: 'logos', label: 'Logos', hint: `${autoLogos.length} Assets` },
-              { id: 'widgets', label: 'Widgets', hint: `${widgets.length} Presets` },
-            ] as const).map((view) => {
+              { id: 'logos' as const, label: 'Logos', hint: `${autoLogos.length} Assets` },
+              { id: 'images' as const, label: 'Bilder', hint: `${autoImages.length} Dateien` },
+              { id: 'widgets' as const, label: 'Widgets', hint: `${widgets.length} Presets` },
+            ]).map((view) => {
               const isActive = activeView === view.id;
               return (
                 <button
@@ -360,6 +439,30 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
           >
             {filteredLogos.map((logo) => (
               <DraggableLogo key={logo.id} asset={logo} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeView === 'images' && (
+        <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, flex: 1 }}>
+          <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)' }}>
+            {autoImages.length > 0
+              ? `${autoImages.length} Bilder. Ziehe ein Bild auf den Canvas.`
+              : 'Lege Bilder in /public/images/ ab und starte den Dev-Server neu.'}
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: 8,
+            overflowY: 'auto',
+            paddingRight: 4,
+            minHeight: 0,
+            flex: 1,
+          }}>
+            {autoImages.map((img) => (
+              <DraggableImage key={img.id} asset={img} />
             ))}
           </div>
         </div>

@@ -532,6 +532,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
             content={element.content as WidgetContent}
             width={renderW}
             height={renderH}
+            elementId={element.id}
           />
         );
       default:
@@ -562,8 +563,9 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({ element, isSelecte
     if (!animationConfig || !activeAnim) return {};
 
     // When paused or scrubbing, show elements in their final visible state — no animation
+    // IMPORTANT: keep the same key to prevent React remount (which resets widget state)
     if ((isScrubbing || playbackState === 'paused') && pastDelay) {
-      return { initial: false, animate: 'visible', variants: animationConfig.variants, transition: { duration: 0 } };
+      return { key: `${animationKey}-${activeAnim.index}`, initial: false, animate: 'visible', variants: animationConfig.variants, transition: { duration: 0 } };
     }
 
     // Clone variants and remove transition from visible to prevent override

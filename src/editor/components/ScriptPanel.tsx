@@ -206,12 +206,12 @@ const DEFAULT_CODE = `// === Szene 1: Server + Inferenz-Engine Logos ===
 // SZENE 1
 // =============================================
 
-const serverW = 420;
+const serverW = 400;
+const serverH = 141;
 const server = api.addElement({
-  type: 'widget', widgetName: 'serverAnimation',
+  type: 'image', src: '/images/dgxspark.png',
   x: 960 - serverW / 2, y: 220,
-  width: serverW, height: 300,
-  fps: 30, durationInFrames: 600, name: 'Server',
+  width: serverW, height: serverH, name: 'Server',
 });
 api.addAnimation(server, { preset: 'scaleIn', delay: 0, duration: 900, easing: 'easeOut' });
 

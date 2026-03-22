@@ -1,109 +1,71 @@
-import React, { useRef, useCallback } from 'react';
+import React from 'react';
 import { WidgetComponentProps, WidgetRegistryEntry } from '../../types';
 import { faMemory } from '@fortawesome/free-solid-svg-icons';
 
-const P = 128;
-const PFX = 8;
-const OS = 32;
-const MOL = 3;
-const CLR = ['#3b82f6','#a855f7','#ec4899','#f97316','#22c55e','#06b6d4','#f43f5e','#e879f9','#84cc16','#fb923c','#38bdf8','#c084fc'];
+const P = 128; // total pages per side
+const BLOCKS_PER_ROW = 16;
 
-interface Req {
-  id: number;
-  c: string;
-  l: string;
-  t: number;
-  max: number;
-  done: boolean;
-  vp: number[];
-  os: number;
-}
+// Person SVG icon
+const PersonIcon: React.FC<{ color: string; opacity?: number }> = ({ color, opacity = 1 }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill={color} opacity={opacity} style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="7" r="4" />
+    <path d="M12 13c-4.42 0-8 1.79-8 4v1h16v-1c0-2.21-3.58-4-8-4z" />
+  </svg>
+);
 
-interface SimState {
-  rs: Req[];
-  rid: number;
-  vp: (number | string | null)[];
-  osl: (number | null)[];
-}
-
-function initState(): SimState {
-  const vp = new Array(P).fill(null);
-  for (let i = 0; i < PFX; i++) vp[i] = 'x';
-  return { rs: [], rid: 0, vp, osl: new Array(MOL).fill(null) };
-}
-
-function allocVLLM(r: Req, vp: (number | string | null)[]) {
-  const f: number[] = [];
-  for (let i = PFX; i < P && f.length < 3; i++) if (!vp[i]) f.push(i);
-  if (f.length === 3) f.forEach(p => { vp[p] = r.id; r.vp.push(p); });
-}
-
-function allocOllama(r: Req, osl: (number | null)[]) {
-  const s = osl.findIndex(x => x === null);
-  if (s !== -1) { osl[s] = r.id; r.os = s; }
-}
-
-function addReq(state: SimState): SimState {
-  const alive = state.rs.filter(r => !r.done);
-  if (alive.length >= 13) return state;
-  const r: Req = { id: state.rid, c: CLR[state.rid % CLR.length], l: 'R' + (state.rid + 1), t: 0, max: 15 + Math.floor(Math.random() * 30), done: false, vp: [], os: -1 };
-  state.rid++;
-  state.rs.push(r);
-  allocVLLM(r, state.vp);
-  allocOllama(r, state.osl);
-  return state;
-}
-
-function tick(state: SimState): SimState {
-  state.rs.filter(r => !r.done).forEach(r => {
-    if (r.vp.length > 0 || r.os >= 0) {
-      r.t++;
-      if (r.vp.length > 0 && r.t % 5 === 0) {
-        for (let i = PFX; i < P; i++) { if (!state.vp[i]) { state.vp[i] = r.id; r.vp.push(i); break; } }
-      }
-      if (r.t >= r.max) {
-        r.done = true;
-        r.vp.forEach(p => state.vp[p] = null); r.vp = [];
-        if (r.os >= 0) { state.osl[r.os] = null; r.os = -1; }
-        state.rs.filter(x => !x.done && x.vp.length === 0).forEach(x => allocVLLM(x, state.vp));
-        state.rs.filter(x => !x.done && x.os === -1).forEach(x => allocOllama(x, state.osl));
-      }
-    }
-  });
-  state.rs = state.rs.filter(r => !r.done);
-  return state;
-}
+// Ollama timeline events (all times in seconds relative to showColors start)
+// Person 1: blue
+// Person 2: purple
+const P1_COLOR = '#3b82f6';
+const P1_LIGHT = '#3b82f620';
+const P1_PREALLOC = '#1a2a4a'; // dark blue tint for pre-alloc
+const P2_COLOR = '#a855f7';
+const P2_LIGHT = '#a855f720';
+const P2_PREALLOC = '#2a1a3a'; // dark purple tint for pre-alloc
 
 const KVCacheDark: React.FC<WidgetComponentProps> = ({ width, height, frame, fps }) => {
-  const stateRef = useRef<SimState>(initState());
-  const lastTickRef = useRef(0);
+  const timeSec = frame / fps;
 
-  const tickInterval = Math.max(1, Math.round(fps * 0.165));
+  // === PHASES ===
+  const phase1End = 2;   // 0-2s: only border + title
+  const phase2End = 4;   // 2-4s: grid appears in gray
+  const showGrid = timeSec >= phase1End;
+  const showColors = timeSec >= phase2End;
+  const gridOpacity = !showGrid ? 0 : Math.min(1, (timeSec - phase1End) / 0.6);
 
-  if (frame !== lastTickRef.current) {
-    lastTickRef.current = frame;
-    if (frame % tickInterval === 0) {
-      stateRef.current = tick(stateRef.current);
-    }
-    if (frame % (tickInterval * 8) === 0 && frame > 0) {
-      stateRef.current = addReq(stateRef.current);
-    }
-    if (frame === 1) {
-      for (let i = 0; i < 3; i++) stateRef.current = addReq(stateRef.current);
-    }
-  }
+  // Ollama scripted timeline (relative to phase2End)
+  const ot = showColors ? timeSec - phase2End : -1;
 
-  const s = stateRef.current;
-  const alive = s.rs.filter(r => !r.done);
-  const vu = Math.round(s.vp.filter(p => p !== null).length / P * 100);
-  const va = alive.filter(r => r.vp.length > 0).length;
-  const vt = va * 14 + (va > 0 ? 10 : 0);
-  const oa = s.osl.filter(x => x !== null).length;
-  const ou = Math.round(oa * OS / P * 100);
-  const ot = oa * 8;
+  // Person 1 (blue) appears at t=0.5, starts filling immediately
+  const p1Visible = ot >= 0.5;
+  const p1PreAlloc = ot >= 1.0;
+  const p1FillStart = 1.5;
+  const p1FillCount = ot >= p1FillStart ? Math.min(12, Math.floor((ot - p1FillStart) / 0.15)) : 0;
+
+  // Person 2 (purple) appears shortly after at t=1.5, fills in parallel
+  const p2Visible = ot >= 1.5;
+  const p2PreAlloc = ot >= 2.0;
+  const p2FillStart = 2.5;
+  const p2FillCount = ot >= p2FillStart ? Math.min(20, Math.floor((ot - p2FillStart) / 0.13)) : 0;
+
+  // Person 3 (pink) appears shortly after at t=2.5, fills in parallel
+  const P3_COLOR = '#ec4899';
+  const P3_PREALLOC = '#3a1a2a';
+  const p3Visible = ot >= 2.5;
+  const p3PreAlloc = ot >= 3.0;
+  const p3FillStart = 3.5;
+  const p3FillCount = ot >= p3FillStart ? Math.min(18, Math.floor((ot - p3FillStart) / 0.14)) : 0;
+
+  // Stats
+  const ollamaUsed = p1FillCount + p2FillCount + p3FillCount;
+  const ollamaPreAlloc = (p1PreAlloc ? 32 : 0) + (p2PreAlloc ? 32 : 0) + (p3PreAlloc ? 32 : 0);
+  const ollamaUtil = ollamaPreAlloc > 0 ? Math.round(ollamaUsed / P * 100) : 0;
+  const ollamaActive = (p1Visible ? 1 : 0) + (p2Visible ? 1 : 0) + (p3Visible ? 1 : 0);
+
+  // vLLM side - keep simulation simple for now (prefix cache visible)
+  const vllmPrefixCount = 8;
 
   // Dark theme colors
-  const bgMain = 'transparent';
   const bgCell = '#0a0a0a';
   const borderCell = '#ffffff44';
   const textPrimary = '#ffffff';
@@ -112,103 +74,138 @@ const KVCacheDark: React.FC<WidgetComponentProps> = ({ width, height, frame, fps
   const accentVLLM = '#00ffcc';
   const accentOllama = '#fbbf24';
 
-  const renderGrid = useCallback((pages: (number | string | null)[], isOllama: boolean) => {
-    return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(16, 1fr)', gap: 2 }}>
-        {Array.from({ length: P }, (_, i) => {
-          let bg = bgCell;
-          if (isOllama) {
-            const sl = Math.floor(i / OS);
-            if (sl >= MOL) { bg = '#0d0d0d'; }
-            else {
-              const sid = s.osl[sl];
-              if (sid !== null) {
-                const r = alive.find(x => x.id === sid);
-                const pos = i % OS, used = r ? Math.min(OS, Math.floor(r.t * 0.75)) : 0;
-                bg = pos < used ? (r ? r.c : '#999') : '#2a1800';
-              }
-            }
-          } else {
-            const o = pages[i];
-            if (o === 'x') bg = '#4a7fcc';
-            else if (o !== null) { const r = alive.find(x => x.id === o); bg = r ? r.c : '#999'; }
-          }
-          return <div key={i} style={{ height: 11, borderRadius: 2, background: bg, transition: 'background .28s' }} />;
-        })}
-      </div>
-    );
-  }, [alive, s.osl, s.vp]);
+  const renderOllamaGrid = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${BLOCKS_PER_ROW}, 1fr)`, gap: 2 }}>
+      {Array.from({ length: P }, (_, i) => {
+        let bg = '#333333'; // graue Blöcke bleiben als Default
 
-  const renderReqs = useCallback((isOllama: boolean) => (
-    <div style={{ minHeight: 25, display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center', marginBottom: 5 }}>
-      {alive.map(r => {
-        const active = isOllama ? r.os >= 0 : r.vp.length > 0;
-        return (
-          <div key={r.id} style={{
-            fontSize: 10, padding: '2px 6px', borderRadius: 3, fontWeight: 700, color: '#000',
-            background: r.c, opacity: active ? 1 : 0.35, filter: active ? 'none' : 'grayscale(.4)',
-          }}>
-            {r.l} {!active ? '\u23F3' : Math.min(100, Math.round(r.t / r.max * 100)) + '%'}
-          </div>
-        );
+        if (showColors) {
+          // Slot 0: Person 1 (blocks 0-31)
+          if (i < 32) {
+            if (p1PreAlloc) {
+              bg = i < p1FillCount ? P1_COLOR : P1_PREALLOC;
+            }
+          }
+          // Slot 1: Person 2 (blocks 32-63)
+          else if (i < 64) {
+            if (p2PreAlloc) {
+              bg = (i - 32) < p2FillCount ? P2_COLOR : P2_PREALLOC;
+            }
+          }
+          // Slot 2: Person 3 (blocks 64-95)
+          else if (i < 96) {
+            if (p3PreAlloc) {
+              bg = (i - 64) < p3FillCount ? P3_COLOR : P3_PREALLOC;
+            }
+          }
+          // Rest: nicht erreichbar
+          else {
+            bg = '#0d0d0d';
+          }
+        }
+
+        return <div key={i} style={{ height: 11, borderRadius: 2, background: bg, transition: 'background .3s' }} />;
       })}
     </div>
-  ), [alive]);
+  );
+
+  const renderVLLMGrid = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${BLOCKS_PER_ROW}, 1fr)`, gap: 2 }}>
+      {Array.from({ length: P }, (_, i) => {
+        let bg = bgCell;
+        if (!showColors) {
+          bg = '#333333';
+        } else if (i < vllmPrefixCount) {
+          bg = '#4a7fcc'; // shared prefix
+        }
+        return <div key={i} style={{ height: 11, borderRadius: 2, background: bg, transition: 'background .3s' }} />;
+      })}
+    </div>
+  );
+
+  // Persons display for Ollama
+  const renderPersons = () => (
+    <div style={{ minHeight: 25, display: 'flex', gap: 8, alignItems: 'center', marginBottom: 5 }}>
+      {p1Visible && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          opacity: p1Visible ? 1 : 0, transition: 'opacity 0.3s',
+        }}>
+          <PersonIcon color={P1_COLOR} />
+          <span style={{ fontSize: 10, color: P1_COLOR, fontWeight: 700 }}>
+            User 1 {p1FillCount > 0 ? `${Math.round(p1FillCount / 12 * 100)}%` : ''}
+          </span>
+        </div>
+      )}
+      {p2Visible && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          opacity: p2Visible ? 1 : 0, transition: 'opacity 0.3s',
+        }}>
+          <PersonIcon color={P2_COLOR} />
+          <span style={{ fontSize: 10, color: P2_COLOR, fontWeight: 700 }}>
+            User 2 {p2FillCount > 0 ? `${Math.round(p2FillCount / 20 * 100)}%` : ''}
+          </span>
+        </div>
+      )}
+      {p3Visible && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          opacity: p3Visible ? 1 : 0, transition: 'opacity 0.3s',
+        }}>
+          <PersonIcon color={P3_COLOR} />
+          <span style={{ fontSize: 10, color: P3_COLOR, fontWeight: 700 }}>
+            User 3 {p3FillCount > 0 ? `${Math.round(p3FillCount / 18 * 100)}%` : ''}
+          </span>
+        </div>
+      )}
+    </div>
+  );
 
   return (
-    <div style={{ width, height, background: bgMain, borderRadius: 14, padding: 22, color: textPrimary, fontFamily: "'Courier New', monospace", border: '1px solid #ffffffaa', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width, height, background: 'transparent', borderRadius: 14, padding: 22, color: textPrimary, fontFamily: "'Courier New', monospace", border: '1px solid #ffffffaa', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', color: textSecondary, marginBottom: 16 }}>
         KV Cache · GPU Memory Simulation
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1, opacity: gridOpacity, transition: 'opacity 0.5s' }}>
         {/* vLLM */}
         <div>
           <div style={{ height: 20, marginBottom: 7 }} />
-          {renderReqs(false)}
+          <div style={{ minHeight: 25, marginBottom: 5 }} />
           <div style={{ background: bgCell, border: `1px solid ${borderCell}`, borderRadius: 8, padding: 9, marginBottom: 7 }}>
-            {renderGrid(s.vp, false)}
-            <div style={{ fontSize: 9, marginTop: 5, color: textMuted }}>▪ erste 8 Pages: Prefix cache — geteilt zwischen ALLEN Requests</div>
+            {renderVLLMGrid()}
+            <div style={{ fontSize: 9, marginTop: 5, color: textMuted }}>
+              {'\u25AA'} erste 8 Pages: Prefix cache — geteilt zwischen ALLEN Requests
+            </div>
           </div>
           <div style={{ fontSize: 11, color: textSecondary, display: 'flex', gap: 10 }}>
-            <span>util <span style={{ fontWeight: 700, fontSize: 12, color: accentVLLM }}>{vu}%</span></span>
-            <span>aktiv <span style={{ fontWeight: 700, fontSize: 12, color: accentVLLM }}>{va}</span></span>
-            <span>~<span style={{ fontWeight: 700, fontSize: 12, color: accentVLLM }}>{vt}</span> tok/s</span>
+            <span>util <span style={{ fontWeight: 700, fontSize: 12, color: accentVLLM }}>
+              {showColors ? Math.round(vllmPrefixCount / P * 100) : 0}%
+            </span></span>
+            <span>aktiv <span style={{ fontWeight: 700, fontSize: 12, color: accentVLLM }}>0</span></span>
+            <span>~<span style={{ fontWeight: 700, fontSize: 12, color: accentVLLM }}>0</span> tok/s</span>
           </div>
         </div>
 
         {/* Ollama */}
         <div>
           <div style={{ height: 20, marginBottom: 7 }} />
-          {renderReqs(true)}
+          {showColors ? renderPersons() : <div style={{ minHeight: 25, marginBottom: 5 }} />}
           <div style={{ background: bgCell, border: `1px solid ${borderCell}`, borderRadius: 8, padding: 9, marginBottom: 7 }}>
-            {renderGrid(s.vp, true)}
-            <div style={{ fontSize: 9, marginTop: 5, color: textMuted }}>▪ 32 Pages pre-allokiert pro Session — Rest bleibt ungenutzt</div>
+            {renderOllamaGrid()}
+            <div style={{ fontSize: 9, marginTop: 5, color: textMuted }}>
+              {'\u25AA'} 32 Pages pre-allokiert pro Session — Rest bleibt ungenutzt
+            </div>
           </div>
           <div style={{ fontSize: 11, color: textSecondary, display: 'flex', gap: 10 }}>
-            <span>util <span style={{ fontWeight: 700, fontSize: 12, color: accentOllama }}>{ou}%</span></span>
-            <span>aktiv <span style={{ fontWeight: 700, fontSize: 12, color: accentOllama }}>{oa}</span></span>
-            <span>~<span style={{ fontWeight: 700, fontSize: 12, color: accentOllama }}>{ot}</span> tok/s</span>
+            <span>util <span style={{ fontWeight: 700, fontSize: 12, color: accentOllama }}>{ollamaUtil}%</span></span>
+            <span>aktiv <span style={{ fontWeight: 700, fontSize: 12, color: accentOllama }}>{ollamaActive}</span></span>
+            <span>~<span style={{ fontWeight: 700, fontSize: 12, color: accentOllama }}>{ollamaActive * 8}</span> tok/s</span>
           </div>
         </div>
       </div>
 
-      <div style={{ width: '100%', height: 1, background: '#ffffff55', margin: '14px 0' }} />
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 10, color: textMuted }}>
-        {[
-          { bg: '#4a7fcc', label: 'Shared prefix (vLLM)' },
-          { bg: bgCell, border: `1px solid ${borderCell}`, label: 'Frei' },
-          { bg: '#2a1800', label: 'Pre-alloc / verschwendet' },
-          { bg: '#3b82f6', label: 'Aktiver Request' },
-          { bg: '#0d0d0d', label: 'Nicht erreichbar (Ollama)' },
-        ].map(l => (
-          <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 2, flexShrink: 0, background: l.bg, border: l.border || `1px solid ${borderCell}` }} />
-            <span style={{ color: textSecondary }}>{l.label}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };

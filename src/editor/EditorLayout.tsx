@@ -57,7 +57,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const [timelineHeight, setTimelineHeight] = useState(320);
   const [isResizingTimeline, setIsResizingTimeline] = useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = useState<'start' | 'insert' | 'animation' | 'view' | 'script'>('insert');
-  const [assetLibraryView, setAssetLibraryView] = useState<'logos' | 'widgets' | null>(null);
+  const [assetLibraryView, setAssetLibraryView] = useState<'logos' | 'widgets' | 'images' | null>(null);
   const [showShapeGallery, setShowShapeGallery] = useState(false);
   const [showScriptPanel, setShowScriptPanel] = useState(true);
 
@@ -65,6 +65,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const shapeGalleryButtonRef = useRef<HTMLButtonElement>(null);
   const logosButtonRef = useRef<HTMLButtonElement>(null);
   const widgetsButtonRef = useRef<HTMLButtonElement>(null);
+  const imagesButtonRef = useRef<HTMLButtonElement>(null);
   const quickWidgets = getAllWidgets().slice(0, 3);
 
   useEffect(() => {
@@ -170,7 +171,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
     setAssetLibraryView(null);
   };
 
-  const handleAssetLibraryToggle = (view: 'logos' | 'widgets') => {
+  const handleAssetLibraryToggle = (view: 'logos' | 'widgets' | 'images') => {
     setShowShapeGallery(false);
     setAssetLibraryView((current) => (current === view ? null : view));
   };
@@ -354,6 +355,12 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
               onClick={() => handleAssetLibraryToggle('logos')}
             />
             <HeaderActionButton
+              buttonRef={imagesButtonRef}
+              label="Bilder"
+              active={assetLibraryView === 'images'}
+              onClick={() => handleAssetLibraryToggle('images')}
+            />
+            <HeaderActionButton
               buttonRef={widgetsButtonRef}
               label="Widgets"
               active={assetLibraryView === 'widgets'}
@@ -487,7 +494,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
       />
 
       <AssetLibrary
-        anchorRef={assetLibraryView === 'widgets' ? widgetsButtonRef : logosButtonRef}
+        anchorRef={assetLibraryView === 'widgets' ? widgetsButtonRef : assetLibraryView === 'images' ? imagesButtonRef : logosButtonRef}
         isOpen={assetLibraryView !== null}
         activeView={assetLibraryView ?? 'logos'}
         onChangeView={setAssetLibraryView}
