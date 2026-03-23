@@ -11,10 +11,12 @@ interface ViewportStore {
   zoom: number;
   panOffset: { x: number; y: number };
   snapGuides: SnapGuide[];
+  cameraEditMode: boolean;
 
   setZoom: (zoom: number) => void;
   setPanOffset: (offset: { x: number; y: number }) => void;
   setSnapGuides: (guides: SnapGuide[]) => void;
+  toggleCameraEditMode: () => void;
 
   /** Zoom centered on a point (screen coords relative to container) */
   zoomAtPoint: (newZoom: number, screenX: number, screenY: number) => void;
@@ -37,8 +39,10 @@ export const useViewportStore = create<ViewportStore>((set, get) => ({
   zoom: 0.5,
   panOffset: { x: 0, y: 0 },
   snapGuides: [],
+  cameraEditMode: false,
 
   setZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
+  toggleCameraEditMode: () => set((s) => ({ cameraEditMode: !s.cameraEditMode })),
 
   setPanOffset: (offset) => set({ panOffset: offset }),
 

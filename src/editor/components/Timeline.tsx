@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { ShapeContent, TextContent, WidgetContent, Keyframe, CameraKeyframe, getAnimations } from '../../types/project';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCamera } from '@fortawesome/free-solid-svg-icons';
+import { faCamera, faVideo } from '@fortawesome/free-solid-svg-icons';
+import { useViewportStore } from '../../store/useViewportStore';
 import { TL_BORDER, TL_BG, TL_BG_MUTED, TL_TEXT_SECONDARY, TL_TEXT_MUTED, TL_TEXT_DISABLED, TL_ACCENT } from './TimelineConstants';
 import { TimelineLayerPanel } from './TimelineLayerPanel';
 import { TimelineTrackArea } from './TimelineTrackArea';
@@ -30,6 +31,8 @@ export const Timeline: React.FC = () => {
   const removeKeyframe = useProjectStore((state) => state.removeKeyframe);
   const addCameraKeyframe = useProjectStore((state) => state.addCameraKeyframe);
   const removeCameraKeyframe = useProjectStore((state) => state.removeCameraKeyframe);
+  const cameraEditMode = useViewportStore((state) => state.cameraEditMode);
+  const toggleCameraEditMode = useViewportStore((state) => state.toggleCameraEditMode);
 
   // Context menu states
   const [kfContextMenu, setKfContextMenu] = useState<KfContextMenuState | null>(null);
@@ -431,7 +434,7 @@ export const Timeline: React.FC = () => {
 
   const handleAddCameraKeyframe = useCallback(() => {
     const snappedTime = Math.round(currentTime / 50) * 50;
-    addCameraKeyframe({ time: snappedTime, x: project.canvas.width / 2, y: project.canvas.height / 2, zoom: 1.0 });
+    addCameraKeyframe({ time: snappedTime, x: project.canvas.width / 2, y: project.canvas.height / 2, zoomX: 1.0, zoomY: 1.0 });
   }, [currentTime, project.canvas.width, project.canvas.height, addCameraKeyframe]);
 
   const formatTime = (ms: number) => {
@@ -468,6 +471,10 @@ export const Timeline: React.FC = () => {
           <button onClick={handleAddCameraKeyframe} title="Kamera-Keyframe an aktueller Position hinzufügen"
             style={{ padding: '4px 10px', backgroundColor: '#00bcd4', color: '#000', border: `1px solid ${TL_BORDER}`, borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
             <FontAwesomeIcon icon={faCamera} style={{ marginRight: 4 }} />Kamera-KF
+          </button>
+          <button onClick={toggleCameraEditMode} title="Kamerarahmen bearbeiten (Ein/Aus)"
+            style={{ padding: '4px 10px', backgroundColor: cameraEditMode ? '#00bcd4' : 'transparent', color: cameraEditMode ? '#000' : '#00bcd4', border: '1px solid #00bcd4', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+            <FontAwesomeIcon icon={faVideo} />
           </button>
           <button onClick={playbackState === 'playing' ? pauseAllAnimations : playAllAnimations}
             style={{ padding: '4px 12px', backgroundColor: playbackState === 'playing' ? 'var(--ae-notice)' : playbackState === 'paused' ? 'var(--ae-positive)' : 'transparent', color: playbackState !== 'stopped' ? 'var(--ae-gray-900)' : TL_TEXT_MUTED, border: `1px solid ${TL_BORDER}`, borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>

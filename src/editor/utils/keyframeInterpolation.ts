@@ -175,7 +175,17 @@ export function getInterpolatedPosition(
 export interface InterpolatedCamera {
   x: number;
   y: number;
-  zoom: number;
+  zoomX: number;
+  zoomY: number;
+}
+
+/** Get zoomX from a camera keyframe, with legacy zoom fallback */
+function camZoomX(kf: CameraKeyframe): number {
+  return kf.zoomX ?? kf.zoom ?? 1;
+}
+/** Get zoomY from a camera keyframe, with legacy zoom fallback */
+function camZoomY(kf: CameraKeyframe): number {
+  return kf.zoomY ?? kf.zoom ?? 1;
 }
 
 /**
@@ -189,19 +199,19 @@ export function getInterpolatedCamera(
   if (!keyframes || keyframes.length === 0) return null;
 
   if (keyframes.length === 1) {
-    return { x: keyframes[0].x, y: keyframes[0].y, zoom: keyframes[0].zoom };
+    return { x: keyframes[0].x, y: keyframes[0].y, zoomX: camZoomX(keyframes[0]), zoomY: camZoomY(keyframes[0]) };
   }
 
   // Before first keyframe
   if (time <= keyframes[0].time) {
     const kf = keyframes[0];
-    return { x: kf.x, y: kf.y, zoom: kf.zoom };
+    return { x: kf.x, y: kf.y, zoomX: camZoomX(kf), zoomY: camZoomY(kf) };
   }
 
   // After last keyframe
   const last = keyframes[keyframes.length - 1];
   if (time >= last.time) {
-    return { x: last.x, y: last.y, zoom: last.zoom };
+    return { x: last.x, y: last.y, zoomX: camZoomX(last), zoomY: camZoomY(last) };
   }
 
   // Find surrounding keyframes and interpolate
@@ -213,7 +223,8 @@ export function getInterpolatedCamera(
       return {
         x: lerp(a.x, b.x, t),
         y: lerp(a.y, b.y, t),
-        zoom: lerp(a.zoom, b.zoom, t),
+        zoomX: lerp(camZoomX(a), camZoomX(b), t),
+        zoomY: lerp(camZoomY(a), camZoomY(b), t),
       };
     }
   }

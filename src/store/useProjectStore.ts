@@ -8,12 +8,12 @@ function generateId(): string {
 }
 
 // Helper: Create blank scene
-function createBlankScene(name = 'Szene 1'): Scene {
+function createBlankScene(name = 'Szene 1', canvasWidth = 1920, canvasHeight = 1080): Scene {
   return {
     id: generateId(),
     name,
     elements: [],
-    cameraKeyframes: [],
+    cameraKeyframes: [{ time: 0, x: canvasWidth / 2, y: canvasHeight / 2, zoomX: 1.0, zoomY: 1.0 }],
   };
 }
 
@@ -574,6 +574,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         return updated;
       });
 
+      // Migrate legacy camera keyframes: zoom → zoomX/zoomY
+      const migrateCamKfs = (kfs: any[] | undefined) =>
+        kfs?.map((kf: any) => ({ ...kf, zoomX: kf.zoomX ?? kf.zoom ?? 1, zoomY: kf.zoomY ?? kf.zoom ?? 1 }));
+      project.cameraKeyframes = migrateCamKfs(project.cameraKeyframes);
+      if (project.scenes) {
+        project.scenes = project.scenes.map((s: any) => ({
+          ...s,
+          cameraKeyframes: migrateCamKfs(s.cameraKeyframes),
+        }));
+      }
+
       get().loadProject(ensureScenes(project));
     } catch (error) {
       console.error('Failed to import project:', error);
@@ -607,7 +618,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set((state) => {
       const synced = syncProjectToActiveScene(state.project);
       const count = synced.scenes.length + 1;
-      const scene = createBlankScene(name || `Szene ${count}`);
+      const scene = createBlankScene(name || `Szene ${count}`, synced.canvas.width, synced.canvas.height);
       const scenes = [...synced.scenes, scene];
       return {
         ...pushHistory(state),

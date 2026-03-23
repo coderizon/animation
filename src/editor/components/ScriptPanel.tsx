@@ -142,10 +142,10 @@ api.log('Kreispfad mit ' + steps + ' Keyframes erstellt!');`,
   {
     name: 'Kamera-Zoom Sequenz',
     code: `// Kamera fährt rein und raus
-api.addCameraKeyframe({ time: 0, x: 960, y: 540, zoom: 1.0 });
-api.addCameraKeyframe({ time: 1500, x: 600, y: 400, zoom: 2.0 });
-api.addCameraKeyframe({ time: 3000, x: 1300, y: 600, zoom: 1.5 });
-api.addCameraKeyframe({ time: 4500, x: 960, y: 540, zoom: 1.0 });
+api.addCameraKeyframe({ time: 0, x: 960, y: 540, zoomX: 1.0, zoomY: 1.0 });
+api.addCameraKeyframe({ time: 1500, x: 600, y: 400, zoomX: 2.0, zoomY: 2.0 });
+api.addCameraKeyframe({ time: 3000, x: 1300, y: 600, zoomX: 1.5, zoomY: 1.5 });
+api.addCameraKeyframe({ time: 4500, x: 960, y: 540, zoomX: 1.0, zoomY: 1.0 });
 
 api.log('Kamera-Sequenz mit 4 Keyframes erstellt!');`,
   },
@@ -198,164 +198,134 @@ api.log(count + ' Partikel erstellt!');`,
   },
 ];
 
-const DEFAULT_CODE = `// === Szene 1: Server + Inferenz-Engine Logos ===
-// === Szene 2: Drei Logos groß verteilt (Morph) ===
+const DEFAULT_CODE = `// === Szene 1: Server + Inferenz-Engine ===
+// === Szene 2: KV Cache Visualisierung (Morph) ===
 // Drücke Strg+Enter zum Ausführen.
 
 // =============================================
 // SZENE 1
 // =============================================
 
-const serverW = 400;
-const serverH = 141;
+// --- Server ---
 const server = api.addElement({
   type: 'image', src: '/images/dgxspark.png',
-  x: 960 - serverW / 2, y: 220,
-  width: serverW, height: serverH, name: 'Server',
+  x: 760, y: 363.09, width: 400, height: 141, name: 'Server',
 });
 api.addAnimation(server, { preset: 'scaleIn', delay: 0, duration: 900, easing: 'easeOut' });
+api.addKeyframe(server, { time: 0, x: 760, y: 363.09, width: 400, height: 141, rotation: 0 });
 
-const rectW = serverW;
-const rectH = 110;
-const rectX = 960 - rectW / 2;
-const rectY = 570;
-
-const rect = api.addElement({
+// --- Rect Outline ---
+const rect_Outline = api.addElement({
   type: 'shape', shape: 'rectangle',
-  x: rectX, y: rectY, width: rectW, height: rectH,
+  x: 760, y: 570, width: 400, height: 110,
   fill: 'transparent', stroke: '#ffffff', strokeWidth: 2, borderRadius: 10,
   name: 'Rect Outline',
 });
-api.addAnimation(rect, { preset: 'strokeDraw', delay: 2000, duration: 700, easing: 'easeOut' });
+api.addAnimation(rect_Outline, { preset: 'strokeDraw', delay: 2000, duration: 700, easing: 'easeOut' });
+api.addKeyframe(rect_Outline, { time: 16300, x: 760, y: 570, width: 400 });
+api.addKeyframe(rect_Outline, { time: 17100, x: 660, y: 570, width: 600 });
 
-const logoSize = 70;
-const logoY = rectY + (rectH - logoSize) / 2;
-const gap = 40;
-const vllmX = 960 - gap / 2 - logoSize;
-const nvidiaX = 960 + gap / 2;
-
-const vllm = api.addElement({
+// --- VLLM ---
+const vLLM = api.addElement({
   type: 'logo', src: '/assets/vllm-color.svg',
-  x: vllmX, y: logoY, width: logoSize, height: logoSize, name: 'VLLM',
+  x: 870, y: 590, width: 70, height: 70, name: 'VLLM',
 });
-api.addAnimation(vllm, { preset: 'elasticScale', delay: 2800, duration: 800, easing: 'spring' });
-api.addEffect(vllm, 'float', 0.4, 0.7);
+api.addAnimation(vLLM, { preset: 'elasticScale', delay: 2800, duration: 800, easing: 'spring' });
+api.addKeyframe(vLLM, { time: 16300, x: 870, y: 590 });
+api.addKeyframe(vLLM, { time: 17100, x: 685, y: 590 });
+api.addEffect(vLLM, 'float', 0.4, 0.7);
 
+// --- Nvidia ---
 const nvidia = api.addElement({
   type: 'logo', src: '/assets/nvidia-color.svg',
-  x: nvidiaX, y: logoY, width: logoSize, height: logoSize, name: 'Nvidia',
+  x: 980, y: 590, width: 70, height: 70, name: 'Nvidia',
 });
 api.addAnimation(nvidia, { preset: 'elasticScale', delay: 3100, duration: 800, easing: 'spring' });
+api.addKeyframe(nvidia, { time: 16300, x: 980, y: 590 });
+api.addKeyframe(nvidia, { time: 17100, x: 1165, y: 590 });
 api.addEffect(nvidia, 'float', 0.4, 0.7);
 
-const textY = rectY + rectH + 16;
-const textDelay = 5100;
-
-const vllmText = api.addElement({
+// --- vLLM Label ---
+const vLLM_Label = api.addElement({
   type: 'text', text: 'vLLM',
-  x: vllmX + logoSize / 2 - 50, y: textY, width: 100, height: 36,
-  fontSize: 20, color: '#ffffff', name: 'vLLM Label',
+  x: 855, y: 696, width: 100, height: 36,
+  fontSize: 20, fontFamily: 'Inter, sans-serif', color: '#ffffff', name: 'vLLM Label',
 });
-api.addAnimation(vllmText, { preset: 'fadeIn', delay: textDelay, duration: 500, easing: 'easeOut' });
+api.addAnimation(vLLM_Label, { preset: 'fadeIn', delay: 5100, duration: 500, easing: 'easeOut' });
+api.addKeyframe(vLLM_Label, { time: 16300, x: 855, y: 696 });
+api.addKeyframe(vLLM_Label, { time: 17100, x: 670, y: 696 });
 
-const nvidiaText = api.addElement({
+// --- TensorRT Label ---
+const tensorRT_Label = api.addElement({
   type: 'text', text: 'TensorRT-LLM',
-  x: nvidiaX + logoSize / 2 - 75, y: textY, width: 150, height: 36,
-  fontSize: 20, color: '#76b900', name: 'TensorRT Label',
+  x: 940, y: 696, width: 150, height: 36,
+  fontSize: 20, fontFamily: 'Inter, sans-serif', color: '#76b900', name: 'TensorRT Label',
 });
-api.addAnimation(nvidiaText, { preset: 'fadeIn', delay: textDelay + 300, duration: 500, easing: 'easeOut' });
+api.addAnimation(tensorRT_Label, { preset: 'fadeIn', delay: 5400, duration: 500, easing: 'easeOut' });
+api.addKeyframe(tensorRT_Label, { time: 16300, x: 940, y: 696 });
+api.addKeyframe(tensorRT_Label, { time: 17100, x: 1125, y: 696 });
 
-const lineDelay = textDelay + 1300;
-const lineW = 260;
-const lineY = textY + 40;
-
-api.addElement({
+// --- Divider Line ---
+const divider_Line = api.addElement({
   type: 'shape', shape: 'rectangle',
-  x: 960 - lineW / 2, y: lineY, width: lineW, height: 2,
+  x: 830, y: 736, width: 260, height: 2,
   fill: '#ffffff', borderRadius: 1, name: 'Divider Line',
 });
-api.addAnimation(api.getElementIds().at(-1), { preset: 'wipeRight', delay: lineDelay, duration: 600, easing: 'easeOut' });
+api.addAnimation(divider_Line, { preset: 'wipeRight', delay: 6400, duration: 600, easing: 'easeOut' });
 
-api.addElement({
+// --- Engine Label ---
+const engine_Label = api.addElement({
   type: 'text', text: 'Inferenz-Engine',
-  x: 960 - 120, y: lineY + 12, width: 240, height: 40,
-  fontSize: 18, color: '#888888', name: 'Engine Label',
+  x: 840, y: 748, width: 240, height: 40,
+  fontSize: 18, fontFamily: 'Inter, sans-serif', color: '#888888', name: 'Engine Label',
 });
-api.addAnimation(api.getElementIds().at(-1), { preset: 'fadeIn', delay: lineDelay + 400, duration: 600, easing: 'easeOut' });
+api.addAnimation(engine_Label, { preset: 'fadeIn', delay: 6800, duration: 600, easing: 'easeOut' });
 
-// ---- Neural Net + Logo Karussell über dem Server ----
-const nnStartDelay = lineDelay + 1200;
-const nnSize = 300;
-
-const neuralNet = api.addElement({
+// --- Neural Net ---
+const neural_Net = api.addElement({
   type: 'widget', widgetName: 'neuralNetServer',
-  x: 960 - nnSize / 2, y: 220 - nnSize / 2 + 30,
-  width: nnSize, height: nnSize,
+  x: 691.26, y: -52.23, width: 503.98, height: 503.98,
   fps: 30, durationInFrames: 300, name: 'Neural Net',
 });
-api.addAnimation(neuralNet, { preset: 'fadeIn', delay: nnStartDelay, duration: 600, easing: 'easeOut' });
+api.addAnimation(neural_Net, { preset: 'fadeIn', delay: 7600, duration: 600, easing: 'easeOut' });
+api.addAnimation(neural_Net, { preset: 'fadeOut', delay: 15500, duration: 500, easing: 'easeOut' });
+api.addKeyframe(neural_Net, { time: 0, x: 691.26, y: -52.23, width: 503.98, height: 503.98, rotation: 0 });
 
-// Logo Karussell im Zentrum des Neuronalen Netzes
-const carouselSize = 100;
-const logoCarousel = api.addElement({
+// --- Logo Karussell ---
+const logo_Karussell = api.addElement({
   type: 'widget', widgetName: 'logoCarousel',
-  x: 960 - carouselSize / 2, y: 220 - carouselSize / 2 + 30,
-  width: carouselSize, height: carouselSize,
+  x: 873.47, y: 129.98, width: 139.58, height: 139.58,
   fps: 30, durationInFrames: 225,
   props: {
     logos: ['/assets/deepseek-color.svg', '/assets/mistral-color.svg', '/assets/claude-color.svg'],
-    displayDuration: 1.5,
-    transitionDuration: 0.5,
-    logoScale: 0.7,
-    floatDistance: 15,
+    displayDuration: 1.5, transitionDuration: 0.5, logoScale: 0.7, floatDistance: 15,
   },
   name: 'Logo Karussell',
 });
-api.addAnimation(logoCarousel, { preset: 'fadeIn', delay: nnStartDelay + 400, duration: 400, easing: 'easeOut' });
+api.addAnimation(logo_Karussell, { preset: 'fadeIn', delay: 8000, duration: 400, easing: 'easeOut' });
+api.addAnimation(logo_Karussell, { preset: 'scaleOut', delay: 15500, duration: 600, easing: 'easeOut' });
+api.addKeyframe(logo_Karussell, { time: 0, x: 880, y: 149.77, width: 139.58, height: 139.58, rotation: 0 });
 
-// Nach dem Karussell (3 Logos × 2.5s = 7.5s) alles ausblenden
-const nnEndDelay = nnStartDelay + 400 + 7500; // ~15500ms
-api.addAnimation(neuralNet, { preset: 'fadeOut', delay: nnEndDelay, duration: 500, easing: 'easeOut' });
-api.addAnimation(logoCarousel, { preset: 'fadeOut', delay: nnEndDelay, duration: 500, easing: 'easeOut' });
-
-// Rechteck expandiert NACH dem Neural Net verschwindet
-const expandTime = nnEndDelay + 800;
-const expandedRectW = 600;
-const expandedRectX = 960 - expandedRectW / 2;
-
-api.addKeyframe(rect, { time: expandTime, x: rectX, y: rectY, width: rectW });
-api.addKeyframe(rect, { time: expandTime + 800, x: expandedRectX, y: rectY, width: expandedRectW });
-
-const vllmTargetX = expandedRectX + 25;
-api.addKeyframe(vllm, { time: expandTime, x: vllmX, y: logoY });
-api.addKeyframe(vllm, { time: expandTime + 800, x: vllmTargetX, y: logoY });
-api.addKeyframe(vllmText, { time: expandTime, x: vllmX + logoSize / 2 - 50, y: textY });
-api.addKeyframe(vllmText, { time: expandTime + 800, x: vllmTargetX + logoSize / 2 - 50, y: textY });
-
-const nvidiaTargetX = expandedRectX + expandedRectW - logoSize - 25;
-api.addKeyframe(nvidia, { time: expandTime, x: nvidiaX, y: logoY });
-api.addKeyframe(nvidia, { time: expandTime + 800, x: nvidiaTargetX, y: logoY });
-api.addKeyframe(nvidiaText, { time: expandTime, x: nvidiaX + logoSize / 2 - 75, y: textY });
-api.addKeyframe(nvidiaText, { time: expandTime + 800, x: nvidiaTargetX + logoSize / 2 - 75, y: textY });
-
+// --- Ollama ---
 const ollama = api.addElement({
-  type: 'logo', src: '/assets/ollama.svg', filter: 'brightness(0) invert(1)',
-  x: 960 - logoSize / 2, y: logoY, width: logoSize, height: logoSize, name: 'Ollama',
+  type: 'logo', src: '/assets/ollama.svg',
+  x: 925, y: 590, width: 70, height: 70, name: 'Ollama',
 });
-api.addAnimation(ollama, { preset: 'scalePop', delay: expandTime + 1200, duration: 600, easing: 'spring' });
+api.addAnimation(ollama, { preset: 'scalePop', delay: 17500, duration: 600, easing: 'spring' });
 
-const ollamaText = api.addElement({
+// --- Ollama Label ---
+const ollama_Label = api.addElement({
   type: 'text', text: 'Ollama',
-  x: 960 - 50, y: textY, width: 100, height: 36,
-  fontSize: 20, color: '#ffffff', name: 'Ollama Label',
+  x: 910, y: 696, width: 100, height: 36,
+  fontSize: 20, fontFamily: 'Inter, sans-serif', color: '#ffffff', name: 'Ollama Label',
 });
-api.addAnimation(ollamaText, { preset: 'fadeIn', delay: expandTime + 1600, duration: 500, easing: 'easeOut' });
+api.addAnimation(ollama_Label, { preset: 'fadeIn', delay: 17900, duration: 500, easing: 'easeOut' });
 
-// Szene-Duration setzen (alle Animationen enden bei ~10s)
+// Szene-Duration
 const scenes1 = api.getScenes();
 api.setSceneDuration(scenes1[0].id, 20000);
 
-api.log('Szene 1 erstellt!');
+api.log('Szene 1: 12 Elemente erstellt!');
 
 // =============================================
 // SZENE 2: KV Cache Visualisierung (Morph)

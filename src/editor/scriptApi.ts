@@ -361,7 +361,9 @@ interface CameraKeyframe {
   time: number;
   x: number;
   y: number;
-  zoom: number;
+  zoom?: number;
+  zoomX: number;
+  zoomY: number;
 }
 
 declare const api: {

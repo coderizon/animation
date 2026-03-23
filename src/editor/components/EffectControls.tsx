@@ -123,12 +123,14 @@ export const CameraKeyframeRow = React.memo<CameraKeyframeRowProps>(({ kf, canva
         <span style={{ fontSize: 10, color: MUTED_TEXT }}>px</span>
       </div>
     ))}
-    <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 30px', alignItems: 'center', gap: 4 }}>
-      <span style={{ fontSize: 11, color: MUTED_TEXT }}>Zoom</span>
-      <input type="number" value={kf.zoom} onChange={(e) => onUpdate({ zoom: Math.max(0.1, Number(e.target.value)) })} min={0.1} max={10} step={0.1}
-        style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box', backgroundColor: FIELD_BG, border: `1px solid ${FIELD_BORDER}`, borderRadius: 4, color: 'var(--ae-text-primary)', fontSize: 11, outline: 'none' }} />
-      <span style={{ fontSize: 10, color: MUTED_TEXT }}>×</span>
-    </div>
+    {(['zoomX', 'zoomY'] as const).map((axis) => (
+      <div key={axis} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 30px', alignItems: 'center', gap: 4 }}>
+        <span style={{ fontSize: 11, color: MUTED_TEXT }}>{axis === 'zoomX' ? 'Z-X' : 'Z-Y'}</span>
+        <input type="number" value={kf[axis]} onChange={(e) => onUpdate({ [axis]: Math.max(0.1, Number(e.target.value)) })} min={0.1} max={10} step={0.1}
+          style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box', backgroundColor: FIELD_BG, border: `1px solid ${FIELD_BORDER}`, borderRadius: 4, color: 'var(--ae-text-primary)', fontSize: 11, outline: 'none' }} />
+        <span style={{ fontSize: 10, color: MUTED_TEXT }}>×</span>
+      </div>
+    ))}
   </div>
 ));
 

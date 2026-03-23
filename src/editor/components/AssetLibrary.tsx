@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const svgModules = import.meta.glob('/public/assets/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const imageModules = import.meta.glob('/public/images/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const iconModules = import.meta.glob('/public/assets/icons/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 interface ImageAsset {
   id: string;
@@ -35,11 +36,21 @@ const autoLogos: LogoAsset[] = Object.entries(svgModules)
   })
   .sort((a, b) => a.name.localeCompare(b.name));
 
+const autoIcons: LogoAsset[] = Object.entries(iconModules)
+  .map(([path, url]) => {
+    const filename = path.split('/').pop()!.replace('.svg', '');
+    const name = filename.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return { id: `icon-${filename}`, name, src: url };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+type ViewId = 'logos' | 'icons' | 'images' | 'widgets';
+
 interface AssetLibraryProps {
   anchorRef: React.RefObject<HTMLElement | null>;
   isOpen: boolean;
-  activeView: 'logos' | 'widgets' | 'images';
-  onChangeView: (view: 'logos' | 'widgets' | 'images') => void;
+  activeView: ViewId;
+  onChangeView: (view: ViewId) => void;
   onClose: () => void;
 }
 
@@ -346,6 +357,7 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
           <div style={{ display: 'flex', gap: 8 }}>
             {([
               { id: 'logos' as const, label: 'Logos', hint: `${autoLogos.length} Assets` },
+              { id: 'icons' as const, label: 'Icons', hint: `${autoIcons.length} Icons` },
               { id: 'images' as const, label: 'Bilder', hint: `${autoImages.length} Dateien` },
               { id: 'widgets' as const, label: 'Widgets', hint: `${widgets.length} Presets` },
             ]).map((view) => {
@@ -439,6 +451,41 @@ export const AssetLibrary: React.FC<AssetLibraryProps> = ({
           >
             {filteredLogos.map((logo) => (
               <DraggableLogo key={logo.id} asset={logo} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeView === 'icons' && (
+        <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, flex: 1 }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Icons suchen"
+            style={{
+              width: '100%', padding: '10px 12px', borderRadius: 10,
+              border: '1px solid var(--ae-border)', backgroundColor: 'var(--ae-bg-input)',
+              color: 'var(--ae-text-primary)', fontSize: 13, outline: 'none',
+            }}
+          />
+          <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)' }}>
+            {(() => {
+              const filtered = search.trim()
+                ? autoIcons.filter(i => i.name.toLowerCase().includes(search.trim().toLowerCase()))
+                : autoIcons;
+              return `${filtered.length} Icons. Ziehe ein Icon auf den Canvas.`;
+            })()}
+          </div>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+            gap: 6, overflowY: 'auto', paddingRight: 4, minHeight: 0, flex: 1,
+          }}>
+            {(search.trim()
+              ? autoIcons.filter(i => i.name.toLowerCase().includes(search.trim().toLowerCase()))
+              : autoIcons
+            ).map((icon) => (
+              <DraggableLogo key={icon.id} asset={icon} />
             ))}
           </div>
         </div>

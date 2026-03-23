@@ -169,7 +169,7 @@ export const TimelineTrackArea = React.memo<TimelineTrackAreaProps>(({
                 e.stopPropagation();
                 onCamKfContextMenu(kf.time, e);
               }}
-              title={`Kamera ${kf.time}ms (x:${Math.round(kf.x)}, y:${Math.round(kf.y)}, zoom:${kf.zoom.toFixed(1)})`}
+              title={`Kamera ${kf.time}ms (x:${Math.round(kf.x)}, y:${Math.round(kf.y)}, zX:${kf.zoomX.toFixed(1)}, zY:${kf.zoomY.toFixed(1)})`}
               style={{
                 position: 'absolute',
                 left: kf.time * pxPerMs - 9,

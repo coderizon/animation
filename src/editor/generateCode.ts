@@ -126,7 +126,7 @@ function genEffect(varName: string, eff: Effect): string {
 }
 
 function genCameraKeyframe(kf: CameraKeyframe): string {
-  return `api.addCameraKeyframe({ time: ${num(kf.time)}, x: ${num(kf.x)}, y: ${num(kf.y)}, zoom: ${num(kf.zoom)} });`;
+  return `api.addCameraKeyframe({ time: ${num(kf.time)}, x: ${num(kf.x)}, y: ${num(kf.y)}, zoomX: ${num(kf.zoomX)}, zoomY: ${num(kf.zoomY)} });`;
 }
 
 function sanitizeVarName(name: string): string {

@@ -57,7 +57,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ onOpenPlayer }) => {
   const [timelineHeight, setTimelineHeight] = useState(320);
   const [isResizingTimeline, setIsResizingTimeline] = useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = useState<'start' | 'insert' | 'animation' | 'view' | 'script'>('insert');
-  const [assetLibraryView, setAssetLibraryView] = useState<'logos' | 'widgets' | 'images' | null>(null);
+  const [assetLibraryView, setAssetLibraryView] = useState<'logos' | 'icons' | 'widgets' | 'images' | null>(null);
   const [showShapeGallery, setShowShapeGallery] = useState(false);
   const [showScriptPanel, setShowScriptPanel] = useState(true);
 

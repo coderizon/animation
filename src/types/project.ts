@@ -242,7 +242,9 @@ export interface CameraKeyframe {
   time: number;   // ms
   x: number;      // Canvas-center X
   y: number;      // Canvas-center Y
-  zoom: number;   // 1.0 = normal, 2.0 = 2x zoom
+  zoom?: number;  // Legacy uniform zoom (kept for backward compat)
+  zoomX: number;  // Horizontal zoom: 1.0 = normal, 2.0 = 2x
+  zoomY: number;  // Vertical zoom: 1.0 = normal, 2.0 = 2x
 }
 
 // Loop Effects

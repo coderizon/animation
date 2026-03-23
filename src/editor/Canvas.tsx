@@ -38,6 +38,7 @@ export const Canvas: React.FC = () => {
   const zoomAtPoint = useViewportStore((state) => state.zoomAtPoint);
   const setPanOffset = useViewportStore((state) => state.setPanOffset);
   const fitToScreen = useViewportStore((state) => state.fitToScreen);
+  const cameraEditMode = useViewportStore((state) => state.cameraEditMode);
 
   // Panning state (refs to avoid re-renders)
   const isPanning = useRef(false);
@@ -298,7 +299,8 @@ export const Canvas: React.FC = () => {
             position: 'absolute',
             top: 0,
             left: 0,
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
+            transform: `translate(${panOffset.x / zoom}px, ${panOffset.y / zoom}px)`,
+            zoom: zoom,
             transformOrigin: '0 0',
             willChange: 'transform',
           }}
@@ -359,6 +361,7 @@ export const Canvas: React.FC = () => {
                 canvasHeight={project.canvas.height}
                 currentTime={currentTime}
                 editorZoom={zoom}
+                interactive={cameraEditMode}
               />
             )}
           </div>
@@ -381,6 +384,7 @@ interface CameraFrameOverlayProps {
   canvasHeight: number;
   currentTime: number;
   editorZoom: number;
+  interactive: boolean;
 }
 
 const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
@@ -389,16 +393,23 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
   canvasHeight,
   currentTime,
   editorZoom,
+  interactive,
 }) => {
   const pushSnapshot = useProjectStore((state) => state.pushSnapshot);
 
   const dragRef = useRef<{
     type: 'move' | 'resize';
+    handle?: 'tl' | 'tr' | 'bl' | 'br' | 'top' | 'right' | 'bottom' | 'left';
     startMouseX: number;
     startMouseY: number;
     startCamX: number;
     startCamY: number;
     startZoom: number;
+    // Frame rect in canvas coords at drag start
+    startLeft: number;
+    startTop: number;
+    startFrameW: number;
+    startFrameH: number;
     snapshot: any;
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -406,8 +417,10 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
   const cam = getInterpolatedCamera(cameraKeyframes, currentTime);
   if (!cam) return null;
 
-  const viewW = canvasWidth / cam.zoom;
-  const viewH = canvasHeight / cam.zoom;
+  // Always use uniform zoom (zoomX === zoomY enforced)
+  const camZoom = cam.zoomX;
+  const viewW = canvasWidth / camZoom;
+  const viewH = canvasHeight / camZoom;
   const left = cam.x - viewW / 2;
   const top = cam.y - viewH / 2;
 
@@ -419,7 +432,7 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
     useProjectStore.setState((state) => {
       const existing = state.project.cameraKeyframes || [];
       const filtered = existing.filter((kf) => kf.time !== time);
-      const updated = [...filtered, { time, x, y, zoom }].sort((a, b) => a.time - b.time);
+      const updated = [...filtered, { time, x, y, zoomX: zoom, zoomY: zoom }].sort((a, b) => a.time - b.time);
       return { project: { ...state.project, cameraKeyframes: updated } };
     });
   };
@@ -435,24 +448,33 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
       startMouseY: e.clientY,
       startCamX: cam.x,
       startCamY: cam.y,
-      startZoom: cam.zoom,
+      startZoom: camZoom,
+      startLeft: left,
+      startTop: top,
+      startFrameW: viewW,
+      startFrameH: viewH,
       snapshot,
     };
     setIsDragging(true);
   };
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  const handleResizeStart = (handle: 'tl' | 'tr' | 'bl' | 'br' | 'top' | 'right' | 'bottom' | 'left') => (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
     const snapshot = structuredClone(useProjectStore.getState().project);
     dragRef.current = {
       type: 'resize',
+      handle,
       startMouseX: e.clientX,
       startMouseY: e.clientY,
       startCamX: cam.x,
       startCamY: cam.y,
-      startZoom: cam.zoom,
+      startZoom: camZoom,
+      startLeft: left,
+      startTop: top,
+      startFrameW: viewW,
+      startFrameH: viewH,
       snapshot,
     };
     setIsDragging(true);
@@ -464,20 +486,68 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragRef.current) return;
-      const { type, startMouseX, startMouseY, startCamX, startCamY, startZoom } = dragRef.current;
+      const { type, startMouseX, startMouseY, startCamX, startCamY } = dragRef.current;
 
       if (type === 'move') {
         const dx = (e.clientX - startMouseX) / editorZoom;
         const dy = (e.clientY - startMouseY) / editorZoom;
-        silentUpdateCamera(startCamX + dx, startCamY + dy, startZoom);
+        silentUpdateCamera(startCamX + dx, startCamY + dy, dragRef.current.startZoom);
       } else {
-        // Resize: use horizontal delta to adjust zoom symmetrically
+        // Resize: 16:9 aspect locked, opposite edge stays fixed
+        const handle = dragRef.current.handle || 'br';
         const dx = (e.clientX - startMouseX) / editorZoom;
-        const startFrameW = canvasWidth / startZoom;
-        // Dragging outward (positive dx) → frame gets bigger → zoom decreases
-        const newFrameW = Math.max(canvasWidth / 10, startFrameW + dx * 2);
-        const newZoom = Math.max(0.1, Math.min(10, canvasWidth / newFrameW));
-        silentUpdateCamera(startCamX, startCamY, newZoom);
+        const dy = (e.clientY - startMouseY) / editorZoom;
+        const { startLeft, startTop, startFrameW, startFrameH } = dragRef.current;
+        const aspect = canvasWidth / canvasHeight;
+        const MIN_W = canvasWidth / 10;
+
+        let newW = startFrameW;
+        let newLeft = startLeft;
+        let newTop = startTop;
+
+        // Derive new width from the dragged axis
+        if (handle === 'right') {
+          newW = startFrameW + dx;
+        } else if (handle === 'left') {
+          newW = startFrameW - dx;
+          newLeft = startLeft + startFrameW - newW;
+        } else if (handle === 'bottom') {
+          newW = (startFrameH + dy) * aspect;
+        } else if (handle === 'top') {
+          const newH = startFrameH - dy;
+          newW = newH * aspect;
+          newTop = startTop + startFrameH - newW / aspect;
+        } else {
+          // Corner handles: use horizontal delta
+          if (handle.includes('l')) {
+            newW = startFrameW - dx;
+            newLeft = startLeft + startFrameW - newW;
+          } else {
+            newW = startFrameW + dx;
+          }
+        }
+
+        newW = Math.max(MIN_W, newW);
+        const newH = newW / aspect;
+
+        // For edge handles, keep opposite edge fixed; adjust perpendicular center
+        if (handle === 'right' || handle === 'left') {
+          // Vertical center stays the same
+          newTop = startTop + (startFrameH - newH) / 2;
+        } else if (handle === 'bottom') {
+          // Top edge fixed
+          newTop = startTop;
+        }
+        // For corner handles, anchor opposite corner vertically too
+        if (handle === 'br' || handle === 'tr') { /* newLeft already = startLeft */ }
+        if (handle.includes('t') && handle.length === 2) {
+          newTop = startTop + startFrameH - newH;
+        }
+
+        const newZoom = Math.max(0.1, Math.min(10, canvasWidth / newW));
+        const newCamX = newLeft + newW / 2;
+        const newCamY = newTop + newH / 2;
+        silentUpdateCamera(newCamX, newCamY, newZoom);
       }
     };
 
@@ -495,7 +565,7 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, editorZoom, canvasWidth, pushSnapshot]);
+  }, [isDragging, editorZoom, canvasWidth, canvasHeight, pushSnapshot]);
 
   const HANDLE_SIZE = 8;
   const handleStyle = (cursor: string): React.CSSProperties => ({
@@ -510,7 +580,7 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
 
   return (
     <div
-      onMouseDown={handleMoveStart}
+      onMouseDown={interactive ? handleMoveStart : undefined}
       data-camera-frame
       style={{
         position: 'absolute',
@@ -518,11 +588,12 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
         top,
         width: viewW,
         height: viewH,
-        border: '2px dashed #00bcd4',
+        border: `2px dashed ${interactive ? '#00bcd4' : '#00bcd455'}`,
         borderRadius: 2,
-        cursor: isDragging && dragRef.current?.type === 'move' ? 'grabbing' : 'move',
-        zIndex: 9998,
-        boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.3)',
+        cursor: interactive ? (isDragging && dragRef.current?.type === 'move' ? 'grabbing' : 'move') : 'default',
+        zIndex: interactive ? 9998 : 1,
+        pointerEvents: interactive ? 'auto' : 'none',
+        boxShadow: interactive ? '0 0 0 9999px rgba(0, 0, 0, 0.3)' : 'none',
       }}
     >
       {/* Label */}
@@ -531,19 +602,25 @@ const CameraFrameOverlay: React.FC<CameraFrameOverlayProps> = ({
         top: -18,
         left: 0,
         fontSize: 10,
-        color: '#00bcd4',
+        color: interactive ? '#00bcd4' : '#00bcd455',
         fontFamily: 'monospace',
         whiteSpace: 'nowrap',
         pointerEvents: 'none',
       }}>
-        <FontAwesomeIcon icon={faVideo} style={{ marginRight: 4 }} />{cam.zoom.toFixed(1)}×
+        <FontAwesomeIcon icon={faVideo} style={{ marginRight: 4 }} />{camZoom.toFixed(1)}×
       </div>
 
-      {/* Corner resize handles */}
-      <div onMouseDown={handleResizeStart} style={{ ...handleStyle('nwse-resize'), top: -HANDLE_SIZE / 2, left: -HANDLE_SIZE / 2 }} />
-      <div onMouseDown={handleResizeStart} style={{ ...handleStyle('nesw-resize'), top: -HANDLE_SIZE / 2, right: -HANDLE_SIZE / 2 }} />
-      <div onMouseDown={handleResizeStart} style={{ ...handleStyle('nesw-resize'), bottom: -HANDLE_SIZE / 2, left: -HANDLE_SIZE / 2 }} />
-      <div onMouseDown={handleResizeStart} style={{ ...handleStyle('nwse-resize'), bottom: -HANDLE_SIZE / 2, right: -HANDLE_SIZE / 2 }} />
+      {/* Resize handles — only when interactive */}
+      {interactive && (<>
+        <div onMouseDown={handleResizeStart('tl')} style={{ ...handleStyle('nwse-resize'), top: -HANDLE_SIZE / 2, left: -HANDLE_SIZE / 2 }} />
+        <div onMouseDown={handleResizeStart('tr')} style={{ ...handleStyle('nesw-resize'), top: -HANDLE_SIZE / 2, right: -HANDLE_SIZE / 2 }} />
+        <div onMouseDown={handleResizeStart('bl')} style={{ ...handleStyle('nesw-resize'), bottom: -HANDLE_SIZE / 2, left: -HANDLE_SIZE / 2 }} />
+        <div onMouseDown={handleResizeStart('br')} style={{ ...handleStyle('nwse-resize'), bottom: -HANDLE_SIZE / 2, right: -HANDLE_SIZE / 2 }} />
+        <div onMouseDown={handleResizeStart('top')} style={{ ...handleStyle('ns-resize'), top: -HANDLE_SIZE / 2, left: '50%', transform: 'translateX(-50%)' }} />
+        <div onMouseDown={handleResizeStart('bottom')} style={{ ...handleStyle('ns-resize'), bottom: -HANDLE_SIZE / 2, left: '50%', transform: 'translateX(-50%)' }} />
+        <div onMouseDown={handleResizeStart('left')} style={{ ...handleStyle('ew-resize'), top: '50%', left: -HANDLE_SIZE / 2, transform: 'translateY(-50%)' }} />
+        <div onMouseDown={handleResizeStart('right')} style={{ ...handleStyle('ew-resize'), top: '50%', right: -HANDLE_SIZE / 2, transform: 'translateY(-50%)' }} />
+      </>)}
     </div>
   );
 };

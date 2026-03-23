@@ -28,7 +28,7 @@ function baseProject(id: string, name: string, elements: CanvasElement[]): Proje
       height: 1080,
       backgroundColor: '#000000',
     },
-    scenes: [{ id: sceneId, name: 'Szene 1', elements, cameraKeyframes: [] }],
+    scenes: [{ id: sceneId, name: 'Szene 1', elements, cameraKeyframes: [{ time: 0, x: 960, y: 540, zoomX: 1.0, zoomY: 1.0 }] }],
     activeSceneId: sceneId,
     elements,
     metadata: {

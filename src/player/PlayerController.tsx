@@ -39,10 +39,11 @@ function SceneRenderer({
   skipAnimation?: boolean;
 }) {
   const cam = getInterpolatedCamera(scene.cameraKeyframes, localTime);
+  const zoom = cam ? cam.zoomX : 1; // zoomX === zoomY (16:9 locked)
   const cameraStyle: React.CSSProperties = cam ? {
     width: canvasWidth,
     height: canvasHeight,
-    transform: `translate(${canvasWidth / 2 - cam.x * cam.zoom}px, ${canvasHeight / 2 - cam.y * cam.zoom}px) scale(${cam.zoom})`,
+    transform: `translate(${canvasWidth / 2 - cam.x * zoom}px, ${canvasHeight / 2 - cam.y * zoom}px) scale(${zoom})`,
     transformOrigin: '0 0',
   } : {
     width: '100%',
@@ -57,6 +58,7 @@ function SceneRenderer({
       width: canvasWidth,
       height: canvasHeight,
       opacity,
+      overflow: 'hidden',
       transition: 'opacity 0.05s',
     }}>
       <div style={cameraStyle}>
@@ -433,6 +435,26 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
   const setCurrentTime = useProjectStore((state) => state.setCurrentTime);
   const previewAreaRef = useRef<HTMLDivElement>(null);
   const [previewAreaSize, setPreviewAreaSize] = useState({ width: 0, height: 0 });
+  const [soloSceneId, setSoloSceneId] = useState<string | null>(null);
+
+  // Spacebar play/pause (skip when interacting with form controls)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        e.preventDefault();
+        const state = useProjectStore.getState();
+        if (state.playbackState === 'playing') {
+          pauseAllAnimations();
+        } else {
+          playAllAnimations();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [playAllAnimations, pauseAllAnimations]);
 
   useEffect(() => {
     const node = previewAreaRef.current;
@@ -450,7 +472,21 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
     return () => ro.disconnect();
   }, []);
 
-  const { slots, totalDuration } = useMemo(() => buildTimeline(project), [project]);
+  // When soloing a scene, build a project with just that scene
+  const effectiveProject = useMemo(() => {
+    if (!soloSceneId) return project;
+    const scene = project.scenes.find(s => s.id === soloSceneId);
+    if (!scene) return project;
+    return {
+      ...project,
+      scenes: [{ ...scene, transition: undefined }],
+      activeSceneId: scene.id,
+      elements: scene.elements,
+      cameraKeyframes: scene.cameraKeyframes,
+    };
+  }, [project, soloSceneId]);
+
+  const { slots, totalDuration } = useMemo(() => buildTimeline(effectiveProject), [effectiveProject]);
 
   const stageScale = previewAreaSize.width > 0 && previewAreaSize.height > 0
     ? Math.min(previewAreaSize.width / project.canvas.width, previewAreaSize.height / project.canvas.height, 1)
@@ -615,11 +651,45 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
         <div>
           <div style={{ fontSize: 14, fontWeight: 700 }}>{project.name}</div>
           <div style={{ fontSize: 12, color: 'var(--ae-text-secondary)' }}>
-            {slots.length > 1
-              ? `Szene ${Math.max(0, currentSceneIdx) + 1} / ${slots.length}`
-              : 'Player / Preview'}
+            {soloSceneId
+              ? `Solo: ${project.scenes.find(s => s.id === soloSceneId)?.name || '?'}`
+              : slots.length > 1
+                ? `Szene ${Math.max(0, currentSceneIdx) + 1} / ${project.scenes.length}`
+                : 'Player / Preview'}
           </div>
         </div>
+
+        {/* Scene solo buttons */}
+        {project.scenes.length > 1 && (
+          <div style={{ display: 'flex', gap: 4, marginLeft: 16 }}>
+            <button
+              onClick={() => { setSoloSceneId(null); stopAllAnimations(); setCurrentTime(0); }}
+              style={{
+                padding: '6px 10px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: 'pointer',
+                backgroundColor: soloSceneId === null ? 'var(--ae-accent)' : 'var(--ae-bg-panel-raised)',
+                color: soloSceneId === null ? 'var(--ae-gray-900)' : 'var(--ae-text-secondary)',
+                border: soloSceneId === null ? 'none' : '1px solid var(--ae-border)',
+              }}
+            >
+              Alle
+            </button>
+            {project.scenes.map((scene, i) => (
+              <button
+                key={scene.id}
+                onClick={() => { setSoloSceneId(soloSceneId === scene.id ? null : scene.id); stopAllAnimations(); setCurrentTime(0); }}
+                style={{
+                  padding: '6px 10px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: 'pointer',
+                  backgroundColor: soloSceneId === scene.id ? 'var(--ae-accent)' : 'var(--ae-bg-panel-raised)',
+                  color: soloSceneId === scene.id ? 'var(--ae-gray-900)' : 'var(--ae-text-secondary)',
+                  border: soloSceneId === scene.id ? 'none' : '1px solid var(--ae-border)',
+                }}
+              >
+                S{i + 1}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             onClick={playbackState === 'playing' ? pauseAllAnimations : playAllAnimations}
@@ -629,7 +699,7 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
               color: 'var(--ae-gray-900)', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            {playbackState === 'playing' ? 'Pause' : 'Play'}
+            {playbackState === 'playing' ? 'Pause' : '▶ Play'}
           </button>
           <button
             onClick={() => { stopAllAnimations(); setCurrentTime(0); }}
@@ -641,6 +711,54 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
           >
             Stop
           </button>
+        </div>
+      </div>
+
+      {/* Timeline scrubber — ABOVE video */}
+      <div style={{
+        height: 48, minHeight: 48, flexShrink: 0,
+        padding: '8px 24px',
+        borderBottom: '1px solid var(--ae-border)',
+        backgroundColor: 'rgba(14, 14, 14, 0.6)',
+        display: 'flex', alignItems: 'center', gap: 14,
+      }}>
+        <div style={{ minWidth: 56, fontSize: 12, color: 'var(--ae-text-secondary)', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
+          {formatTime(currentTime)}
+        </div>
+
+        <div style={{ flex: 1, position: 'relative' }}>
+          <input
+            type="range" min={0} max={Math.max(1, totalDuration)} step={1}
+            value={Math.min(currentTime, totalDuration)}
+            onMouseDown={(e) => e.stopPropagation()}
+            onInput={(e) => {
+              const t = Number((e.target as HTMLInputElement).value);
+              if (playbackState === 'playing') {
+                pauseAllAnimations();
+              } else if (playbackState === 'stopped') {
+                useProjectStore.setState({ playbackState: 'paused' });
+              }
+              setCurrentTime(t);
+            }}
+            style={{ width: '100%', accentColor: 'var(--ae-accent)', cursor: 'pointer', position: 'relative', zIndex: 2 }}
+          />
+          {/* Scene boundary markers */}
+          {!soloSceneId && slots.length > 1 && slots.slice(1).map((slot, i) => {
+            const pct = totalDuration > 0 ? (slot.globalStart / totalDuration) * 100 : 0;
+            return (
+              <div key={i} style={{
+                position: 'absolute', left: `${pct}%`, top: -2,
+                width: 1, height: 6,
+                backgroundColor: 'var(--ae-accent)',
+                opacity: 0.6,
+                pointerEvents: 'none',
+              }} />
+            );
+          })}
+        </div>
+
+        <div style={{ minWidth: 56, textAlign: 'right', fontSize: 12, color: 'var(--ae-text-secondary)', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
+          {formatTime(totalDuration)}
         </div>
       </div>
 
@@ -694,57 +812,7 @@ export const PlayerController: React.FC<PlayerControllerProps> = ({ project, onE
         </div>
       </div>
 
-      {/* Timeline scrubber */}
-      <div style={{
-        height: 72, minHeight: 72, flexShrink: 0,
-        padding: '16px 24px',
-        borderTop: '1px solid var(--ae-border)',
-        backgroundColor: 'rgba(14, 14, 14, 0.82)', backdropFilter: 'blur(16px)',
-        display: 'flex', alignItems: 'center', gap: 18,
-      }}>
-        <div style={{ minWidth: 72, fontSize: 13, color: 'var(--ae-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-          {formatTime(currentTime)}
-        </div>
-
-        {/* Scrubber with scene markers */}
-        <div style={{ flex: 1, position: 'relative' }}>
-          <input
-            type="range" min={0} max={totalDuration} step={1}
-            value={Math.min(currentTime, totalDuration)}
-            onChange={(e) => {
-              const t = Number(e.target.value);
-              // Pause if playing, or set paused state so Play resumes from here
-              if (playbackState === 'playing') {
-                pauseAllAnimations();
-              } else if (playbackState === 'stopped') {
-                // Mark as paused so Play knows to resume from this position
-                useProjectStore.setState({ playbackState: 'paused' });
-              }
-              setCurrentTime(t);
-            }}
-            style={{ width: '100%', accentColor: 'var(--ae-accent)' }}
-          />
-          {/* Scene boundary markers */}
-          {slots.length > 1 && slots.slice(1).map((slot, i) => {
-            const pct = totalDuration > 0 ? (slot.globalStart / totalDuration) * 100 : 0;
-            return (
-              <div key={i} style={{
-                position: 'absolute', left: `${pct}%`, top: -4,
-                width: 1, height: 8,
-                backgroundColor: 'var(--ae-accent)',
-                opacity: 0.6,
-                pointerEvents: 'none',
-              }} />
-            );
-          })}
-        </div>
-
-        <div style={{ minWidth: 72, textAlign: 'right', fontSize: 13, color: 'var(--ae-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-          {formatTime(totalDuration)}
-        </div>
-      </div>
-
-      {/* Progress bar (thin strip above scrubber) */}
+      {/* Spacebar hint */}
     </div>
   );
 };

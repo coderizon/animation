@@ -47,7 +47,7 @@ export const PropertiesPanel: React.FC = () => {
         <PropertySection title="Kamera-Keyframes">
           <button
             onClick={() => {
-              addCameraKeyframe({ time: Math.round(currentTime / 50) * 50, x: project.canvas.width / 2, y: project.canvas.height / 2, zoom: 1.0 });
+              addCameraKeyframe({ time: Math.round(currentTime / 50) * 50, x: project.canvas.width / 2, y: project.canvas.height / 2, zoomX: 1.0, zoomY: 1.0 });
             }}
             style={{ width: '100%', padding: '7px 10px', backgroundColor: '#00bcd4', color: '#000', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             <FontAwesomeIcon icon={faCamera} style={{ marginRight: 6 }} />Kamera-KF bei {Math.round(currentTime)}ms
